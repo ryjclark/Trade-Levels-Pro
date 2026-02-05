@@ -9,7 +9,7 @@ interface PublicSettings {
   priceText: string;
 }
 
-const PAYMENT_URL = "https://im.page/8e37ed0a/plan?planId=76a5d210-02de-11f1-b161-8d9d089773e5";
+const PAYMENT_URL = "https://im.page/tradelevelspro";
 
 export default function PublicTrackRecordPage() {
   const { data: settings } = useQuery<PublicSettings>({
