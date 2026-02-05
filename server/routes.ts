@@ -419,7 +419,7 @@ export async function registerRoutes(
         telegramMessage: null
       });
 
-      const telegramText = formatTelegram(plan);
+      const telegramText = formatTelegramPro(plan);
 
       try {
         const response = await sendTelegramMessage({
@@ -479,6 +479,38 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/settings", requireAdmin, async (_req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.post("/api/settings", requireAdmin, async (req, res) => {
+    try {
+      const settings = await storage.updateSettings(req.body);
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  app.get("/api/public/settings", async (_req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      res.json({
+        joinUrl: settings.joinUrl,
+        substackUrl: settings.substackUrl,
+        xUrl: settings.xUrl,
+        priceText: settings.priceText
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch settings" });
     }
   });
 
