@@ -106,6 +106,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(publishLogs.planId, planId))
       .orderBy(desc(publishLogs.attemptTime));
   }
+
+  async updatePlan(id: number, data: Partial<InsertPlan>): Promise<Plan | undefined> {
+    await db
+      .update(plans)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(plans.id, id));
+    return this.getPlanById(id);
+  }
 }
 
 export const storage = new DatabaseStorage();

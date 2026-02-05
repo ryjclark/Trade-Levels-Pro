@@ -129,6 +129,69 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/plans/:id/republish", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid plan ID" });
+      }
+      
+      const plan = await storage.getPlanById(id);
+      if (!plan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        await storage.insertPublishLog({
+          planId: id,
+          destination: "telegram",
+          status: "error",
+          errorMessage: "Telegram not configured"
+        });
+        return res.status(400).json({ error: "Telegram not configured" });
+      }
+
+      const telegramMessage = formatTelegram(plan);
+      
+      try {
+        const telegramResult = await sendTelegramMessage({
+          token: TELEGRAM_BOT_TOKEN,
+          chatId: TELEGRAM_CHAT_ID,
+          text: telegramMessage
+        });
+
+        const messageId = telegramResult.result?.message_id?.toString();
+        
+        const updatedPlan = await storage.updatePlan(id, {
+          status: "published",
+          publishedAt: new Date().toISOString(),
+          telegramMessageId: messageId,
+          telegramMessage
+        });
+
+        await storage.insertPublishLog({
+          planId: id,
+          destination: "telegram",
+          status: "success",
+          responsePayload: JSON.stringify({ messageId })
+        });
+
+        res.json(updatedPlan);
+      } catch (telegramError) {
+        const errorMsg = telegramError instanceof Error ? telegramError.message : "Failed to send to Telegram";
+        await storage.insertPublishLog({
+          planId: id,
+          destination: "telegram",
+          status: "error",
+          errorMessage: errorMsg
+        });
+        res.status(500).json({ error: errorMsg });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to republish plan" });
+    }
+  });
+
   const savePlanSchema = z.object({
     id: z.number().nullable().optional(),
     date: z.string(),

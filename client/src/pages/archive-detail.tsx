@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { formatTelegram, formatSubstack, formatTitle } from "@/lib/formatter";
+import { queryClient } from "@/lib/queryClient";
 import type { Plan, PublishLog } from "@shared/schema";
 import { useState } from "react";
 import { 
@@ -22,21 +23,24 @@ import {
   TrendingDown,
   Activity,
   Clock,
-  MessageCircle
+  MessageCircle,
+  Send,
+  Loader2
 } from "lucide-react";
 
 export default function ArchiveDetailPage() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { logout } = useAuth();
+  const { logout, getToken } = useAuth();
   const { toast } = useToast();
   const [copied, setCopied] = useState<"telegram" | "substack" | null>(null);
 
   const { data: plan, isLoading: planLoading } = useQuery<Plan>({
     queryKey: ['/api/plans', params.id],
     queryFn: async () => {
+      const token = getToken();
       const response = await fetch(`/api/plans/${params.id}`, {
-        credentials: "include"
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error("Failed to load plan");
       return response.json();
@@ -47,13 +51,44 @@ export default function ArchiveDetailPage() {
   const { data: logs, isLoading: logsLoading } = useQuery<PublishLog[]>({
     queryKey: ['/api/plans', params.id, 'logs'],
     queryFn: async () => {
+      const token = getToken();
       const response = await fetch(`/api/plans/${params.id}/logs`, {
-        credentials: "include"
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error("Failed to load logs");
       return response.json();
     },
     enabled: !!params.id
+  });
+
+  const republishMutation = useMutation({
+    mutationFn: async () => {
+      const token = getToken();
+      const response = await fetch(`/api/plans/${params.id}/republish`, {
+        method: "POST",
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to republish");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/plans', params.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/plans', params.id, 'logs'] });
+      toast({
+        title: "Published to Telegram",
+        description: "Your trade plan has been sent to Telegram."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to republish",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleLogout = async () => {
@@ -123,7 +158,7 @@ export default function ArchiveDetailPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-5xl">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
           <Button 
             variant="ghost" 
             size="sm" 
@@ -133,6 +168,21 @@ export default function ArchiveDetailPage() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Archive
           </Button>
+          
+          {plan && (
+            <Button
+              onClick={() => republishMutation.mutate()}
+              disabled={republishMutation.isPending}
+              data-testid="button-republish"
+            >
+              {republishMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Send to Telegram
+            </Button>
+          )}
         </div>
 
         {isLoading ? (
@@ -176,13 +226,6 @@ export default function ArchiveDetailPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Target className="w-4 h-4" />
-                      Magnet
-                    </div>
-                    <p className="text-2xl font-semibold font-mono">{formatNumber(plan.magnet)}</p>
-                  </div>
                   <div className="space-y-1 sm:col-span-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Target className="w-4 h-4" />
@@ -191,6 +234,13 @@ export default function ArchiveDetailPage() {
                     <p className="text-2xl font-semibold font-mono">
                       {formatNumber(plan.dynamicZoneBottom)} – {formatNumber(plan.dynamicZoneTop)}
                     </p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Target className="w-4 h-4" />
+                      Magnet
+                    </div>
+                    <p className="text-2xl font-semibold font-mono">{formatNumber(plan.magnet)}</p>
                   </div>
                 </div>
 
@@ -233,13 +283,13 @@ export default function ArchiveDetailPage() {
                       {plan.setup1 && (
                         <div className="p-3 rounded-lg bg-muted">
                           <div className="text-xs text-muted-foreground mb-1">Setup 1</div>
-                          <p className="text-sm">{plan.setup1}</p>
+                          <p className="text-sm whitespace-pre-wrap">{plan.setup1}</p>
                         </div>
                       )}
                       {plan.setup2 && (
                         <div className="p-3 rounded-lg bg-muted">
                           <div className="text-xs text-muted-foreground mb-1">Setup 2</div>
-                          <p className="text-sm">{plan.setup2}</p>
+                          <p className="text-sm whitespace-pre-wrap">{plan.setup2}</p>
                         </div>
                       )}
                     </div>
@@ -249,7 +299,7 @@ export default function ArchiveDetailPage() {
                 {plan.notes && (
                   <div className="space-y-2">
                     <div className="text-sm font-medium">Notes</div>
-                    <p className="text-sm text-muted-foreground">{plan.notes}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{plan.notes}</p>
                   </div>
                 )}
               </CardContent>

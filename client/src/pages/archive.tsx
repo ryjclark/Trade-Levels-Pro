@@ -21,13 +21,14 @@ import {
 
 export default function ArchivePage() {
   const [, setLocation] = useLocation();
-  const { logout } = useAuth();
+  const { logout, getToken } = useAuth();
 
   const { data: plans, isLoading } = useQuery<Plan[]>({
     queryKey: ['/api/plans'],
     queryFn: async () => {
+      const token = getToken();
       const response = await fetch("/api/plans?limit=200", {
-        credentials: "include"
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error("Failed to load plans");
       return response.json();

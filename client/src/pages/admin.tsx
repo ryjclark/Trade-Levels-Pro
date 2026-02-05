@@ -65,11 +65,14 @@ export default function AdminPage() {
     status: "draft"
   });
 
+  const { getToken } = useAuth();
+  
   const { data: plan, isLoading, refetch } = useQuery<Plan>({
     queryKey: ['/api/plans/lookup', date, symbol],
     queryFn: async () => {
+      const token = getToken();
       const response = await fetch(`/api/plans/lookup?date=${date}&symbol=${symbol}`, {
-        credentials: "include"
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
       if (response.status === 404) return null;
       if (!response.ok) throw new Error("Failed to load plan");
