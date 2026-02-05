@@ -8,6 +8,7 @@ export const plans = pgTable("plans", {
   date: text("date").notNull(),
   symbol: text("symbol").notNull(),
   contract: text("contract"),
+  tier: text("tier").notNull().default("pro"),
   dynamicZoneTop: real("dynamic_zone_top"),
   dynamicZoneBottom: real("dynamic_zone_bottom"),
   magnet: real("magnet"),
@@ -27,6 +28,7 @@ export const plans = pgTable("plans", {
   publishedAt: text("published_at"),
   telegramMessageId: text("telegram_message_id"),
   telegramMessage: text("telegram_message"),
+  telegramMessageVariant: text("telegram_message_variant"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -36,6 +38,7 @@ export const publishLogs = pgTable("publish_logs", {
   planId: integer("plan_id").notNull().references(() => plans.id),
   attemptTime: timestamp("attempt_time").defaultNow().notNull(),
   destination: text("destination").notNull(),
+  variant: text("variant"),
   status: text("status").notNull(),
   errorMessage: text("error_message"),
   responsePayload: text("response_payload"),
