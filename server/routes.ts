@@ -61,9 +61,15 @@ export async function registerRoutes(
     }
     if (password === ADMIN_PASSWORD) {
       req.session.isAdmin = true;
-      return res.json({ success: true });
+      req.session.save((err) => {
+        if (err) {
+          return res.status(500).json({ error: "Failed to create session" });
+        }
+        return res.json({ success: true });
+      });
+    } else {
+      return res.status(401).json({ error: "Invalid password" });
     }
-    return res.status(401).json({ error: "Invalid password" });
   });
 
   app.get("/api/auth/check", (req, res) => {
