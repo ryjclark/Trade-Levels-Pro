@@ -1,73 +1,53 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import "./public.css";
-
-interface PublicSettings {
-  joinUrl: string;
-  substackUrl: string;
-  xUrl: string;
-  priceText: string;
-}
 
 const PAYMENT_URL = "https://im.page/tradelevelspro";
 
 export default function PublicAboutPage() {
-  const { data: settings } = useQuery<PublicSettings>({
-    queryKey: ["/api/public/settings"],
-  });
-
-  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
-
   const handleSubscribe = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+    window.open(PAYMENT_URL, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div className="public-page">
       <div className="public-container">
         <nav className="public-navbar">
-          <div className="public-brand">Trade Levels Pro</div>
+          <Link href="/" className="public-brand" data-testid="link-brand">
+            <img src="/images/logo-square.webp" alt="Trade Levels Pro" className="public-brand-logo" />
+            Trade Levels Pro
+          </Link>
           <div className="public-nav-links">
             <Link href="/" className="public-link" data-testid="link-home">Home</Link>
+            <Link href="/about" className="public-link public-link-active" data-testid="link-about">About</Link>
             <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
-            <Link href="/trackrecord" className="public-link" data-testid="link-trackrecord">Track Record</Link>
-            <Link href="/about" className="public-link" data-testid="link-about">About</Link>
+            <Link href="/subscribe" className="public-link" data-testid="link-subscribe">Subscribe</Link>
           </div>
         </nav>
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <div className="public-pill">About Us</div>
-            <h1>About Trade Levels Pro</h1>
-            <p className="public-hero-subtitle">
-              Professional-grade daily trade plans focused on precision and clarity.
-            </p>
+            <h1>About <span className="accent">Trade Levels Pro</span></h1>
           </div>
         </section>
 
-        <section className="public-section">
+        <section className="public-section" style={{ paddingTop: 0 }}>
           <div className="public-info-box">
-            <h2>Our Approach</h2>
-            <p>Trade Levels Pro delivers a daily trade plan focused on Dynamic Zones, Magnet levels, and clear support/resistance analysis for ES futures.</p>
-            <p>Each plan includes the directional bias and top setups for the day, giving you a clear framework for your trading decisions.</p>
-          </div>
-        </section>
-
-        <section className="public-section">
-          <div className="public-info-box">
-            <h2>How The Levels Are Used</h2>
-            <p>These levels provide context for potential reactions and areas of interest. They're not predictions - they're frameworks for understanding where price may find support or resistance.</p>
-            <p>The plan outlines the directional bias and top setups, helping you trade with context rather than chasing moves.</p>
-          </div>
-        </section>
-
-        <section className="public-section">
-          <div className="public-info-box">
-            <h2>Disclaimer</h2>
-            <p>This content is for educational purposes only and is not financial advice. Trading futures involves substantial risk of loss. Past performance is not indicative of future results.</p>
-            <p>Always do your own research and consult with a qualified financial advisor before making any trading decisions.</p>
+            <p>Trade Levels Pro was created for traders who are tired of guessing, chasing moves, and reacting emotionally to the market.</p>
+            <p>This service is built around one core idea: <strong>professional trading requires structure.</strong></p>
+            <p>Every trading day, we publish a clear, repeatable plan for ES and NQ futures based on:</p>
+            <ul>
+              <li>Dynamic Zones</li>
+              <li>Magnet Levels</li>
+              <li>Key Support and Resistance</li>
+              <li>Market Context and Bias</li>
+              <li>High-Probability Setups</li>
+            </ul>
+            <p>No hype. No signal spam. No unrealistic promises.</p>
+            <p>Just disciplined preparation and consistent execution.</p>
+            <p>Trade Levels Pro is designed for traders who want to think in probabilities, manage risk properly, and treat trading like a business.</p>
+            <p><strong>If you value structure over shortcuts, you're in the right place.</strong></p>
           </div>
         </section>
 
@@ -77,12 +57,12 @@ export default function PublicAboutPage() {
             Join traders who use professional-grade levels every day.
           </p>
           <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
-            Subscribe Now →
+            Join Trade Levels Pro →
           </button>
         </section>
 
         <footer className="public-footer">
-          Trade Smarter. React to Price. No Predictions.
+          Trade Smart. React to Price. No Predictions.
         </footer>
       </div>
     </div>

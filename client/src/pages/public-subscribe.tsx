@@ -1,65 +1,53 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import "./public.css";
-
-interface PublicSettings {
-  joinUrl: string;
-  substackUrl: string;
-  xUrl: string;
-  priceText: string;
-}
 
 const PAYMENT_URL = "https://im.page/tradelevelspro";
 
 export default function PublicSubscribePage() {
-  const { data: settings } = useQuery<PublicSettings>({
-    queryKey: ["/api/public/settings"],
-  });
-
-  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
-
   const handleSubscribe = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+    window.open(PAYMENT_URL, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div className="public-page">
       <div className="public-container">
         <nav className="public-navbar">
-          <div className="public-brand">Trade Levels Pro</div>
+          <Link href="/" className="public-brand" data-testid="link-brand">
+            <img src="/images/logo-square.webp" alt="Trade Levels Pro" className="public-brand-logo" />
+            Trade Levels Pro
+          </Link>
           <div className="public-nav-links">
             <Link href="/" className="public-link" data-testid="link-home">Home</Link>
-            <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
-            <Link href="/trackrecord" className="public-link" data-testid="link-trackrecord">Track Record</Link>
             <Link href="/about" className="public-link" data-testid="link-about">About</Link>
+            <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
+            <Link href="/subscribe" className="public-link public-link-active" data-testid="link-subscribe">Subscribe</Link>
           </div>
         </nav>
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <div className="public-pill">Get Started</div>
-            <h1>Subscribe Now</h1>
+            <h1>Get <span className="accent">Instant Access</span></h1>
             <p className="public-hero-subtitle">
-              Get daily ES trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis delivered to your private Telegram channel.
+              Daily ES & NQ trade plans with Dynamic Zones, Magnet Levels, and support/resistance delivered to your private Telegram channel.
             </p>
-            <p className="public-price-text">$20/month</p>
+            <p className="public-price-line"><strong>Only $20/month</strong> &bull; Cancel anytime</p>
           </div>
         </section>
 
-        <section className="public-section">
+        <section className="public-section" style={{ paddingTop: 0 }}>
           <div className="subscribe-grid">
             <div className="public-info-box">
               <h2>What's Included</h2>
               <div className="subscribe-features">
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
-                  <span>Daily ES trade plans</span>
+                  <span>Daily ES & NQ trade plans</span>
                 </div>
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
-                  <span>Dynamic Zone & Magnet levels</span>
+                  <span>Dynamic Zones & Magnet Levels</span>
                 </div>
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
@@ -67,7 +55,7 @@ export default function PublicSubscribePage() {
                 </div>
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
-                  <span>Directional bias analysis</span>
+                  <span>Market bias & context</span>
                 </div>
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
@@ -90,8 +78,8 @@ export default function PublicSubscribePage() {
 
             <div className="subscribe-action-box">
               <div className="subscribe-price-card">
-                <div className="subscribe-price-label">Monthly Subscription</div>
-                <div className="subscribe-price-amount">$20/month</div>
+                <div className="subscribe-price-label">Founding Members</div>
+                <div className="subscribe-price-amount">$20/mo</div>
                 <p className="subscribe-price-desc">Full access to all daily trade plans and levels</p>
                 <button
                   onClick={handleSubscribe}
@@ -100,7 +88,7 @@ export default function PublicSubscribePage() {
                 >
                   Subscribe & Join Telegram
                 </button>
-                <p className="subscribe-secure-text">Secure payment via InviteMember</p>
+                <p className="subscribe-secure-text">Secure checkout &bull; Instant access</p>
               </div>
 
               <div className="subscribe-steps">
@@ -111,7 +99,7 @@ export default function PublicSubscribePage() {
                 </div>
                 <div className="subscribe-step">
                   <span className="subscribe-step-num">2</span>
-                  <span>Complete payment through InviteMember</span>
+                  <span>Complete payment through secure checkout</span>
                 </div>
                 <div className="subscribe-step">
                   <span className="subscribe-step-num">3</span>
@@ -127,7 +115,7 @@ export default function PublicSubscribePage() {
         </section>
 
         <footer className="public-footer">
-          Trade Smarter. React to Price. No Predictions.
+          Trade Smart. React to Price. No Predictions.
         </footer>
       </div>
     </div>

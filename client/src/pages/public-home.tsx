@@ -28,98 +28,96 @@ export default function PublicHomePage() {
     <div className="public-page">
       <div className="public-container">
         <nav className="public-navbar">
-          <div className="public-brand">Trade Levels Pro</div>
+          <Link href="/" className="public-brand" data-testid="link-brand">
+            <img src="/images/logo-square.webp" alt="Trade Levels Pro" className="public-brand-logo" />
+            Trade Levels Pro
+          </Link>
           <div className="public-nav-links">
-            <Link href="/" className="public-link" data-testid="link-home">Home</Link>
-            <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
-            <Link href="/trackrecord" className="public-link" data-testid="link-trackrecord">Track Record</Link>
+            <Link href="/" className="public-link public-link-active" data-testid="link-home">Home</Link>
             <Link href="/about" className="public-link" data-testid="link-about">About</Link>
+            <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
+            <Link href="/subscribe" className="public-link" data-testid="link-subscribe">Subscribe</Link>
           </div>
         </nav>
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <div className="public-pill">Daily ES Trade Plans</div>
-            <h1>Trade Levels Pro</h1>
+            <h1>Trade ES & NQ with <span className="accent">Structure.</span> Not Guesswork.</h1>
             <p className="public-hero-subtitle">
-              Professional daily trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis for ES futures.
+              Professional daily futures trade plans with Dynamic Zones, Magnet Levels, and clear support/resistance — delivered every trading day.
             </p>
-            <p className="public-price-text">$20/month</p>
+            <p className="public-price-line"><strong>Only $20/month</strong> &bull; Cancel anytime</p>
             <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
-              Subscribe Now →
+              Get Access on Telegram →
             </button>
-          </div>
-          <div className="public-hero-image">
-            <img src="/images/hero-trading.jpg" alt="Trading charts" />
+            <p className="public-small-text">Secure checkout &bull; Instant access</p>
           </div>
         </section>
 
         <section className="public-section">
           <div className="public-section-header">
-            <h2 className="public-section-title">What You Get</h2>
+            <h2 className="public-section-title">Everything You Need — Before the Market Opens</h2>
             <p className="public-section-subtitle">
-              Everything you need to plan your trading day with confidence
+              A clear, repeatable framework for trading ES & NQ with confidence.
             </p>
           </div>
           <div className="public-cards">
             <div className="public-card">
-              <img src="/images/feature-levels.jpg" alt="Trading levels" className="public-card-image" />
-              <div className="public-card-content">
-                <h3>Daily Levels</h3>
-                <p>Dynamic Zone, Magnet, and clean support/resistance levels delivered after market close.</p>
+              <div className="public-card-icon" data-testid="icon-levels">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </div>
+              <h3>Daily Market Levels</h3>
+              <p>Precise Dynamic Zones, Magnet price, and key support/resistance levels calculated after each session.</p>
             </div>
             <div className="public-card">
-              <img src="/images/feature-bias.jpg" alt="Directional bias" className="public-card-image" />
-              <div className="public-card-content">
-                <h3>Directional Bias</h3>
-                <p>Clear context on how the day is likely to trade, helping you align with market direction.</p>
+              <div className="public-card-icon" data-testid="icon-bias">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               </div>
+              <h3>Daily Market Bias</h3>
+              <p>Clear context for how the market is positioned so you're trading with structure, not emotion.</p>
             </div>
             <div className="public-card">
-              <img src="/images/feature-setups.jpg" alt="Trade setups" className="public-card-image" />
-              <div className="public-card-content">
-                <h3>Best Setups</h3>
-                <p>1-2 actionable setups for each session, written simply and clearly.</p>
+              <div className="public-card-icon" data-testid="icon-setups">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
               </div>
+              <h3>High-Probability Setups</h3>
+              <p>1-2 actionable trade scenarios per day with defined conditions and expectations.</p>
             </div>
           </div>
         </section>
 
         <section className="public-section">
-          <div className="public-info-box">
-            <h2>Find Me</h2>
-            <p>Stay connected and get the latest updates on trade plans and market analysis.</p>
-            <div className="public-social-links">
-              {settings?.substackUrl && (
-                <a className="public-social-link" href={settings.substackUrl} target="_blank" rel="noopener noreferrer">
-                  Substack
-                </a>
-              )}
-              {settings?.xUrl && (
-                <a className="public-social-link" href={settings.xUrl} target="_blank" rel="noopener noreferrer">
-                  X / Twitter
-                </a>
-              )}
-              {!settings?.substackUrl && !settings?.xUrl && (
-                <span className="public-social-link">Links coming soon</span>
-              )}
+          <div className="public-section-header">
+            <h2 className="public-section-title">Simple. Consistent. Professional.</h2>
+          </div>
+          <div className="public-steps">
+            <div className="public-step">
+              <div className="public-step-num">1</div>
+              <p>Subscribe for $20/month using our secure checkout.</p>
+            </div>
+            <div className="public-step">
+              <div className="public-step-num">2</div>
+              <p>Get instant access to our private Telegram channel.</p>
+            </div>
+            <div className="public-step">
+              <div className="public-step-num">3</div>
+              <p>Receive your daily plan and levels before each session.</p>
             </div>
           </div>
         </section>
 
         <section className="public-cta-section">
-          <h2 className="public-section-title">Ready to Level Up Your Trading?</h2>
+          <h2 className="public-section-title">Stop Guessing. Start Trading with Structure.</h2>
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
           <button onClick={handleSubscribe} className="public-cta" data-testid="button-get-started">
-            Get Started Today →
+            Join Trade Levels Pro →
           </button>
         </section>
 
         <footer className="public-footer">
-          Trade Smarter. React to Price. No Predictions.
+          Trade Smart. React to Price. No Predictions.
         </footer>
       </div>
     </div>
