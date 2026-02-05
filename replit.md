@@ -17,6 +17,8 @@ Trade Levels Pro is a daily trade planning system for ES (E-mini S&P 500) and NQ
 - **Telegram Publishing**: Publish plans directly to Telegram with variant tracking
 - **Substack Formatting**: Copy formatted plans for Substack newsletters (Free and Pro versions)
 - **Archive System**: View historical plans with tier badges and variant-tracked publish logs
+- **Admin Settings**: Configure join URL, social links, pricing text, and optional Telegram footer
+- **Public Marketing Pages**: Home, Pricing, Track Record, and About pages for marketing funnel
 - **Dark/Light Mode**: Toggle between themes
 - **Health Check Endpoint**: GET /api/health for monitoring
 
@@ -68,6 +70,9 @@ shared/
 - `POST /api/plans/:id/republish` - Republish plan to Telegram (accepts variant: "free" | "pro")
 - `POST /api/plans/save` - Save plan (action: "save" | "publish_free" | "publish_pro")
 - `POST /api/telegram/test` - Send test message to Telegram
+- `GET /api/settings` - Get admin settings (protected)
+- `POST /api/settings` - Update admin settings (protected)
+- `GET /api/public/settings` - Get public settings (joinUrl, substackUrl, xUrl, priceText)
 
 ## Development
 Run `npm run dev` to start the development server on port 5000.
