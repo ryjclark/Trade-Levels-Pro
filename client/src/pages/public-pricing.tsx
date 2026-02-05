@@ -9,10 +9,14 @@ interface PublicSettings {
   priceText: string;
 }
 
+const PAYMENT_URL = "https://im.page/8e37ed0a/plan?planId=76a5d210-02de-11f1-b161-8d9d089773e5";
+
 export default function PublicPricingPage() {
   const { data: settings } = useQuery<PublicSettings>({
     queryKey: ["/api/public/settings"],
   });
+
+  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
   return (
     <div className="public-page">
@@ -34,10 +38,10 @@ export default function PublicPricingPage() {
             <p className="public-hero-subtitle">
               One straightforward subscription. Full access to daily trade plans.
             </p>
-            <p className="public-price-text">{settings?.priceText || "$20/month"}</p>
-            <Link href="/subscribe" className="public-cta" data-testid="button-subscribe">
+            <p className="public-price-text">$20/month</p>
+            <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
               Subscribe Now →
-            </Link>
+            </a>
           </div>
         </section>
 
@@ -57,9 +61,9 @@ export default function PublicPricingPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Get daily levels and trade plans delivered straight to your Telegram.
           </p>
-          <Link href="/subscribe" className="public-cta">
+          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-join-now">
             Join Now →
-          </Link>
+          </a>
         </section>
 
         <footer className="public-footer">

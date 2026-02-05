@@ -9,10 +9,14 @@ interface PublicSettings {
   priceText: string;
 }
 
+const PAYMENT_URL = "https://im.page/8e37ed0a/plan?planId=76a5d210-02de-11f1-b161-8d9d089773e5";
+
 export default function PublicAboutPage() {
   const { data: settings } = useQuery<PublicSettings>({
     queryKey: ["/api/public/settings"],
   });
+
+  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
   return (
     <div className="public-page">
@@ -66,9 +70,9 @@ export default function PublicAboutPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
-          <Link href="/subscribe" className="public-cta">
+          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
             Subscribe Now →
-          </Link>
+          </a>
         </section>
 
         <footer className="public-footer">

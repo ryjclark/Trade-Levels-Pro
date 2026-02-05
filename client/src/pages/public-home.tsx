@@ -9,10 +9,14 @@ interface PublicSettings {
   priceText: string;
 }
 
+const PAYMENT_URL = "https://im.page/8e37ed0a/plan?planId=76a5d210-02de-11f1-b161-8d9d089773e5";
+
 export default function PublicHomePage() {
   const { data: settings } = useQuery<PublicSettings>({
     queryKey: ["/api/public/settings"],
   });
+
+  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
   return (
     <div className="public-page">
@@ -34,10 +38,10 @@ export default function PublicHomePage() {
             <p className="public-hero-subtitle">
               Professional daily trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis for ES and NQ futures.
             </p>
-            <p className="public-price-text">{settings?.priceText || "$20/month"}</p>
-            <Link href="/subscribe" className="public-cta" data-testid="button-subscribe">
+            <p className="public-price-text">$20/month</p>
+            <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
               Subscribe Now →
-            </Link>
+            </a>
           </div>
           <div className="public-hero-image">
             <img src="/images/hero-trading.jpg" alt="Trading charts" />
@@ -103,9 +107,9 @@ export default function PublicHomePage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
-          <Link href="/subscribe" className="public-cta">
+          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-get-started">
             Get Started Today →
-          </Link>
+          </a>
         </section>
 
         <footer className="public-footer">

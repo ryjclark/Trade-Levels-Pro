@@ -9,10 +9,14 @@ interface PublicSettings {
   priceText: string;
 }
 
+const PAYMENT_URL = "https://im.page/8e37ed0a/plan?planId=76a5d210-02de-11f1-b161-8d9d089773e5";
+
 export default function PublicSubscribePage() {
   const { data: settings } = useQuery<PublicSettings>({
     queryKey: ["/api/public/settings"],
   });
+
+  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
   return (
     <div className="public-page">
@@ -81,21 +85,17 @@ export default function PublicSubscribePage() {
             <div className="subscribe-action-box">
               <div className="subscribe-price-card">
                 <div className="subscribe-price-label">Monthly Subscription</div>
-                <div className="subscribe-price-amount">{settings?.priceText || "$20/month"}</div>
+                <div className="subscribe-price-amount">$20/month</div>
                 <p className="subscribe-price-desc">Full access to all daily trade plans and levels</p>
-                {settings?.joinUrl ? (
-                  <a
-                    href={settings.joinUrl}
-                    className="subscribe-button"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-testid="button-subscribe-main"
-                  >
-                    Subscribe & Join Telegram
-                  </a>
-                ) : (
-                  <span className="subscribe-button subscribe-button-disabled">Coming Soon</span>
-                )}
+                <a
+                  href={paymentUrl}
+                  className="subscribe-button"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="button-subscribe-main"
+                >
+                  Subscribe & Join Telegram
+                </a>
                 <p className="subscribe-secure-text">Secure payment via InviteMember</p>
               </div>
 
