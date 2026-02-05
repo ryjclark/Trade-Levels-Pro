@@ -36,16 +36,19 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Trust proxy for Replit's HTTPS proxy
+  app.set("trust proxy", 1);
+  
   app.use(
     session({
       secret: SESSION_SECRET || "insecure-dev-secret",
-      resave: false,
+      resave: true,
       saveUninitialized: false,
       cookie: {
         maxAge: 1000 * 60 * 60 * 8,
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax"
+        secure: true,
+        sameSite: "none"
       }
     })
   );
