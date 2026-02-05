@@ -1,18 +1,59 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, timestamp, integer, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const plans = pgTable("plans", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull(),
+  symbol: text("symbol").notNull(),
+  contract: text("contract"),
+  dynamicZoneTop: real("dynamic_zone_top"),
+  dynamicZoneBottom: real("dynamic_zone_bottom"),
+  magnet: real("magnet"),
+  r1: real("r1"),
+  r2: real("r2"),
+  r3: real("r3"),
+  r4: real("r4"),
+  s1: real("s1"),
+  s2: real("s2"),
+  s3: real("s3"),
+  s4: real("s4"),
+  bias: text("bias"),
+  setup1: text("setup_1"),
+  setup2: text("setup_2"),
+  notes: text("notes"),
+  status: text("status").notNull().default("draft"),
+  publishedAt: text("published_at"),
+  telegramMessageId: text("telegram_message_id"),
+  telegramMessage: text("telegram_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const publishLogs = pgTable("publish_logs", {
+  id: serial("id").primaryKey(),
+  planId: integer("plan_id").notNull().references(() => plans.id),
+  attemptTime: timestamp("attempt_time").defaultNow().notNull(),
+  destination: text("destination").notNull(),
+  status: text("status").notNull(),
+  errorMessage: text("error_message"),
+  responsePayload: text("response_payload"),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const insertPlanSchema = createInsertSchema(plans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPublishLogSchema = createInsertSchema(publishLogs).omit({
+  id: true,
+  attemptTime: true,
+});
+
+export type InsertPlan = z.infer<typeof insertPlanSchema>;
+export type Plan = typeof plans.$inferSelect;
+
+export type InsertPublishLog = z.infer<typeof insertPublishLogSchema>;
+export type PublishLog = typeof publishLogs.$inferSelect;
