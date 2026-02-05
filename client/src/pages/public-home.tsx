@@ -23,65 +23,96 @@ export default function PublicHomePage() {
             <Link href="/" className="public-link" data-testid="link-home">Home</Link>
             <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
             <Link href="/trackrecord" className="public-link" data-testid="link-trackrecord">Track Record</Link>
+            <Link href="/about" className="public-link" data-testid="link-about">About</Link>
           </div>
         </nav>
 
-        <div className="public-hero">
-          <div className="public-hero-card">
-            <div className="public-pill">Daily after-close plan</div>
+        <section className="public-hero">
+          <div className="public-hero-content">
+            <div className="public-pill">Daily ES/NQ Trade Plans</div>
             <h1>Trade Levels Pro</h1>
-            <p className="public-muted">Daily ES/NQ levels (Dynamic Zone, Magnet, Support/Resistance) + trade plan.</p>
-            <p><strong>{settings?.priceText || "$25/month"}</strong></p>
+            <p className="public-hero-subtitle">
+              Professional daily trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis for ES and NQ futures.
+            </p>
+            <p className="public-price-text">{settings?.priceText || "$25/month"}</p>
             {settings?.joinUrl ? (
               <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
-                Subscribe / Join Telegram
+                Subscribe Now →
               </a>
             ) : (
-              <span className="public-cta public-cta-disabled">Join link coming soon</span>
+              <span className="public-cta public-cta-disabled">Coming Soon</span>
             )}
           </div>
-        </div>
+          <div className="public-hero-image">
+            <img src="/images/hero-trading.jpg" alt="Trading charts" />
+          </div>
+        </section>
 
-        <div className="public-section">
-          <h2 className="public-section-title">What You Get</h2>
+        <section className="public-section">
+          <div className="public-section-header">
+            <h2 className="public-section-title">What You Get</h2>
+            <p className="public-section-subtitle">
+              Everything you need to plan your trading day with confidence
+            </p>
+          </div>
           <div className="public-cards">
-            <div className="public-card public-card-soft">
-              <h3>Daily Levels</h3>
-              <p className="public-muted">Dynamic Zone, Magnet, and clean support/resistance.</p>
+            <div className="public-card">
+              <img src="/images/feature-levels.jpg" alt="Trading levels" className="public-card-image" />
+              <div className="public-card-content">
+                <h3>Daily Levels</h3>
+                <p>Dynamic Zone, Magnet, and clean support/resistance levels delivered after market close.</p>
+              </div>
             </div>
-            <div className="public-card public-card-soft">
-              <h3>Directional Bias</h3>
-              <p className="public-muted">Clear context on how the day is likely to trade.</p>
+            <div className="public-card">
+              <img src="/images/feature-bias.jpg" alt="Directional bias" className="public-card-image" />
+              <div className="public-card-content">
+                <h3>Directional Bias</h3>
+                <p>Clear context on how the day is likely to trade, helping you align with market direction.</p>
+              </div>
             </div>
-            <div className="public-card public-card-soft">
-              <h3>Best Setups</h3>
-              <p className="public-muted">1–2 actionable setups, written simply.</p>
+            <div className="public-card">
+              <img src="/images/feature-setups.jpg" alt="Trade setups" className="public-card-image" />
+              <div className="public-card-content">
+                <h3>Best Setups</h3>
+                <p>1-2 actionable setups for each session, written simply and clearly.</p>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="public-section public-card public-card-soft">
-          <h2>Pricing</h2>
-          <p>{settings?.priceText || "$25/month"}</p>
+        <section className="public-section">
+          <div className="public-info-box">
+            <h2>Find Me</h2>
+            <p>Stay connected and get the latest updates on trade plans and market analysis.</p>
+            <div className="public-social-links">
+              {settings?.substackUrl && (
+                <a className="public-social-link" href={settings.substackUrl} target="_blank" rel="noopener noreferrer">
+                  Substack
+                </a>
+              )}
+              {settings?.xUrl && (
+                <a className="public-social-link" href={settings.xUrl} target="_blank" rel="noopener noreferrer">
+                  X / Twitter
+                </a>
+              )}
+              {!settings?.substackUrl && !settings?.xUrl && (
+                <span className="public-social-link">Links coming soon</span>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="public-cta-section">
+          <h2 className="public-section-title">Ready to Level Up Your Trading?</h2>
+          <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
+            Join traders who use professional-grade levels every day.
+          </p>
           {settings?.joinUrl && (
             <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
-              Subscribe / Join Telegram
+              Get Started Today →
             </a>
           )}
-        </div>
-
-        <div className="public-section public-card public-card-soft">
-          <h2>Find Me</h2>
-          {settings?.substackUrl && (
-            <p><a className="public-link" href={settings.substackUrl} target="_blank" rel="noopener noreferrer">Substack</a></p>
-          )}
-          {settings?.xUrl && (
-            <p><a className="public-link" href={settings.xUrl} target="_blank" rel="noopener noreferrer">X / Twitter</a></p>
-          )}
-          {!settings?.substackUrl && !settings?.xUrl && (
-            <p className="public-muted">Links coming soon.</p>
-          )}
-        </div>
+        </section>
 
         <footer className="public-footer">
           Trade Smarter. React to Price. No Predictions.

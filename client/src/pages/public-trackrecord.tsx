@@ -1,7 +1,19 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import "./public.css";
 
+interface PublicSettings {
+  joinUrl: string;
+  substackUrl: string;
+  xUrl: string;
+  priceText: string;
+}
+
 export default function PublicTrackRecordPage() {
+  const { data: settings } = useQuery<PublicSettings>({
+    queryKey: ["/api/public/settings"],
+  });
+
   return (
     <div className="public-page">
       <div className="public-container">
@@ -11,22 +23,42 @@ export default function PublicTrackRecordPage() {
             <Link href="/" className="public-link" data-testid="link-home">Home</Link>
             <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
             <Link href="/trackrecord" className="public-link" data-testid="link-trackrecord">Track Record</Link>
+            <Link href="/about" className="public-link" data-testid="link-about">About</Link>
           </div>
         </nav>
 
-        <div className="public-hero">
-          <div className="public-hero-card">
+        <section className="public-hero">
+          <div className="public-hero-content">
             <div className="public-pill">Performance</div>
             <h1>Track Record</h1>
-            <p className="public-muted">Performance history and level accuracy.</p>
+            <p className="public-hero-subtitle">
+              Historical performance and level accuracy for ES and NQ trade plans.
+            </p>
           </div>
-        </div>
+        </section>
 
-        <div className="public-section public-card public-card-soft">
-          <h2>Coming Soon</h2>
-          <p className="public-muted">Track record details and historical performance will be available soon.</p>
-          <p className="public-muted">Subscribe to stay updated on our latest analysis and results.</p>
-        </div>
+        <section className="public-section">
+          <div className="public-info-box">
+            <h2>Coming Soon</h2>
+            <p>We're building out a comprehensive track record section that will showcase:</p>
+            <p>• Historical level accuracy and hit rates</p>
+            <p>• Weekly and monthly performance summaries</p>
+            <p>• Notable setups and key level reactions</p>
+            <p style={{ marginTop: '24px' }}>Subscribe to stay updated on our latest analysis and results.</p>
+          </div>
+        </section>
+
+        <section className="public-cta-section">
+          <h2 className="public-section-title">Want to See It in Action?</h2>
+          <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
+            Join now and experience professional-grade trade plans daily.
+          </p>
+          {settings?.joinUrl && (
+            <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
+              Subscribe Now →
+            </a>
+          )}
+        </section>
 
         <footer className="public-footer">
           Trade Smarter. React to Price. No Predictions.

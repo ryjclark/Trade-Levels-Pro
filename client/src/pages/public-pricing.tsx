@@ -23,32 +23,50 @@ export default function PublicPricingPage() {
             <Link href="/" className="public-link" data-testid="link-home">Home</Link>
             <Link href="/pricing" className="public-link" data-testid="link-pricing">Pricing</Link>
             <Link href="/trackrecord" className="public-link" data-testid="link-trackrecord">Track Record</Link>
+            <Link href="/about" className="public-link" data-testid="link-about">About</Link>
           </div>
         </nav>
 
-        <div className="public-hero">
-          <div className="public-hero-card">
-            <div className="public-pill">Simple monthly access</div>
+        <section className="public-hero">
+          <div className="public-hero-content">
+            <div className="public-pill">Simple Pricing</div>
             <h1>Pricing</h1>
-            <p className="public-muted">{settings?.priceText || "$25/month"}</p>
+            <p className="public-hero-subtitle">
+              One straightforward subscription. Full access to daily trade plans.
+            </p>
+            <p className="public-price-text">{settings?.priceText || "$25/month"}</p>
             {settings?.joinUrl ? (
               <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
-                Subscribe / Join Telegram
+                Subscribe Now →
               </a>
             ) : (
-              <span className="public-cta public-cta-disabled">Join link coming soon</span>
+              <span className="public-cta public-cta-disabled">Coming Soon</span>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="public-section public-card public-card-soft">
-          <h2>FAQ</h2>
-          <p><strong>What is included?</strong> Daily ES/NQ levels, bias, and setups.</p>
-          <p><strong>When is it posted?</strong> After market close on trading days.</p>
-          <p><strong>Is this financial advice?</strong> No. Educational purposes only.</p>
-          <p><strong>Can I cancel?</strong> Yes, anytime via InviteMember.</p>
-          <p><strong>How do I access?</strong> Join the private Telegram channel.</p>
-        </div>
+        <section className="public-section">
+          <div className="public-info-box">
+            <h2>Frequently Asked Questions</h2>
+            <p><strong>What is included?</strong><br />Daily ES/NQ levels, directional bias, and actionable setups posted after market close.</p>
+            <p><strong>When is it posted?</strong><br />Trade plans are published after market close on trading days.</p>
+            <p><strong>Is this financial advice?</strong><br />No. This is for educational purposes only. Always do your own research.</p>
+            <p><strong>Can I cancel?</strong><br />Yes, you can cancel anytime via your subscription provider.</p>
+            <p><strong>How do I access?</strong><br />After subscribing, you'll get access to the private Telegram channel.</p>
+          </div>
+        </section>
+
+        <section className="public-cta-section">
+          <h2 className="public-section-title">Start Trading with Confidence</h2>
+          <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
+            Get daily levels and trade plans delivered straight to your Telegram.
+          </p>
+          {settings?.joinUrl && (
+            <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
+              Join Now →
+            </a>
+          )}
+        </section>
 
         <footer className="public-footer">
           Trade Smarter. React to Price. No Predictions.

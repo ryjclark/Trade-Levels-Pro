@@ -1,156 +1,344 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 .public-page {
   min-height: 100vh;
-  background: #f7f7f2;
-  color: #1f1f1f;
-  font-family: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  background: linear-gradient(180deg, #0a0f1a 0%, #111827 50%, #0a0f1a 100%);
+  color: #ffffff;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .public-container {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 20px 60px;
+  padding: 0 24px;
 }
 
+/* Navigation */
 .public-navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
+  padding: 24px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .public-brand {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #1f1f1f;
+  background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .public-nav-links {
   display: flex;
-  gap: 24px;
+  gap: 32px;
 }
 
 .public-link {
-  color: #1c5d99;
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   font-weight: 500;
-  transition: opacity 0.2s;
+  font-size: 15px;
+  transition: color 0.2s;
 }
 
 .public-link:hover {
-  opacity: 0.7;
+  color: #ffffff;
 }
 
+/* Hero Section */
 .public-hero {
-  margin-bottom: 40px;
-}
-
-.public-hero-card {
-  background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
-  border-radius: 16px;
-  border: 1px solid #e1e7ff;
-  padding: 40px 32px;
-  box-shadow: 0 12px 28px rgba(28, 93, 153, 0.08);
+  position: relative;
+  padding: 80px 0;
   text-align: center;
+  overflow: hidden;
 }
 
-.public-hero-card h1 {
-  margin: 0 0 12px;
-  font-size: 36px;
-  font-weight: 700;
+.public-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.public-hero-content {
+  position: relative;
+  z-index: 1;
 }
 
 .public-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #eef4ff;
-  color: #1c5d99;
-  padding: 6px 14px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  padding: 8px 16px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.public-muted {
-  color: #6b6b6b;
+.public-hero h1 {
+  margin: 0 0 20px;
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.public-hero-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 20px;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto 16px;
+}
+
+.public-price-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #60a5fa;
+  margin-bottom: 32px;
 }
 
 .public-cta {
-  display: inline-block;
-  background: #1c5d99;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 999px;
+  padding: 16px 32px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   text-decoration: none;
-  margin-top: 16px;
-  transition: background 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
 }
 
 .public-cta:hover {
-  background: #154a7a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
 }
 
 .public-cta-disabled {
-  background: #9aa3b2;
+  background: #374151;
+  box-shadow: none;
   pointer-events: none;
 }
 
+/* Hero Image */
+.public-hero-image {
+  margin-top: 60px;
+  position: relative;
+}
+
+.public-hero-image img {
+  width: 100%;
+  max-width: 900px;
+  border-radius: 16px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.public-hero-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(10, 15, 26, 0.9) 100%);
+  border-radius: 16px;
+  pointer-events: none;
+}
+
+/* Sections */
 .public-section {
-  margin-bottom: 24px;
+  padding: 80px 0;
+}
+
+.public-section-header {
+  text-align: center;
+  margin-bottom: 48px;
 }
 
 .public-section-title {
+  font-size: 36px;
+  font-weight: 700;
   margin: 0 0 16px;
-  font-size: 20px;
-  font-weight: 600;
+  color: #ffffff;
 }
 
+.public-section-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 18px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Feature Cards */
 .public-cards {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .public-card {
-  background: #ffffff;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #dddddd;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s;
 }
 
-.public-card-soft {
-  border-color: #e1e7ff;
-  background: #ffffff;
+.public-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
-.public-card h2 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  font-weight: 600;
+.public-card-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
+.public-card-content {
+  padding: 24px;
 }
 
 .public-card h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
+  margin: 0 0 12px;
+  font-size: 20px;
   font-weight: 600;
+  color: #ffffff;
 }
 
 .public-card p {
-  margin: 0 0 10px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.6;
 }
 
-.public-footer {
-  margin-top: 40px;
-  padding-top: 16px;
-  border-top: 1px solid #e6e6e6;
-  color: #6b6b6b;
-  font-size: 13px;
+/* Info Box */
+.public-info-box {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 40px;
+}
+
+.public-info-box h2 {
+  margin: 0 0 20px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.public-info-box p {
+  margin: 0 0 16px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.7;
+}
+
+.public-info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.public-info-box strong {
+  color: #ffffff;
+}
+
+/* Social Links */
+.public-social-links {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.public-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.public-social-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* CTA Section */
+.public-cta-section {
   text-align: center;
+  padding: 80px 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(59, 130, 246, 0.1) 50%, transparent 100%);
+}
+
+/* Footer */
+.public-footer {
+  padding: 40px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .public-navbar {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .public-nav-links {
+    gap: 20px;
+  }
+  
+  .public-hero {
+    padding: 60px 0;
+  }
+  
+  .public-hero h1 {
+    font-size: 36px;
+  }
+  
+  .public-hero-subtitle {
+    font-size: 16px;
+  }
+  
+  .public-section {
+    padding: 60px 0;
+  }
+  
+  .public-section-title {
+    font-size: 28px;
+  }
+  
+  .public-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .public-info-box {
+    padding: 24px;
+  }
 }
