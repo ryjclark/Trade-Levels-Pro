@@ -102,7 +102,7 @@ export async function registerRoutes(
 
   app.get("/api/plans/:id", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid plan ID" });
       }
@@ -118,7 +118,7 @@ export async function registerRoutes(
 
   app.get("/api/plans/:id/logs", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid plan ID" });
       }
@@ -131,7 +131,7 @@ export async function registerRoutes(
 
   app.post("/api/plans/:id/republish", requireAdmin, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid plan ID" });
       }

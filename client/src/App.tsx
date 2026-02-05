@@ -14,6 +14,7 @@ import PublicHomePage from "@/pages/public-home";
 import PublicPricingPage from "@/pages/public-pricing";
 import PublicTrackRecordPage from "@/pages/public-trackrecord";
 import PublicAboutPage from "@/pages/public-about";
+import PublicSubscribePage from "@/pages/public-subscribe";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/pricing" component={PublicPricingPage} />
       <Route path="/trackrecord" component={PublicTrackRecordPage} />
       <Route path="/about" component={PublicAboutPage} />
+      <Route path="/subscribe" component={PublicSubscribePage} />
       <Route path="/login">
         <PublicRoute component={LoginPage} />
       </Route>

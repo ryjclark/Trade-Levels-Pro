@@ -34,14 +34,10 @@ export default function PublicHomePage() {
             <p className="public-hero-subtitle">
               Professional daily trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis for ES and NQ futures.
             </p>
-            <p className="public-price-text">{settings?.priceText || "$25/month"}</p>
-            {settings?.joinUrl ? (
-              <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
-                Subscribe Now →
-              </a>
-            ) : (
-              <span className="public-cta public-cta-disabled">Coming Soon</span>
-            )}
+            <p className="public-price-text">{settings?.priceText || "$20/month"}</p>
+            <Link href="/subscribe" className="public-cta" data-testid="button-subscribe">
+              Subscribe Now →
+            </Link>
           </div>
           <div className="public-hero-image">
             <img src="/images/hero-trading.jpg" alt="Trading charts" />
@@ -107,11 +103,9 @@ export default function PublicHomePage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
-          {settings?.joinUrl && (
-            <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
-              Get Started Today →
-            </a>
-          )}
+          <Link href="/subscribe" className="public-cta">
+            Get Started Today →
+          </Link>
         </section>
 
         <footer className="public-footer">

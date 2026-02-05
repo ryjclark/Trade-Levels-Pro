@@ -34,14 +34,10 @@ export default function PublicPricingPage() {
             <p className="public-hero-subtitle">
               One straightforward subscription. Full access to daily trade plans.
             </p>
-            <p className="public-price-text">{settings?.priceText || "$25/month"}</p>
-            {settings?.joinUrl ? (
-              <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
-                Subscribe Now →
-              </a>
-            ) : (
-              <span className="public-cta public-cta-disabled">Coming Soon</span>
-            )}
+            <p className="public-price-text">{settings?.priceText || "$20/month"}</p>
+            <Link href="/subscribe" className="public-cta" data-testid="button-subscribe">
+              Subscribe Now →
+            </Link>
           </div>
         </section>
 
@@ -51,8 +47,8 @@ export default function PublicPricingPage() {
             <p><strong>What is included?</strong><br />Daily ES/NQ levels, directional bias, and actionable setups posted after market close.</p>
             <p><strong>When is it posted?</strong><br />Trade plans are published after market close on trading days.</p>
             <p><strong>Is this financial advice?</strong><br />No. This is for educational purposes only. Always do your own research.</p>
-            <p><strong>Can I cancel?</strong><br />Yes, you can cancel anytime via your subscription provider.</p>
-            <p><strong>How do I access?</strong><br />After subscribing, you'll get access to the private Telegram channel.</p>
+            <p><strong>Can I cancel?</strong><br />Yes, you can cancel anytime via InviteMember.</p>
+            <p><strong>How do I access?</strong><br />After subscribing, you'll get instant access to the private Telegram channel.</p>
           </div>
         </section>
 
@@ -61,11 +57,9 @@ export default function PublicPricingPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Get daily levels and trade plans delivered straight to your Telegram.
           </p>
-          {settings?.joinUrl && (
-            <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
-              Join Now →
-            </a>
-          )}
+          <Link href="/subscribe" className="public-cta">
+            Join Now →
+          </Link>
         </section>
 
         <footer className="public-footer">

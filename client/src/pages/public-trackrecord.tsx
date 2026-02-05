@@ -41,9 +41,9 @@ export default function PublicTrackRecordPage() {
           <div className="public-info-box">
             <h2>Coming Soon</h2>
             <p>We're building out a comprehensive track record section that will showcase:</p>
-            <p>• Historical level accuracy and hit rates</p>
-            <p>• Weekly and monthly performance summaries</p>
-            <p>• Notable setups and key level reactions</p>
+            <p>Historical level accuracy and hit rates</p>
+            <p>Weekly and monthly performance summaries</p>
+            <p>Notable setups and key level reactions</p>
             <p style={{ marginTop: '24px' }}>Subscribe to stay updated on our latest analysis and results.</p>
           </div>
         </section>
@@ -53,11 +53,9 @@ export default function PublicTrackRecordPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join now and experience professional-grade trade plans daily.
           </p>
-          {settings?.joinUrl && (
-            <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
-              Subscribe Now →
-            </a>
-          )}
+          <Link href="/subscribe" className="public-cta">
+            Subscribe Now →
+          </Link>
         </section>
 
         <footer className="public-footer">

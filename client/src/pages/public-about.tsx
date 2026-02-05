@@ -66,11 +66,9 @@ export default function PublicAboutPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
-          {settings?.joinUrl && (
-            <a href={settings.joinUrl} className="public-cta" target="_blank" rel="noopener noreferrer">
-              Subscribe Now →
-            </a>
-          )}
+          <Link href="/subscribe" className="public-cta">
+            Subscribe Now →
+          </Link>
         </section>
 
         <footer className="public-footer">
