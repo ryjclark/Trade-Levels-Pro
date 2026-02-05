@@ -16,12 +16,10 @@ export default function PublicHomePage() {
     queryKey: ["/api/public/settings"],
   });
 
-  const paymentUrl = settings?.joinUrl || PAYMENT_URL;
-
   const handleSubscribe = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+    window.open(PAYMENT_URL, "_blank", "noopener,noreferrer");
   };
 
   return (

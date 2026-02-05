@@ -11,22 +11,26 @@ Trade Levels Pro is a daily trade planning system for ES (E-mini S&P 500) and NQ
 ## Features
 - **Password-protected Admin Dashboard**: Secure access with token-based authentication
 - **Daily Plan Management**: Create, edit, and save trade plans as drafts
-- **Free/Pro Tier System**: Separate publishing for Free (R1-R2, S1-S2) and Pro (R1-R4, S1-S4) tiers
-- **Dual Publish Buttons**: Publish FREE or PRO versions to Telegram independently
-- **Four Preview Panels**: See Telegram and Substack previews for both Free and Pro tiers
+- **PRO Tier System**: Single "Publish to Telegram" button for PRO tier (R1-R4, S1-S4)
 - **Telegram Publishing**: Publish plans directly to Telegram with variant tracking
-- **Substack Formatting**: Copy formatted plans for Substack newsletters (Free and Pro versions)
-- **Archive System**: View historical plans with tier badges and variant-tracked publish logs
-- **Admin Settings**: Configure join URL, social links, pricing text, and optional Telegram footer
-- **Public Marketing Pages**: Home, Pricing, Track Record, and About pages for marketing funnel
-- **Dark/Light Mode**: Toggle between themes
+- **Archive System**: View historical plans with publish logs
+- **Admin Settings**: Configure social links, pricing text, and optional Telegram footer
+- **Public Marketing Pages**: Home, About, Pricing, Subscribe pages with InviteMember payment integration
+- **Brand Design**: Dark theme (#0c1117) with teal/cyan accents (#2dd4bf), Inter font
 - **Health Check Endpoint**: GET /api/health for monitoring
+
+## Brand
+- Colors: Dark background (#0c1117), teal/cyan accent (#2dd4bf), white text
+- Logo: /images/logo-square.webp (square), /images/logo-banner.jpg (wide)
+- Tagline: "Trade Smart. React to Price. No Predictions."
+- Payment URL: https://im.page/tradelevelspro
+- Price: $20/month (Founding Members)
 
 ## Tech Stack
 - **Frontend**: React with TypeScript, TanStack Query, Tailwind CSS, shadcn/ui
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: Tailwind CSS with custom design tokens
+- **Styling**: Custom CSS for public pages, Tailwind for admin
 
 ## Project Structure
 ```
@@ -39,7 +43,16 @@ client/
 │       ├── login.tsx   # Admin login page
 │       ├── admin.tsx   # Main admin dashboard
 │       ├── archive.tsx # Plan archive list
-│       └── archive-detail.tsx # Individual plan details
+│       ├── archive-detail.tsx # Individual plan details
+│       ├── settings.tsx # Admin settings
+│       ├── public-home.tsx # Marketing homepage
+│       ├── public-about.tsx # About page
+│       ├── public-pricing.tsx # Pricing page with FAQ
+│       ├── public-subscribe.tsx # Subscribe/checkout page
+│       ├── public-trackrecord.tsx # Track record (coming soon)
+│       └── public.css  # Shared public page styles
+├── public/
+│   └── images/         # Brand logos and assets
 server/
 ├── db.ts               # Database connection
 ├── storage.ts          # Data access layer
@@ -67,12 +80,15 @@ shared/
 - `GET /api/plans/lookup?date=&symbol=` - Get plan by date and symbol
 - `GET /api/plans/:id` - Get plan by ID
 - `GET /api/plans/:id/logs` - Get publish logs for a plan
-- `POST /api/plans/:id/republish` - Republish plan to Telegram (accepts variant: "free" | "pro")
-- `POST /api/plans/save` - Save plan (action: "save" | "publish_free" | "publish_pro")
+- `POST /api/plans/:id/republish` - Republish plan to Telegram
+- `POST /api/plans/save` - Save plan (action: "save" | "publish_pro")
 - `POST /api/telegram/test` - Send test message to Telegram
 - `GET /api/settings` - Get admin settings (protected)
 - `POST /api/settings` - Update admin settings (protected)
 - `GET /api/public/settings` - Get public settings (joinUrl, substackUrl, xUrl, priceText)
+
+## Navigation (Public)
+Home | About | Pricing | Subscribe
 
 ## Development
 Run `npm run dev` to start the development server on port 5000.
