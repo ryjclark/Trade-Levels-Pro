@@ -7,7 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { formatTelegram, formatSubstack, formatTitle } from "@/lib/formatter";
+import { 
+  formatTelegramFree, 
+  formatTelegramPro, 
+  formatSubstackFree, 
+  formatSubstackPro, 
+  formatTitle 
+} from "@/lib/formatter";
 import { queryClient } from "@/lib/queryClient";
 import type { Plan, PublishLog } from "@shared/schema";
 import { useState } from "react";
@@ -33,7 +39,7 @@ export default function ArchiveDetailPage() {
   const [, setLocation] = useLocation();
   const { logout, getToken } = useAuth();
   const { toast } = useToast();
-  const [copied, setCopied] = useState<"telegram" | "substack" | null>(null);
+  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | null>(null);
 
   const { data: plan, isLoading: planLoading } = useQuery<Plan>({
     queryKey: ['/api/plans', params.id],
@@ -96,18 +102,31 @@ export default function ArchiveDetailPage() {
     setLocation("/login");
   };
 
-  const handleCopy = async (type: "telegram" | "substack") => {
+  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro") => {
     if (!plan) return;
-    const text = type === "telegram" 
-      ? formatTelegram(plan)
-      : formatSubstack(plan);
+    
+    const formatters = {
+      telegramFree: formatTelegramFree,
+      telegramPro: formatTelegramPro,
+      substackFree: formatSubstackFree,
+      substackPro: formatSubstackPro
+    };
+    
+    const text = formatters[type](plan);
     
     await navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
+    
+    const labels = {
+      telegramFree: "Telegram Free",
+      telegramPro: "Telegram Pro",
+      substackFree: "Substack Free",
+      substackPro: "Substack Pro"
+    };
     toast({
       title: "Copied",
-      description: `${type === "telegram" ? "Telegram" : "Substack"} version copied to clipboard.`,
+      description: `${labels[type]} version copied to clipboard.`,
     });
   };
 
@@ -309,14 +328,14 @@ export default function ArchiveDetailPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base">Telegram Version</CardTitle>
+                    <CardTitle className="text-base">Telegram Free</CardTitle>
                     <Button 
                       size="sm" 
                       variant="ghost"
-                      onClick={() => handleCopy("telegram")}
-                      data-testid="button-copy-telegram"
+                      onClick={() => handleCopy("telegramFree")}
+                      data-testid="button-copy-telegram-free"
                     >
-                      {copied === "telegram" ? (
+                      {copied === "telegramFree" ? (
                         <Check className="w-4 h-4" />
                       ) : (
                         <Copy className="w-4 h-4" />
@@ -325,8 +344,8 @@ export default function ArchiveDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-telegram">
-                    {formatTelegram(plan)}
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-telegram-free">
+                    {formatTelegramFree(plan)}
                   </pre>
                 </CardContent>
               </Card>
@@ -334,14 +353,14 @@ export default function ArchiveDetailPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-base">Substack Version</CardTitle>
+                    <CardTitle className="text-base">Telegram Pro</CardTitle>
                     <Button 
                       size="sm" 
                       variant="ghost"
-                      onClick={() => handleCopy("substack")}
-                      data-testid="button-copy-substack"
+                      onClick={() => handleCopy("telegramPro")}
+                      data-testid="button-copy-telegram-pro"
                     >
-                      {copied === "substack" ? (
+                      {copied === "telegramPro" ? (
                         <Check className="w-4 h-4" />
                       ) : (
                         <Copy className="w-4 h-4" />
@@ -350,8 +369,58 @@ export default function ArchiveDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-substack">
-                    {formatSubstack(plan)}
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-telegram-pro">
+                    {formatTelegramPro(plan)}
+                  </pre>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-base">Substack Free</CardTitle>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleCopy("substackFree")}
+                      data-testid="button-copy-substack-free"
+                    >
+                      {copied === "substackFree" ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-substack-free">
+                    {formatSubstackFree(plan)}
+                  </pre>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-base">Substack Pro</CardTitle>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleCopy("substackPro")}
+                      data-testid="button-copy-substack-pro"
+                    >
+                      {copied === "substackPro" ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-substack-pro">
+                    {formatSubstackPro(plan)}
                   </pre>
                 </CardContent>
               </Card>
