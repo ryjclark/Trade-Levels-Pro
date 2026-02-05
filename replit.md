@@ -9,12 +9,16 @@ Trade Levels Pro is a daily trade planning system for ES (E-mini S&P 500) and NQ
 - Trading bias and setups
 
 ## Features
-- **Password-protected Admin Dashboard**: Secure access with session-based authentication
+- **Password-protected Admin Dashboard**: Secure access with token-based authentication
 - **Daily Plan Management**: Create, edit, and save trade plans as drafts
-- **Telegram Publishing**: Publish plans directly to Telegram with one click
-- **Substack Formatting**: Copy formatted plans for Substack newsletters
-- **Archive System**: View historical plans with full details and publish logs
+- **Free/Pro Tier System**: Separate publishing for Free (R1-R2, S1-S2) and Pro (R1-R4, S1-S4) tiers
+- **Dual Publish Buttons**: Publish FREE or PRO versions to Telegram independently
+- **Four Preview Panels**: See Telegram and Substack previews for both Free and Pro tiers
+- **Telegram Publishing**: Publish plans directly to Telegram with variant tracking
+- **Substack Formatting**: Copy formatted plans for Substack newsletters (Free and Pro versions)
+- **Archive System**: View historical plans with tier badges and variant-tracked publish logs
 - **Dark/Light Mode**: Toggle between themes
+- **Health Check Endpoint**: GET /api/health for monitoring
 
 ## Tech Stack
 - **Frontend**: React with TypeScript, TanStack Query, Tailwind CSS, shadcn/ui
@@ -53,6 +57,7 @@ shared/
 - `TELEGRAM_CHAT_ID`: Target Telegram chat/channel ID
 
 ## API Endpoints
+- `GET /api/health` - Health check endpoint
 - `POST /api/auth/login` - Admin login
 - `GET /api/auth/check` - Check authentication status
 - `POST /api/auth/logout` - Logout
@@ -60,8 +65,8 @@ shared/
 - `GET /api/plans/lookup?date=&symbol=` - Get plan by date and symbol
 - `GET /api/plans/:id` - Get plan by ID
 - `GET /api/plans/:id/logs` - Get publish logs for a plan
-- `POST /api/plans/save` - Save plan as draft
-- `POST /api/plans/publish` - Save and publish to Telegram
+- `POST /api/plans/:id/republish` - Republish plan to Telegram (accepts variant: "free" | "pro")
+- `POST /api/plans/save` - Save plan (action: "save" | "publish_free" | "publish_pro")
 - `POST /api/telegram/test` - Send test message to Telegram
 
 ## Development
