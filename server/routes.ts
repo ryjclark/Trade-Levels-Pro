@@ -1,33 +1,34 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import session from "express-session";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegram } from "./formatter";
 import { insertPlanSchema } from "@shared/schema";
 import { z } from "zod";
 
-declare module "express-session" {
-  interface SessionData {
-    isAdmin: boolean;
-  }
-}
-
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const SESSION_SECRET = process.env.SESSION_SECRET;
+const SESSION_SECRET = process.env.SESSION_SECRET || "insecure-dev-secret";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 if (!ADMIN_PASSWORD) {
   console.warn("WARNING: ADMIN_PASSWORD is not set. Admin login will be disabled.");
 }
-if (!SESSION_SECRET) {
-  console.warn("WARNING: SESSION_SECRET is not set. Using insecure default.");
+
+const validTokens = new Set<string>();
+
+function generateToken(): string {
+  return crypto.randomBytes(32).toString("hex");
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.session && req.session.isAdmin) {
-    return next();
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+    if (validTokens.has(token)) {
+      return next();
+    }
   }
   return res.status(401).json({ error: "Unauthorized" });
 }
@@ -36,23 +37,6 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Trust proxy for Replit's HTTPS proxy
-  app.set("trust proxy", 1);
-  
-  app.use(
-    session({
-      secret: SESSION_SECRET || "insecure-dev-secret",
-      resave: true,
-      saveUninitialized: false,
-      cookie: {
-        maxAge: 1000 * 60 * 60 * 8,
-        httpOnly: true,
-        secure: true,
-        sameSite: "none"
-      }
-    })
-  );
-
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
   });
@@ -63,33 +47,31 @@ export async function registerRoutes(
       return res.status(500).json({ error: "Admin password not configured" });
     }
     if (password === ADMIN_PASSWORD) {
-      req.session.isAdmin = true;
-      req.session.save((err) => {
-        if (err) {
-          return res.status(500).json({ error: "Failed to create session" });
-        }
-        return res.json({ success: true });
-      });
-    } else {
-      return res.status(401).json({ error: "Invalid password" });
+      const token = generateToken();
+      validTokens.add(token);
+      return res.json({ success: true, token });
     }
+    return res.status(401).json({ error: "Invalid password" });
   });
 
   app.get("/api/auth/check", (req, res) => {
-    if (req.session && req.session.isAdmin) {
-      return res.json({ authenticated: true });
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      if (validTokens.has(token)) {
+        return res.json({ authenticated: true });
+      }
     }
     return res.status(401).json({ authenticated: false });
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Failed to logout" });
-      }
-      res.clearCookie("connect.sid");
-      return res.json({ success: true });
-    });
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      validTokens.delete(token);
+    }
+    return res.json({ success: true });
   });
 
   app.get("/api/plans", requireAdmin, async (_req, res) => {

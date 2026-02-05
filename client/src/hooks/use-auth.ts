@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+const AUTH_TOKEN_KEY = "trade_levels_auth";
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -9,9 +11,16 @@ export function useAuth() {
   }, []);
 
   const checkAuth = async () => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const response = await fetch("/api/auth/check", {
-        credentials: "include"
+        headers: { "Authorization": `Bearer ${token}` }
       });
       setIsAuthenticated(response.ok);
     } catch {
@@ -26,10 +35,11 @@ export function useAuth() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-        credentials: "include"
+        body: JSON.stringify({ password })
       });
       if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
         setIsAuthenticated(true);
         return true;
       }
@@ -40,15 +50,13 @@ export function useAuth() {
   };
 
   const logout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include"
-      });
-    } finally {
-      setIsAuthenticated(false);
-    }
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    setIsAuthenticated(false);
   };
 
-  return { isAuthenticated, isLoading, login, logout, checkAuth };
+  const getToken = (): string | null => {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  };
+
+  return { isAuthenticated, isLoading, login, logout, checkAuth, getToken };
 }
