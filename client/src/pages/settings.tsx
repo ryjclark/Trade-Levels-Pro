@@ -9,11 +9,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { SiteSettingsData } from "@shared/schema";
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { getToken } = useAuth();
   const [formData, setFormData] = useState<SiteSettingsData>({
     joinUrl: "",
     substackUrl: "",
@@ -26,10 +28,9 @@ export default function SettingsPage() {
   const { isLoading } = useQuery<SiteSettingsData>({
     queryKey: ["/api/settings"],
     queryFn: async () => {
+      const token = getToken();
       const response = await fetch("/api/settings", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error("Failed to fetch settings");
       const data = await response.json();

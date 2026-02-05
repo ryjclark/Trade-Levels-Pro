@@ -54,6 +54,7 @@ export class DatabaseStorage implements IStorage {
           date: data.date,
           symbol: data.symbol,
           contract: data.contract,
+          tier: data.tier,
           dynamicZoneTop: data.dynamicZoneTop,
           dynamicZoneBottom: data.dynamicZoneBottom,
           magnet: data.magnet,
@@ -73,6 +74,7 @@ export class DatabaseStorage implements IStorage {
           publishedAt: data.publishedAt,
           telegramMessageId: data.telegramMessageId,
           telegramMessage: data.telegramMessage,
+          telegramMessageVariant: data.telegramMessageVariant,
           updatedAt: now
         })
         .where(eq(plans.id, existing.id));
