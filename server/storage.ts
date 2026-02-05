@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog } from "@shared/schema";
+import { plans, publishLogs, siteSettings, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData } from "@shared/schema";
 
 export interface IStorage {
   getPlanById(id: number): Promise<Plan | undefined>;
@@ -9,6 +9,8 @@ export interface IStorage {
   upsertPlan(data: InsertPlan & { id?: number }): Promise<Plan>;
   insertPublishLog(log: InsertPublishLog): Promise<void>;
   listPublishLogs(planId: number): Promise<PublishLog[]>;
+  getSettings(): Promise<SiteSettingsData>;
+  updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -116,6 +118,42 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(plans.id, id));
     return this.getPlanById(id);
+  }
+
+  async getSettings(): Promise<SiteSettingsData> {
+    const rows = await db.select().from(siteSettings);
+    const settings: SiteSettingsData = {
+      joinUrl: "",
+      substackUrl: "",
+      xUrl: "",
+      priceText: "",
+      footerText: "",
+      footerEnabled: false,
+    };
+    for (const row of rows) {
+      if (row.key === "joinUrl") settings.joinUrl = row.value || "";
+      if (row.key === "substackUrl") settings.substackUrl = row.value || "";
+      if (row.key === "xUrl") settings.xUrl = row.value || "";
+      if (row.key === "priceText") settings.priceText = row.value || "";
+      if (row.key === "footerText") settings.footerText = row.value || "";
+      if (row.key === "footerEnabled") settings.footerEnabled = row.value === "true";
+    }
+    return settings;
+  }
+
+  async updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {
+    const now = new Date();
+    const entries = Object.entries(data);
+    for (const [key, value] of entries) {
+      const stringValue = typeof value === "boolean" ? String(value) : (value || "");
+      const existing = await db.select().from(siteSettings).where(eq(siteSettings.key, key)).limit(1);
+      if (existing.length > 0) {
+        await db.update(siteSettings).set({ value: stringValue, updatedAt: now }).where(eq(siteSettings.key, key));
+      } else {
+        await db.insert(siteSettings).values({ key, value: stringValue, updatedAt: now });
+      }
+    }
+    return this.getSettings();
   }
 }
 

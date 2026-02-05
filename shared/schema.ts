@@ -44,6 +44,13 @@ export const publishLogs = pgTable("publish_logs", {
   responsePayload: text("response_payload"),
 });
 
+export const siteSettings = pgTable("site_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertPlanSchema = createInsertSchema(plans).omit({
   id: true,
   createdAt: true,
@@ -60,3 +67,14 @@ export type Plan = typeof plans.$inferSelect;
 
 export type InsertPublishLog = z.infer<typeof insertPublishLogSchema>;
 export type PublishLog = typeof publishLogs.$inferSelect;
+
+export type SiteSetting = typeof siteSettings.$inferSelect;
+
+export interface SiteSettingsData {
+  joinUrl: string;
+  substackUrl: string;
+  xUrl: string;
+  priceText: string;
+  footerText: string;
+  footerEnabled: boolean;
+}
