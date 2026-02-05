@@ -152,7 +152,13 @@ export async function registerRoutes(
       }
 
       const variant = (req.body.variant as string) || "pro";
-      const telegramMessage = variant === "free" ? formatTelegramFree(plan) : formatTelegramPro(plan);
+      let telegramMessage = variant === "free" ? formatTelegramFree(plan) : formatTelegramPro(plan);
+      
+      const settings = await storage.getSettings();
+      if (settings.footerEnabled && settings.footerText) {
+        const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
+        telegramMessage += "\n\n" + footer;
+      }
       
       try {
         const telegramResult = await sendTelegramMessage({
@@ -287,7 +293,13 @@ export async function registerRoutes(
           telegramMessageVariant: null
         });
 
-        const telegramMessage = isPro ? formatTelegramPro(plan) : formatTelegramFree(plan);
+        let telegramMessage = isPro ? formatTelegramPro(plan) : formatTelegramFree(plan);
+        
+        const settings = await storage.getSettings();
+        if (settings.footerEnabled && settings.footerText) {
+          const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
+          telegramMessage += "\n\n" + footer;
+        }
 
         try {
           const response = await sendTelegramMessage({
