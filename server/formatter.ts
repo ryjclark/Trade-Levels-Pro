@@ -29,8 +29,8 @@ export function formatTelegram(plan: Plan): string {
   const lines = [
     title,
     '',
-    `Magnet: ${formatNumber(plan.magnet)}`,
     `Dynamic Zone: ${formatNumber(plan.dynamicZoneBottom)} – ${formatNumber(plan.dynamicZoneTop)}`,
+    `Magnet: ${formatNumber(plan.magnet)}`,
     `Resistance: R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)} | R3 ${formatNumber(plan.r3)} | R4 ${formatNumber(plan.r4)}`,
     `Support: S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)} | S3 ${formatNumber(plan.s3)} | S4 ${formatNumber(plan.s4)}`,
     `Bias: ${plan.bias || ''}`,
