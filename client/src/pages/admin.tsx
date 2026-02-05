@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
-import { formatTelegram, formatSubstack } from "@/lib/formatter";
+import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro } from "@/lib/formatter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import { 
@@ -48,11 +48,12 @@ export default function AdminPage() {
   
   const [date, setDate] = useState(getTodayISO());
   const [symbol, setSymbol] = useState("ES");
-  const [copied, setCopied] = useState<"telegram" | "substack" | null>(null);
+  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | null>(null);
   
   const [formData, setFormData] = useState({
     id: null as number | null,
     contract: "",
+    tier: "pro",
     dynamicZoneTop: "",
     dynamicZoneBottom: "",
     magnet: "",
@@ -86,6 +87,7 @@ export default function AdminPage() {
       setFormData({
         id: plan.id,
         contract: plan.contract || "",
+        tier: plan.tier || "pro",
         dynamicZoneTop: plan.dynamicZoneTop?.toString() || "",
         dynamicZoneBottom: plan.dynamicZoneBottom?.toString() || "",
         magnet: plan.magnet?.toString() || "",
@@ -107,6 +109,7 @@ export default function AdminPage() {
       setFormData({
         id: null,
         contract: "",
+        tier: "pro",
         dynamicZoneTop: "",
         dynamicZoneBottom: "",
         magnet: "",
@@ -122,11 +125,12 @@ export default function AdminPage() {
   }, [plan, isLoading]);
 
   const saveMutation = useMutation({
-    mutationFn: async (action: "save" | "publish") => {
+    mutationFn: async (action: "save" | "publish_free" | "publish_pro") => {
       const payload = {
         ...formData,
         date,
         symbol,
+        action,
         dynamicZoneTop: formData.dynamicZoneTop ? parseFloat(formData.dynamicZoneTop) : null,
         dynamicZoneBottom: formData.dynamicZoneBottom ? parseFloat(formData.dynamicZoneBottom) : null,
         magnet: formData.magnet ? parseFloat(formData.magnet) : null,
@@ -140,16 +144,18 @@ export default function AdminPage() {
         s4: formData.s4 ? parseFloat(formData.s4) : null,
       };
       
-      const response = await apiRequest("POST", `/api/plans/${action}`, payload);
+      const response = await apiRequest("POST", "/api/plans/save", payload);
       return response.json();
     },
     onSuccess: (data, action) => {
       queryClient.invalidateQueries({ queryKey: ['/api/plans/lookup'] });
       queryClient.invalidateQueries({ queryKey: ['/api/plans'] });
+      const isPublish = action.startsWith("publish");
+      const variant = action === "publish_free" ? "FREE" : "PRO";
       toast({
-        title: action === "publish" ? "Published to Telegram" : "Draft Saved",
-        description: action === "publish" 
-          ? "Your trade plan has been sent to Telegram." 
+        title: isPublish ? `Published ${variant} to Telegram` : "Draft Saved",
+        description: isPublish 
+          ? `Your ${variant} trade plan has been sent to Telegram.` 
           : "Your draft has been saved successfully.",
       });
       refetch();
@@ -192,7 +198,7 @@ export default function AdminPage() {
     setLocation("/login");
   };
 
-  const handleCopy = async (type: "telegram" | "substack") => {
+  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro") => {
     const planPreview = {
       ...formData,
       date,
@@ -210,16 +216,28 @@ export default function AdminPage() {
       s4: formData.s4 ? parseFloat(formData.s4) : null,
     } as Plan;
     
-    const text = type === "telegram" 
-      ? formatTelegram(planPreview)
-      : formatSubstack(planPreview);
+    const formatters = {
+      telegramFree: formatTelegramFree,
+      telegramPro: formatTelegramPro,
+      substackFree: formatSubstackFree,
+      substackPro: formatSubstackPro
+    };
+    
+    const text = formatters[type](planPreview);
     
     await navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
+    
+    const labels = {
+      telegramFree: "Telegram Free",
+      telegramPro: "Telegram Pro", 
+      substackFree: "Substack Free",
+      substackPro: "Substack Pro"
+    };
     toast({
       title: "Copied",
-      description: `${type === "telegram" ? "Telegram" : "Substack"} version copied to clipboard.`,
+      description: `${labels[type]} version copied to clipboard.`,
     });
   };
 
@@ -531,16 +549,29 @@ export default function AdminPage() {
                         Save Draft
                       </Button>
                       <Button
-                        onClick={() => saveMutation.mutate("publish")}
+                        variant="outline"
+                        onClick={() => saveMutation.mutate("publish_free")}
                         disabled={saveMutation.isPending}
-                        data-testid="button-publish"
+                        data-testid="button-publish-free"
                       >
                         {saveMutation.isPending ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
                           <Send className="w-4 h-4 mr-2" />
                         )}
-                        Publish to Telegram
+                        Publish FREE
+                      </Button>
+                      <Button
+                        onClick={() => saveMutation.mutate("publish_pro")}
+                        disabled={saveMutation.isPending}
+                        data-testid="button-publish-pro"
+                      >
+                        {saveMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-2" />
+                        )}
+                        Publish PRO
                       </Button>
                     </div>
                   </>
@@ -553,14 +584,14 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Telegram Preview</CardTitle>
+                  <CardTitle className="text-base">Telegram Free Preview</CardTitle>
                   <Button 
                     size="sm" 
                     variant="ghost"
-                    onClick={() => handleCopy("telegram")}
-                    data-testid="button-copy-telegram"
+                    onClick={() => handleCopy("telegramFree")}
+                    data-testid="button-copy-telegram-free"
                   >
-                    {copied === "telegram" ? (
+                    {copied === "telegramFree" ? (
                       <Check className="w-4 h-4" />
                     ) : (
                       <Copy className="w-4 h-4" />
@@ -569,8 +600,8 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-telegram">
-                  {formatTelegram(planPreview)}
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-telegram-free">
+                  {formatTelegramFree(planPreview)}
                 </pre>
               </CardContent>
             </Card>
@@ -578,14 +609,14 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Substack Preview</CardTitle>
+                  <CardTitle className="text-base">Telegram Pro Preview</CardTitle>
                   <Button 
                     size="sm" 
                     variant="ghost"
-                    onClick={() => handleCopy("substack")}
-                    data-testid="button-copy-substack"
+                    onClick={() => handleCopy("telegramPro")}
+                    data-testid="button-copy-telegram-pro"
                   >
-                    {copied === "substack" ? (
+                    {copied === "telegramPro" ? (
                       <Check className="w-4 h-4" />
                     ) : (
                       <Copy className="w-4 h-4" />
@@ -594,8 +625,58 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-substack">
-                  {formatSubstack(planPreview)}
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-telegram-pro">
+                  {formatTelegramPro(planPreview)}
+                </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Substack Free Preview</CardTitle>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleCopy("substackFree")}
+                    data-testid="button-copy-substack-free"
+                  >
+                    {copied === "substackFree" ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-substack-free">
+                  {formatSubstackFree(planPreview)}
+                </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Substack Pro Preview</CardTitle>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleCopy("substackPro")}
+                    data-testid="button-copy-substack-pro"
+                  >
+                    {copied === "substackPro" ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-substack-pro">
+                  {formatSubstackPro(planPreview)}
                 </pre>
               </CardContent>
             </Card>

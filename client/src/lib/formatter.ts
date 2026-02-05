@@ -24,7 +24,7 @@ export function formatTitle(plan: Plan): string {
   return `${plan.symbol} Daily Trade Plan — ${datePart}${contract}`;
 }
 
-export function formatTelegram(plan: Plan): string {
+export function formatTelegramPro(plan: Plan): string {
   const title = formatTitle(plan);
   const lines = [
     title,
@@ -47,7 +47,23 @@ export function formatTelegram(plan: Plan): string {
   return lines.join('\n');
 }
 
-export function formatSubstack(plan: Plan): string {
+export function formatTelegramFree(plan: Plan): string {
+  const title = formatTitle(plan);
+  const lines = [
+    title,
+    '',
+    `Magnet: ${formatNumber(plan.magnet)}`,
+    `Dynamic Zone: ${formatNumber(plan.dynamicZoneBottom)} – ${formatNumber(plan.dynamicZoneTop)}`,
+    `Resistance: R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)}`,
+    `Support: S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)}`,
+    `Bias: ${plan.bias || ''}`
+  ];
+
+  lines.push('', 'Trade Smarter. React to Price. No Predictions.');
+  return lines.join('\n');
+}
+
+export function formatSubstackPro(plan: Plan): string {
   const title = formatTitle(plan);
   const lines = [
     `# ${title}`,
@@ -71,10 +87,37 @@ export function formatSubstack(plan: Plan): string {
   return lines.join('\n');
 }
 
+export function formatSubstackFree(plan: Plan): string {
+  const title = formatTitle(plan);
+  const lines = [
+    `# ${title}`,
+    '',
+    `**Magnet:** ${formatNumber(plan.magnet)}`,
+    `**Dynamic Zone:** ${formatNumber(plan.dynamicZoneBottom)} – ${formatNumber(plan.dynamicZoneTop)}`,
+    `**Resistance:** R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)}`,
+    `**Support:** S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)}`,
+    `**Bias:** ${plan.bias || ''}`,
+    '',
+    'Trade Smarter. React to Price. No Predictions.'
+  ];
+
+  return lines.join('\n');
+}
+
+export function formatTelegram(plan: Plan): string {
+  return formatTelegramPro(plan);
+}
+
+export function formatSubstack(plan: Plan): string {
+  return formatSubstackPro(plan);
+}
+
 export function formatAll(plan: Plan) {
   return {
     title: formatTitle(plan),
-    telegram: formatTelegram(plan),
-    substack: formatSubstack(plan)
+    telegramPro: formatTelegramPro(plan),
+    telegramFree: formatTelegramFree(plan),
+    substackPro: formatSubstackPro(plan),
+    substackFree: formatSubstackFree(plan)
   };
 }
