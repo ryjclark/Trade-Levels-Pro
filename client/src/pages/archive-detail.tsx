@@ -68,11 +68,15 @@ export default function ArchiveDetailPage() {
   });
 
   const republishMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (variant: "free" | "pro") => {
       const token = getToken();
       const response = await fetch(`/api/plans/${params.id}/republish`, {
         method: "POST",
-        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ variant })
       });
       if (!response.ok) {
         const data = await response.json();
@@ -80,12 +84,13 @@ export default function ArchiveDetailPage() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variant) => {
       queryClient.invalidateQueries({ queryKey: ['/api/plans', params.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/plans', params.id, 'logs'] });
+      const tierLabel = variant === "free" ? "FREE" : "PRO";
       toast({
-        title: "Published to Telegram",
-        description: "Your trade plan has been sent to Telegram."
+        title: `Published ${tierLabel} to Telegram`,
+        description: `Your ${tierLabel} trade plan has been sent to Telegram.`
       });
     },
     onError: (error: Error) => {
@@ -189,18 +194,33 @@ export default function ArchiveDetailPage() {
           </Button>
           
           {plan && (
-            <Button
-              onClick={() => republishMutation.mutate()}
-              disabled={republishMutation.isPending}
-              data-testid="button-republish"
-            >
-              {republishMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 mr-2" />
-              )}
-              Send to Telegram
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => republishMutation.mutate("free")}
+                disabled={republishMutation.isPending}
+                data-testid="button-republish-free"
+              >
+                {republishMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Send FREE
+              </Button>
+              <Button
+                onClick={() => republishMutation.mutate("pro")}
+                disabled={republishMutation.isPending}
+                data-testid="button-republish-pro"
+              >
+                {republishMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Send PRO
+              </Button>
+            </div>
           )}
         </div>
 
@@ -230,17 +250,27 @@ export default function ArchiveDetailPage() {
                       {plan.bias && `Bias: ${plan.bias}`}
                     </p>
                   </div>
-                  <Badge 
-                    variant={plan.status === "published" ? "default" : "secondary"}
-                    data-testid="badge-status"
-                  >
-                    {plan.status === "published" ? (
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                    ) : (
-                      <AlertCircle className="w-3 h-3 mr-1" />
+                  <div className="flex items-center gap-2">
+                    {plan.telegramMessageVariant && (
+                      <Badge 
+                        variant="outline"
+                        data-testid="badge-tier"
+                      >
+                        {plan.telegramMessageVariant.toUpperCase()}
+                      </Badge>
                     )}
-                    {plan.status}
-                  </Badge>
+                    <Badge 
+                      variant={plan.status === "published" ? "default" : "secondary"}
+                      data-testid="badge-status"
+                    >
+                      {plan.status === "published" ? (
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                      ) : (
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                      )}
+                      {plan.status}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -443,6 +473,11 @@ export default function ArchiveDetailPage() {
                             <Badge variant={log.status === "success" ? "default" : "destructive"}>
                               {log.status}
                             </Badge>
+                            {log.variant && (
+                              <Badge variant="outline">
+                                {log.variant.toUpperCase()}
+                              </Badge>
+                            )}
                             <span className="text-sm">{log.destination}</span>
                           </div>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
