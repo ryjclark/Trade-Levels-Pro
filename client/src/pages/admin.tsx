@@ -559,29 +559,16 @@ export default function AdminPage() {
                         Save Draft
                       </Button>
                       <Button
-                        variant="outline"
-                        onClick={() => saveMutation.mutate("publish_free")}
-                        disabled={saveMutation.isPending}
-                        data-testid="button-publish-free"
-                      >
-                        {saveMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4 mr-2" />
-                        )}
-                        Publish FREE
-                      </Button>
-                      <Button
                         onClick={() => saveMutation.mutate("publish_pro")}
                         disabled={saveMutation.isPending}
-                        data-testid="button-publish-pro"
+                        data-testid="button-publish"
                       >
                         {saveMutation.isPending ? (
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
                           <Send className="w-4 h-4 mr-2" />
                         )}
-                        Publish PRO
+                        Publish to Telegram
                       </Button>
                     </div>
                   </>
@@ -594,37 +581,12 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Telegram Free Preview</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleCopy("telegramFree")}
-                    data-testid="button-copy-telegram-free"
-                  >
-                    {copied === "telegramFree" ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-telegram-free">
-                  {formatTelegramFree(planPreview)}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Telegram Pro Preview</CardTitle>
+                  <CardTitle className="text-base">Telegram Preview</CardTitle>
                   <Button 
                     size="sm" 
                     variant="ghost"
                     onClick={() => handleCopy("telegramPro")}
-                    data-testid="button-copy-telegram-pro"
+                    data-testid="button-copy-telegram"
                   >
                     {copied === "telegramPro" ? (
                       <Check className="w-4 h-4" />
@@ -635,7 +597,7 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-telegram-pro">
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-telegram">
                   {formatTelegramPro(planPreview)}
                 </pre>
               </CardContent>
@@ -644,37 +606,12 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Substack Free Preview</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleCopy("substackFree")}
-                    data-testid="button-copy-substack-free"
-                  >
-                    {copied === "substackFree" ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-substack-free">
-                  {formatSubstackFree(planPreview)}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Substack Pro Preview</CardTitle>
+                  <CardTitle className="text-base">Substack Preview</CardTitle>
                   <Button 
                     size="sm" 
                     variant="ghost"
                     onClick={() => handleCopy("substackPro")}
-                    data-testid="button-copy-substack-pro"
+                    data-testid="button-copy-substack"
                   >
                     {copied === "substackPro" ? (
                       <Check className="w-4 h-4" />
@@ -685,7 +622,7 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-substack-pro">
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-substack">
                   {formatSubstackPro(planPreview)}
                 </pre>
               </CardContent>
