@@ -30,7 +30,8 @@ import {
   Calendar,
   Target,
   TrendingDown,
-  Activity
+  Activity,
+  Settings
 } from "lucide-react";
 
 function getTodayISO() {
@@ -354,6 +355,15 @@ export default function AdminPage() {
                   >
                     <Archive className="w-4 h-4 mr-2" />
                     View Archive
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setLocation("/admin/settings")}
+                    data-testid="link-settings"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
                   </Button>
                 </CardContent>
               </Card>

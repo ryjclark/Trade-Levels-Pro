@@ -9,6 +9,11 @@ import LoginPage from "@/pages/login";
 import AdminPage from "@/pages/admin";
 import ArchivePage from "@/pages/archive";
 import ArchiveDetailPage from "@/pages/archive-detail";
+import SettingsPage from "@/pages/settings";
+import PublicHomePage from "@/pages/public-home";
+import PublicPricingPage from "@/pages/public-pricing";
+import PublicTrackRecordPage from "@/pages/public-trackrecord";
+import PublicAboutPage from "@/pages/public-about";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -51,14 +56,18 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
 function Router() {
   return (
     <Switch>
-      <Route path="/">
-        <Redirect to="/admin" />
-      </Route>
+      <Route path="/" component={PublicHomePage} />
+      <Route path="/pricing" component={PublicPricingPage} />
+      <Route path="/trackrecord" component={PublicTrackRecordPage} />
+      <Route path="/about" component={PublicAboutPage} />
       <Route path="/login">
         <PublicRoute component={LoginPage} />
       </Route>
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />
+      </Route>
+      <Route path="/admin/settings">
+        <ProtectedRoute component={SettingsPage} />
       </Route>
       <Route path="/archive">
         <ProtectedRoute component={ArchivePage} />
