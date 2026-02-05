@@ -18,6 +18,12 @@ export default function PublicSubscribePage() {
 
   const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
+  const handleSubscribe = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="public-page">
       <div className="public-container">
@@ -36,9 +42,9 @@ export default function PublicSubscribePage() {
             <div className="public-pill">Get Started</div>
             <h1>Subscribe Now</h1>
             <p className="public-hero-subtitle">
-              Get daily ES/NQ trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis delivered to your private Telegram channel.
+              Get daily ES trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis delivered to your private Telegram channel.
             </p>
-            <p className="public-price-text">{settings?.priceText || "$20/month"}</p>
+            <p className="public-price-text">$20/month</p>
           </div>
         </section>
 
@@ -49,7 +55,7 @@ export default function PublicSubscribePage() {
               <div className="subscribe-features">
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
-                  <span>Daily ES & NQ trade plans</span>
+                  <span>Daily ES trade plans</span>
                 </div>
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
@@ -87,15 +93,13 @@ export default function PublicSubscribePage() {
                 <div className="subscribe-price-label">Monthly Subscription</div>
                 <div className="subscribe-price-amount">$20/month</div>
                 <p className="subscribe-price-desc">Full access to all daily trade plans and levels</p>
-                <a
-                  href={paymentUrl}
+                <button
+                  onClick={handleSubscribe}
                   className="subscribe-button"
-                  target="_blank"
-                  rel="noopener noreferrer"
                   data-testid="button-subscribe-main"
                 >
                   Subscribe & Join Telegram
-                </a>
+                </button>
                 <p className="subscribe-secure-text">Secure payment via InviteMember</p>
               </div>
 

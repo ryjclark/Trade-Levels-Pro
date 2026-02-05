@@ -18,6 +18,12 @@ export default function PublicHomePage() {
 
   const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
+  const handleSubscribe = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="public-page">
       <div className="public-container">
@@ -33,15 +39,15 @@ export default function PublicHomePage() {
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <div className="public-pill">Daily ES/NQ Trade Plans</div>
+            <div className="public-pill">Daily ES Trade Plans</div>
             <h1>Trade Levels Pro</h1>
             <p className="public-hero-subtitle">
-              Professional daily trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis for ES and NQ futures.
+              Professional daily trade plans with Dynamic Zone, Magnet levels, and Support/Resistance analysis for ES futures.
             </p>
             <p className="public-price-text">$20/month</p>
-            <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
+            <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
               Subscribe Now →
-            </a>
+            </button>
           </div>
           <div className="public-hero-image">
             <img src="/images/hero-trading.jpg" alt="Trading charts" />
@@ -107,9 +113,9 @@ export default function PublicHomePage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
-          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-get-started">
+          <button onClick={handleSubscribe} className="public-cta" data-testid="button-get-started">
             Get Started Today →
-          </a>
+          </button>
         </section>
 
         <footer className="public-footer">

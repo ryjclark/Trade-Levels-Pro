@@ -18,6 +18,12 @@ export default function PublicPricingPage() {
 
   const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
+  const handleSubscribe = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="public-page">
       <div className="public-container">
@@ -39,16 +45,16 @@ export default function PublicPricingPage() {
               One straightforward subscription. Full access to daily trade plans.
             </p>
             <p className="public-price-text">$20/month</p>
-            <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
+            <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
               Subscribe Now →
-            </a>
+            </button>
           </div>
         </section>
 
         <section className="public-section">
           <div className="public-info-box">
             <h2>Frequently Asked Questions</h2>
-            <p><strong>What is included?</strong><br />Daily ES/NQ levels, directional bias, and actionable setups posted after market close.</p>
+            <p><strong>What is included?</strong><br />Daily ES levels, directional bias, and actionable setups posted after market close.</p>
             <p><strong>When is it posted?</strong><br />Trade plans are published after market close on trading days.</p>
             <p><strong>Is this financial advice?</strong><br />No. This is for educational purposes only. Always do your own research.</p>
             <p><strong>Can I cancel?</strong><br />Yes, you can cancel anytime via InviteMember.</p>
@@ -61,9 +67,9 @@ export default function PublicPricingPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Get daily levels and trade plans delivered straight to your Telegram.
           </p>
-          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-join-now">
+          <button onClick={handleSubscribe} className="public-cta" data-testid="button-join-now">
             Join Now →
-          </a>
+          </button>
         </section>
 
         <footer className="public-footer">

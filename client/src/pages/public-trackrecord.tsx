@@ -18,6 +18,12 @@ export default function PublicTrackRecordPage() {
 
   const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
+  const handleSubscribe = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="public-page">
       <div className="public-container">
@@ -36,7 +42,7 @@ export default function PublicTrackRecordPage() {
             <div className="public-pill">Performance</div>
             <h1>Track Record</h1>
             <p className="public-hero-subtitle">
-              Historical performance and level accuracy for ES and NQ trade plans.
+              Historical performance and level accuracy for ES trade plans.
             </p>
           </div>
         </section>
@@ -57,9 +63,9 @@ export default function PublicTrackRecordPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join now and experience professional-grade trade plans daily.
           </p>
-          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
+          <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
             Subscribe Now →
-          </a>
+          </button>
         </section>
 
         <footer className="public-footer">

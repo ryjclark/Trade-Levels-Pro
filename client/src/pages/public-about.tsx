@@ -18,6 +18,12 @@ export default function PublicAboutPage() {
 
   const paymentUrl = settings?.joinUrl || PAYMENT_URL;
 
+  const handleSubscribe = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(paymentUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="public-page">
       <div className="public-container">
@@ -44,7 +50,7 @@ export default function PublicAboutPage() {
         <section className="public-section">
           <div className="public-info-box">
             <h2>Our Approach</h2>
-            <p>Trade Levels Pro delivers a daily trade plan focused on Dynamic Zones, Magnet levels, and clear support/resistance analysis for ES and NQ futures.</p>
+            <p>Trade Levels Pro delivers a daily trade plan focused on Dynamic Zones, Magnet levels, and clear support/resistance analysis for ES futures.</p>
             <p>Each plan includes the directional bias and top setups for the day, giving you a clear framework for your trading decisions.</p>
           </div>
         </section>
@@ -70,9 +76,9 @@ export default function PublicAboutPage() {
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
             Join traders who use professional-grade levels every day.
           </p>
-          <a href={paymentUrl} className="public-cta" target="_blank" rel="noopener noreferrer" data-testid="button-subscribe">
+          <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
             Subscribe Now →
-          </a>
+          </button>
         </section>
 
         <footer className="public-footer">
