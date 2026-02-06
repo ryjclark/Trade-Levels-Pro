@@ -10,13 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
-import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro, formatMiddayUpdate } from "@/lib/formatter";
+import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro, formatMiddayUpdate, formatXPost } from "@/lib/formatter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import { 
-  TrendingUp, 
   LogOut, 
   Save, 
   Send, 
@@ -29,6 +27,7 @@ import {
   Loader2,
   Calendar,
   Target,
+  TrendingUp,
   TrendingDown,
   Activity,
   Settings
@@ -49,7 +48,7 @@ export default function AdminPage() {
   
   const [date, setDate] = useState(getTodayISO());
   const [symbol, setSymbol] = useState("ES");
-  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | null>(null);
+  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | "xPost" | null>(null);
   
   const [formData, setFormData] = useState({
     id: null as number | null,
@@ -199,7 +198,7 @@ export default function AdminPage() {
     setLocation("/login");
   };
 
-  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate") => {
+  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | "xPost") => {
     const planPreview = {
       ...formData,
       date,
@@ -217,15 +216,19 @@ export default function AdminPage() {
       s4: formData.s4 ? parseFloat(formData.s4) : null,
     } as Plan;
     
-    const formatters = {
-      telegramFree: formatTelegramFree,
-      telegramPro: formatTelegramPro,
-      substackFree: formatSubstackFree,
-      substackPro: formatSubstackPro,
-      middayUpdate: formatMiddayUpdate
-    };
-    
-    const text = formatters[type](planPreview);
+    let text: string;
+    if (type === "xPost") {
+      text = formatXPost(planPreview);
+    } else {
+      const formatters = {
+        telegramFree: formatTelegramFree,
+        telegramPro: formatTelegramPro,
+        substackFree: formatSubstackFree,
+        substackPro: formatSubstackPro,
+        middayUpdate: formatMiddayUpdate
+      };
+      text = formatters[type](planPreview);
+    }
     
     await navigator.clipboard.writeText(text);
     setCopied(type);
@@ -236,7 +239,8 @@ export default function AdminPage() {
       telegramPro: "Telegram Pro", 
       substackFree: "Substack Free",
       substackPro: "Substack Pro",
-      middayUpdate: "Midday Update"
+      middayUpdate: "Midday Update",
+      xPost: "X Post"
     };
     toast({
       title: "Copied",
@@ -265,25 +269,26 @@ export default function AdminPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const xPostText = formatXPost(planPreview);
+  const xPostLength = xPostText.length;
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="min-h-screen" style={{ background: '#0c1117' }}>
+      <header className="sticky top-0 z-50 border-b border-white/10" style={{ background: 'rgba(12, 17, 23, 0.95)', backdropFilter: 'blur(8px)' }}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-              <TrendingUp className="w-5 h-5 text-primary" />
-            </div>
+            <img src="/images/logo-square.webp" alt="Trade Levels Pro" className="w-9 h-9 rounded-lg object-cover" />
             <div>
-              <h1 className="text-lg font-semibold">Trade Levels Pro</h1>
-              <p className="text-xs text-muted-foreground">Daily Plan Admin</p>
+              <h1 className="text-lg font-semibold text-white">Trade Levels Pro</h1>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Admin Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={handleLogout}
+              className="text-white/70"
               data-testid="button-logout"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -602,6 +607,39 @@ export default function AdminPage() {
                 <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-midday">
                   {formatMiddayUpdate(planPreview)}
                 </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">X (Twitter) Post</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-mono ${xPostLength > 280 ? 'text-destructive font-semibold' : 'text-muted-foreground'}`} data-testid="text-xpost-count">
+                      {xPostLength}/280
+                    </span>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleCopy("xPost")}
+                      data-testid="button-copy-xpost"
+                    >
+                      {copied === "xPost" ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <pre className={`text-xs font-mono whitespace-pre-wrap p-3 rounded-lg max-h-48 overflow-auto ${xPostLength > 280 ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted'}`} data-testid="preview-xpost">
+                  {xPostText}
+                </pre>
+                {xPostLength > 280 && (
+                  <p className="text-xs text-destructive mt-2" data-testid="text-xpost-warning">Over 280 character limit by {xPostLength - 280} characters</p>
+                )}
               </CardContent>
             </Card>
 

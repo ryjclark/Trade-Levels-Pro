@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Lock, TrendingUp, AlertCircle } from "lucide-react";
+import { Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function LoginPage() {
@@ -35,14 +35,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: '#0c1117' }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <TrendingUp className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Trade Levels Pro</h1>
-          <p className="text-muted-foreground mt-2">Daily ES Trade Plan System</p>
+          <img src="/images/logo-square.webp" alt="Trade Levels Pro" className="w-16 h-16 rounded-lg object-cover mx-auto mb-4" />
+          <h1 className="text-3xl font-bold tracking-tight text-white">Trade Levels Pro</h1>
+          <p className="mt-2" style={{ color: 'rgba(255,255,255,0.5)' }}>Daily ES Trade Plan System</p>
         </div>
 
         <Card>

@@ -140,6 +140,29 @@ export function formatMiddayUpdate(plan: Plan): string {
   return lines.join('\n');
 }
 
+export function formatXPost(plan: Plan, ctaUrl?: string): string {
+  const datePart = formatDateTelegram(plan.date);
+  const url = ctaUrl || 'https://tradelevelspro.com';
+  const lines: string[] = [
+    `${plan.symbol} Daily Plan \u2014 ${datePart}`
+  ];
+
+  if (plan.magnet != null) {
+    lines.push(`Magnet: ${formatNumber(plan.magnet)}`);
+  }
+
+  if (plan.dynamicZoneBottom != null && plan.dynamicZoneTop != null) {
+    lines.push(`DZ: ${formatNumber(plan.dynamicZoneBottom)}\u2013${formatNumber(plan.dynamicZoneTop)}`);
+  }
+
+  if (plan.bias) {
+    lines.push(`Bias: ${plan.bias}`);
+  }
+
+  lines.push(`Full plan: ${url}`);
+  return lines.join('\n');
+}
+
 export function formatTelegram(plan: Plan): string {
   return formatTelegramPro(plan);
 }

@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { SiteSettingsData } from "@shared/schema";
@@ -59,36 +58,26 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0c1117' }}>
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/admin">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold">Settings</h1>
+    <div className="min-h-screen" style={{ background: '#0c1117' }}>
+      <header className="sticky top-0 z-50 border-b border-white/10" style={{ background: 'rgba(12, 17, 23, 0.95)', backdropFilter: 'blur(8px)' }}>
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link href="/admin"><Button variant="ghost" size="icon" data-testid="button-back" className="text-white/70"><ArrowLeft className="w-5 h-5" /></Button></Link>
+            <div>
+              <h1 className="text-lg font-semibold text-white">Settings</h1>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Trade Levels Pro</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/admin">
-              <Button variant="outline" size="sm" data-testid="link-admin">
-                Admin
-              </Button>
-            </Link>
-            <Link href="/archive">
-              <Button variant="outline" size="sm" data-testid="link-archive">
-                Archive
-              </Button>
-            </Link>
-            <ThemeToggle />
+            <Link href="/admin"><Button variant="outline" size="sm" data-testid="link-admin" className="text-white/70 border-white/20">Admin</Button></Link>
+            <Link href="/archive"><Button variant="outline" size="sm" data-testid="link-archive" className="text-white/70 border-white/20">Archive</Button></Link>
           </div>
         </div>
       </header>

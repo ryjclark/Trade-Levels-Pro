@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -18,7 +17,6 @@ import { queryClient } from "@/lib/queryClient";
 import type { Plan, PublishLog } from "@shared/schema";
 import { useState } from "react";
 import { 
-  TrendingUp, 
   LogOut, 
   ArrowLeft,
   CheckCircle2,
@@ -26,6 +24,7 @@ import {
   Copy,
   Check,
   Target,
+  TrendingUp,
   TrendingDown,
   Activity,
   Clock,
@@ -154,26 +153,18 @@ export default function ArchiveDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="min-h-screen" style={{ background: '#0c1117' }}>
+      <header className="sticky top-0 z-50 border-b border-white/10" style={{ background: 'rgba(12, 17, 23, 0.95)', backdropFilter: 'blur(8px)' }}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-              <TrendingUp className="w-5 h-5 text-primary" />
-            </div>
+            <img src="/images/logo-square.webp" alt="Trade Levels Pro" className="w-9 h-9 rounded-lg object-cover" />
             <div>
-              <h1 className="text-lg font-semibold">Trade Levels Pro</h1>
-              <p className="text-xs text-muted-foreground">Plan Details</p>
+              <h1 className="text-lg font-semibold text-white">Trade Levels Pro</h1>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Plan Details</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleLogout}
-              data-testid="button-logout"
-            >
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/70" data-testid="button-logout">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
