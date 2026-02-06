@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
-import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro } from "@/lib/formatter";
+import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro, formatMiddayUpdate } from "@/lib/formatter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import { 
@@ -49,7 +49,7 @@ export default function AdminPage() {
   
   const [date, setDate] = useState(getTodayISO());
   const [symbol, setSymbol] = useState("ES");
-  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | null>(null);
+  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | null>(null);
   
   const [formData, setFormData] = useState({
     id: null as number | null,
@@ -199,7 +199,7 @@ export default function AdminPage() {
     setLocation("/login");
   };
 
-  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro") => {
+  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate") => {
     const planPreview = {
       ...formData,
       date,
@@ -221,7 +221,8 @@ export default function AdminPage() {
       telegramFree: formatTelegramFree,
       telegramPro: formatTelegramPro,
       substackFree: formatSubstackFree,
-      substackPro: formatSubstackPro
+      substackPro: formatSubstackPro,
+      middayUpdate: formatMiddayUpdate
     };
     
     const text = formatters[type](planPreview);
@@ -234,7 +235,8 @@ export default function AdminPage() {
       telegramFree: "Telegram Free",
       telegramPro: "Telegram Pro", 
       substackFree: "Substack Free",
-      substackPro: "Substack Pro"
+      substackPro: "Substack Pro",
+      middayUpdate: "Midday Update"
     };
     toast({
       title: "Copied",
@@ -578,6 +580,31 @@ export default function AdminPage() {
           </div>
 
           <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Midday Update</CardTitle>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => handleCopy("middayUpdate")}
+                    data-testid="button-copy-midday"
+                  >
+                    {copied === "middayUpdate" ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-midday">
+                  {formatMiddayUpdate(planPreview)}
+                </pre>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">

@@ -104,6 +104,42 @@ export function formatSubstackFree(plan: Plan): string {
   return lines.join('\n');
 }
 
+function formatDateTelegram(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+export function formatMiddayUpdate(plan: Plan): string {
+  const datePart = formatDateTelegram(plan.date);
+  const lines: string[] = [
+    `\u{1F4CD} Midday Update \u2014 ${plan.symbol} \u2014 ${datePart}`
+  ];
+
+  if (plan.magnet != null) {
+    lines.push('', `\u{1F3AF} Magnet: ${formatNumber(plan.magnet)}`);
+  }
+
+  if (plan.dynamicZoneBottom != null && plan.dynamicZoneTop != null) {
+    lines.push(`\u{1F4C8} Dynamic Zone: ${formatNumber(plan.dynamicZoneBottom)}\u2013${formatNumber(plan.dynamicZoneTop)}`);
+  }
+
+  if (plan.bias) {
+    lines.push(`\u{1F9ED} Bias: ${plan.bias}`);
+  }
+
+  if (plan.notes) {
+    lines.push(`\u{1F4DD} Notes: ${plan.notes}`);
+  }
+
+  lines.push('', 'Full plan after close.');
+  return lines.join('\n');
+}
+
 export function formatTelegram(plan: Plan): string {
   return formatTelegramPro(plan);
 }
