@@ -1,0 +1,137 @@
+function formatNumber(value) {
+  if (value === null || value === undefined) return '';
+  const num = Number(value);
+  if (Number.isNaN(num)) return '';
+  return num.toString();
+}
+
+function formatDateTitle(dateStr) {
+  const date = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function formatDateTelegram(dateStr) {
+  const date = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+function formatTitle(plan) {
+  const datePart = formatDateTitle(plan.date);
+  const contract = plan.contract ? ` (${plan.contract})` : '';
+  return `${plan.symbol} Daily Trade Plan — ${datePart}${contract}`;
+}
+
+function formatTelegramHeader(plan) {
+  const datePart = formatDateTelegram(plan.date);
+  const contract = plan.contract ? ` (${plan.contract})` : '';
+  return `📊 ${plan.symbol} Daily Trade Plan — ${datePart}${contract}`;
+}
+
+function formatTelegramPro(plan) {
+  const header = formatTelegramHeader(plan);
+  const lines = [
+    header,
+    '',
+    '🧭 Bias',
+    `${plan.bias}`,
+    '',
+    '📈 Dynamic Zone',
+    `${formatNumber(plan.dynamic_zone_bottom)} – ${formatNumber(plan.dynamic_zone_top)}`,
+    '',
+    '🎯 Magnet',
+    `${formatNumber(plan.magnet)}`,
+    '',
+    '🟥 Resistance',
+    `R1: ${formatNumber(plan.r1)} | R2: ${formatNumber(plan.r2)} | R3: ${formatNumber(plan.r3)} | R4: ${formatNumber(plan.r4)}`,
+    '',
+    '🟩 Support',
+    `S1: ${formatNumber(plan.s1)} | S2: ${formatNumber(plan.s2)} | S3: ${formatNumber(plan.s3)} | S4: ${formatNumber(plan.s4)}`,
+    '',
+    '⚡ Best Setups',
+    `• ${plan.setup_1}`,
+    `• ${plan.setup_2}`
+  ];
+
+  if (plan.notes) {
+    lines.push('', '📝 Notes', `${plan.notes}`);
+  }
+
+  lines.push('', '—', 'Trade Smarter. React to Price. No Predictions.');
+  return lines.join('\n');
+}
+
+function formatTelegramFree(plan) {
+  // keep compatibility — same premium format
+  return formatTelegramPro(plan);
+}
+
+function formatSubstackPro(plan) {
+  const title = formatTitle(plan);
+  const lines = [
+    `# ${title}`,
+    '',
+    `**Bias:** ${plan.bias}`,
+    `**Dynamic Zone:** ${formatNumber(plan.dynamic_zone_bottom)} – ${formatNumber(plan.dynamic_zone_top)}`,
+    `**Magnet:** ${formatNumber(plan.magnet)}`,
+    `**Resistance:** R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)} | R3 ${formatNumber(plan.r3)} | R4 ${formatNumber(plan.r4)}`,
+    `**Support:** S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)} | S3 ${formatNumber(plan.s3)} | S4 ${formatNumber(plan.s4)}`,
+    '',
+    '**Best Setups:**',
+    `- ${plan.setup_1}`,
+    `- ${plan.setup_2}`
+  ];
+
+  if (plan.notes) {
+    lines.push('', `**Notes:** ${plan.notes}`);
+  }
+
+  lines.push('', 'Trade Smarter. React to Price. No Predictions.');
+  return lines.join('\n');
+}
+
+function formatSubstackFree(plan) {
+  const title = formatTitle(plan);
+  const lines = [
+    `# ${title}`,
+    '',
+    `**Bias:** ${plan.bias}`,
+    `**Dynamic Zone:** ${formatNumber(plan.dynamic_zone_bottom)} – ${formatNumber(plan.dynamic_zone_top)}`,
+    `**Magnet:** ${formatNumber(plan.magnet)}`,
+    `**Resistance:** R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)}`,
+    `**Support:** S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)}`,
+    '',
+    'Trade Smarter. React to Price. No Predictions.'
+  ];
+
+  return lines.join('\n');
+}
+
+function formatAll(plan) {
+  return {
+    title: formatTitle(plan),
+    telegramPro: formatTelegramPro(plan),
+    telegramFree: formatTelegramFree(plan),
+    substackPro: formatSubstackPro(plan),
+    substackFree: formatSubstackFree(plan)
+  };
+}
+
+module.exports = {
+  formatAll,
+  formatTelegramPro,
+  formatTelegramFree,
+  formatSubstackPro,
+  formatSubstackFree,
+  formatTitle
+};

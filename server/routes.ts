@@ -197,7 +197,8 @@ export async function registerRoutes(
         res.status(500).json({ error: errorMsg });
       }
     } catch (error) {
-      res.status(500).json({ error: "Failed to republish plan" });
+      console.error("Republish error:", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to republish plan" });
     }
   });
 
