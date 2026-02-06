@@ -227,8 +227,10 @@ export async function registerRoutes(
 
   app.post("/api/plans/save", requireAdmin, async (req, res) => {
     try {
+      console.log("POST /api/plans/save - action:", req.body?.action);
       const parsed = savePlanSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.error("Validation error:", parsed.error.errors);
         return res.status(400).json({ error: "Invalid plan data", details: parsed.error.errors });
       }
 
@@ -242,7 +244,7 @@ export async function registerRoutes(
         const requiredFields = isPro ? [
           "date", "symbol", "dynamicZoneTop", "dynamicZoneBottom",
           "magnet", "r1", "r2", "r3", "r4", "s1", "s2", "s3", "s4",
-          "bias", "setup1", "setup2"
+          "bias"
         ] : [
           "date", "symbol", "dynamicZoneTop", "dynamicZoneBottom",
           "magnet", "r1", "r2", "s1", "s2", "bias"
@@ -251,6 +253,7 @@ export async function registerRoutes(
         for (const field of requiredFields) {
           const value = data[field as keyof typeof data];
           if (value === null || value === undefined || value === "") {
+            console.error(`Missing required field: ${field}`, { value });
             return res.status(400).json({ error: `Missing required field: ${field}` });
           }
         }
@@ -330,6 +333,7 @@ export async function registerRoutes(
 
           res.json(plan);
         } catch (telegramError: any) {
+          console.error("Telegram send error:", telegramError.message);
           await storage.insertPublishLog({
             planId: plan.id,
             destination: "telegram",
@@ -391,12 +395,13 @@ export async function registerRoutes(
       const requiredFields = [
         "date", "symbol", "dynamicZoneTop", "dynamicZoneBottom",
         "magnet", "r1", "r2", "r3", "r4", "s1", "s2", "s3", "s4",
-        "bias", "setup1", "setup2"
+        "bias"
       ];
 
       for (const field of requiredFields) {
         const value = data[field as keyof typeof data];
         if (value === null || value === undefined || value === "") {
+          console.error(`Publish: Missing required field: ${field}`);
           return res.status(400).json({ error: `Missing required field: ${field}` });
         }
       }
