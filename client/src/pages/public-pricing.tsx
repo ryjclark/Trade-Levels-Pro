@@ -43,7 +43,7 @@ export default function PublicPricingPage() {
             <div className="pricing-features">
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
-                <span>Daily ES & NQ Trade Plans</span>
+                <span>Daily ES Trade Plans</span>
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
@@ -83,19 +83,23 @@ export default function PublicPricingPage() {
           <div className="faq-list">
             <div className="faq-item">
               <h3 className="faq-question">Is this for beginners?</h3>
-              <p className="faq-answer">This service is best for traders who already understand basic futures trading and want a structured daily framework.</p>
+              <p className="faq-answer">Yes. Trade Levels Pro is designed for all experience levels. We provide key price levels and context that help you understand where the market may react — so whether you're just starting out or have years of experience, you'll learn to trade with structure instead of guessing.</p>
             </div>
             <div className="faq-item">
-              <h3 className="faq-question">Do you give buy/sell signals?</h3>
-              <p className="faq-answer">No. We provide levels, structure, and scenarios so you can execute according to your own plan.</p>
+              <h3 className="faq-question">Is this an alert or signal service?</h3>
+              <p className="faq-answer">No. We don't send buy/sell alerts. Instead, we provide daily levels, zones, and market context so you can build your own plan and make your own trading decisions. This is about learning to trade with structure — not following someone else's calls.</p>
             </div>
             <div className="faq-item">
-              <h3 className="faq-question">Can I cancel anytime?</h3>
-              <p className="faq-answer">Yes. There are no contracts or long-term commitments.</p>
+              <h3 className="faq-question">What exactly do I get each day?</h3>
+              <p className="faq-answer">Every trading day you receive a complete plan with Dynamic Zones, a Magnet level, support and resistance levels (S1-S4, R1-R4), the daily market bias, and 1-2 high-probability trade setups. These levels help you know where price is likely to react before the session even starts.</p>
             </div>
             <div className="faq-item">
               <h3 className="faq-question">When are plans posted?</h3>
-              <p className="faq-answer">Plans are published after market close for the following trading session.</p>
+              <p className="faq-answer">Plans are published after market close for the following trading session, so you're always prepared before the market opens.</p>
+            </div>
+            <div className="faq-item">
+              <h3 className="faq-question">Can I cancel anytime?</h3>
+              <p className="faq-answer">Yes. There are no contracts or long-term commitments. Cancel anytime with one click.</p>
             </div>
           </div>
         </section>

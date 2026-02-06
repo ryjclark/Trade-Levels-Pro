@@ -30,7 +30,7 @@ export default function PublicTrackRecordPage() {
           <div className="public-hero-content">
             <h1>Track Record</h1>
             <p className="public-hero-subtitle">
-              Historical performance and level accuracy for ES & NQ trade plans.
+              Historical performance and level accuracy for ES trade plans.
             </p>
           </div>
         </section>

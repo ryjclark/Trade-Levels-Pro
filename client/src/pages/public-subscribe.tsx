@@ -30,7 +30,7 @@ export default function PublicSubscribePage() {
           <div className="public-hero-content">
             <h1>Get <span className="accent">Instant Access</span></h1>
             <p className="public-hero-subtitle">
-              Daily ES & NQ trade plans with Dynamic Zones, Magnet Levels, and support/resistance delivered to your private Telegram channel.
+              Daily ES trade plans with Dynamic Zones, Magnet Levels, and support/resistance delivered to your private Telegram channel.
             </p>
             <p className="public-price-line"><strong>Only $20/month</strong> &bull; Cancel anytime</p>
           </div>
@@ -43,7 +43,7 @@ export default function PublicSubscribePage() {
               <div className="subscribe-features">
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>
-                  <span>Daily ES & NQ trade plans</span>
+                  <span>Daily ES trade plans</span>
                 </div>
                 <div className="subscribe-feature">
                   <span className="subscribe-check">&#10003;</span>

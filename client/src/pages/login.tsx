@@ -42,7 +42,7 @@ export default function LoginPage() {
             <TrendingUp className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Trade Levels Pro</h1>
-          <p className="text-muted-foreground mt-2">Daily ES/NQ Trade Plan System</p>
+          <p className="text-muted-foreground mt-2">Daily ES Trade Plan System</p>
         </div>
 
         <Card>

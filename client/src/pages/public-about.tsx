@@ -36,7 +36,7 @@ export default function PublicAboutPage() {
           <div className="public-info-box">
             <p>Trade Levels Pro was created for traders who are tired of guessing, chasing moves, and reacting emotionally to the market.</p>
             <p>This service is built around one core idea: <strong>professional trading requires structure.</strong></p>
-            <p>Every trading day, we publish a clear, repeatable plan for ES and NQ futures based on:</p>
+            <p>Every trading day, we publish a clear, repeatable plan for ES futures based on:</p>
             <ul>
               <li>Dynamic Zones</li>
               <li>Magnet Levels</li>

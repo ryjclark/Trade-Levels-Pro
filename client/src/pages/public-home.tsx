@@ -40,7 +40,7 @@ export default function PublicHomePage() {
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <h1>Trade ES & NQ with <span className="accent">Structure.</span> Not Guesswork.</h1>
+            <h1>Trade ES with <span className="accent">Structure.</span> Not Guesswork.</h1>
             <p className="public-hero-subtitle">
               Professional daily futures trade plans with Dynamic Zones, Magnet Levels, and clear support/resistance — delivered every trading day.
             </p>
@@ -56,7 +56,7 @@ export default function PublicHomePage() {
           <div className="public-section-header">
             <h2 className="public-section-title">Everything You Need — Before the Market Opens</h2>
             <p className="public-section-subtitle">
-              A clear, repeatable framework for trading ES & NQ with confidence.
+              A clear, repeatable framework for trading ES with confidence.
             </p>
           </div>
           <div className="public-cards">
