@@ -40,11 +40,11 @@ export default function PublicHomePage() {
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <h1>Trade ES with <span className="accent">Structure.</span> Not Guesswork.</h1>
+            <h1>Trade Levels <span className="accent">Pro</span></h1>
             <p className="public-hero-subtitle">
-              Professional daily futures trade plans with Dynamic Zones, Magnet Levels, and clear support/resistance — delivered every trading day.
+              Daily ES levels and a structured plan built for prop traders and developing futures traders.
             </p>
-            <p className="public-price-line"><strong>Only $20/month</strong> &bull; Cancel anytime</p>
+            <p className="public-price-line">Focus on the levels that matter to reduce drawdown and trade with more discipline.</p>
             <button onClick={handleSubscribe} className="public-cta" data-testid="button-subscribe">
               Get Access on Telegram →
             </button>
@@ -54,9 +54,9 @@ export default function PublicHomePage() {
 
         <section className="public-section">
           <div className="public-section-header">
-            <h2 className="public-section-title">Everything You Need — Before the Market Opens</h2>
+            <h2 className="public-section-title">Why It Works</h2>
             <p className="public-section-subtitle">
-              A clear, repeatable framework for trading ES with confidence.
+              A clear, repeatable framework built for prop traders and developing futures traders.
             </p>
           </div>
           <div className="public-cards">
@@ -64,22 +64,22 @@ export default function PublicHomePage() {
               <div className="public-card-icon" data-testid="icon-levels">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </div>
-              <h3>Daily Market Levels</h3>
-              <p>Precise Dynamic Zones, Magnet price, and key support/resistance levels calculated after each session.</p>
+              <h3>Levels-First Clarity</h3>
+              <p>Dynamic Zone, Magnet, and key S/R levels to cut out the noise and focus on what matters.</p>
             </div>
             <div className="public-card">
               <div className="public-card-icon" data-testid="icon-bias">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               </div>
-              <h3>Daily Market Bias</h3>
-              <p>Clear context for how the market is positioned so you're trading with structure, not emotion.</p>
+              <h3>Prop-Trader Focused</h3>
+              <p>Built to create a repeatable process and protect evaluation accounts. Trade with discipline, not emotion.</p>
             </div>
             <div className="public-card">
               <div className="public-card-icon" data-testid="icon-setups">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
               </div>
-              <h3>High-Probability Setups</h3>
-              <p>1-2 actionable trade scenarios per day with defined conditions and expectations.</p>
+              <h3>High-Quality Setups</h3>
+              <p>1-2 clean setups per day based on the levels — not alerts, just structured examples of how to trade them.</p>
             </div>
           </div>
         </section>
@@ -107,7 +107,7 @@ export default function PublicHomePage() {
         <section className="public-cta-section">
           <h2 className="public-section-title">Stop Guessing. Start Trading with Structure.</h2>
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
-            Join traders who use professional-grade levels every day.
+            This plan teaches you how to navigate key levels and execute with discipline.
           </p>
           <button onClick={handleSubscribe} className="public-cta" data-testid="button-get-started">
             Join Trade Levels Pro →

@@ -59,7 +59,7 @@ export default function PublicPricingPage() {
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
-                <span>Best Setup Scenarios</span>
+                <span>1-2 High-Quality Setups Daily</span>
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
@@ -82,16 +82,20 @@ export default function PublicPricingPage() {
           </div>
           <div className="faq-list">
             <div className="faq-item">
-              <h3 className="faq-question">Is this for beginners?</h3>
-              <p className="faq-answer">Yes. Trade Levels Pro is designed for all experience levels. We provide key price levels and context that help you understand where the market may react — so whether you're just starting out or have years of experience, you'll learn to trade with structure instead of guessing.</p>
+              <h3 className="faq-question">Is this ES only?</h3>
+              <p className="faq-answer">Yes — ES only for now. NQ is planned for the future.</p>
             </div>
             <div className="faq-item">
-              <h3 className="faq-question">Is this an alert or signal service?</h3>
-              <p className="faq-answer">No. We don't send buy/sell alerts. Instead, we provide daily levels, zones, and market context so you can build your own plan and make your own trading decisions. This is about learning to trade with structure — not following someone else's calls.</p>
+              <h3 className="faq-question">Is this an alerts service?</h3>
+              <p className="faq-answer">No. It's a daily plan with key levels and 1-2 high-quality setups. You learn to navigate the levels and make your own trading decisions — not follow someone else's calls.</p>
+            </div>
+            <div className="faq-item">
+              <h3 className="faq-question">Who is this for?</h3>
+              <p className="faq-answer">Prop traders and futures traders who want a repeatable, disciplined process. Whether you're protecting an evaluation account or building consistency, this plan gives you the structure to trade with confidence.</p>
             </div>
             <div className="faq-item">
               <h3 className="faq-question">What exactly do I get each day?</h3>
-              <p className="faq-answer">Every trading day you receive a complete plan with Dynamic Zones, a Magnet level, support and resistance levels (S1-S4, R1-R4), the daily market bias, and 1-2 high-probability trade setups. These levels help you know where price is likely to react before the session even starts.</p>
+              <p className="faq-answer">Every trading day you receive a complete plan with Dynamic Zones, a Magnet level, support and resistance levels (S1-S4, R1-R4), the daily market bias, and 1-2 high-quality setups based on those levels.</p>
             </div>
             <div className="faq-item">
               <h3 className="faq-question">When are plans posted?</h3>
@@ -107,7 +111,7 @@ export default function PublicPricingPage() {
         <section className="public-cta-section">
           <h2 className="public-section-title">Start Trading with Structure</h2>
           <p className="public-section-subtitle" style={{ marginBottom: '32px' }}>
-            Get daily levels and trade plans delivered straight to your Telegram.
+            Daily ES levels and a structured plan built for prop traders and developing futures traders.
           </p>
           <button onClick={handleSubscribe} className="public-cta" data-testid="button-join-now">
             Join Trade Levels Pro →
