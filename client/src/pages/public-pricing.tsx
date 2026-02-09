@@ -28,9 +28,9 @@ export default function PublicPricingPage() {
 
         <section className="public-hero">
           <div className="public-hero-content">
-            <h1>Simple Pricing. <span className="accent">No Gimmicks.</span></h1>
+            <h1>Start Trading with <span className="accent">Precision</span></h1>
             <p className="public-hero-subtitle">
-              One plan. Full access. Cancel anytime.
+              Get daily ES levels, bias, and structured setups for just $25/month.
             </p>
           </div>
         </section>
@@ -38,32 +38,24 @@ export default function PublicPricingPage() {
         <section className="public-section" style={{ paddingTop: 0 }}>
           <div className="pricing-plan">
             <div className="pricing-plan-name">Trade Levels Pro — Founding Members</div>
-            <div className="pricing-plan-price">$20</div>
+            <div className="pricing-plan-price">$25</div>
             <div className="pricing-plan-period">per month</div>
             <div className="pricing-features">
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
-                <span>Daily ES Trade Plans</span>
+                <span>Daily ES Support & Resistance Levels</span>
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
-                <span>Dynamic Zones & Magnet Levels</span>
+                <span>Dynamic Zone + Magnet</span>
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
-                <span>Support & Resistance Levels</span>
+                <span>Bias + 1-2 High-Quality Setups</span>
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
-                <span>Market Bias & Context</span>
-              </div>
-              <div className="pricing-feature">
-                <span className="pricing-check">&#10003;</span>
-                <span>1-2 High-Quality Setups Daily</span>
-              </div>
-              <div className="pricing-feature">
-                <span className="pricing-check">&#10003;</span>
-                <span>Private Telegram Access</span>
+                <span>Delivered via Telegram After the Close</span>
               </div>
               <div className="pricing-feature">
                 <span className="pricing-check">&#10003;</span>
