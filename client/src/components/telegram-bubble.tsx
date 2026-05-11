@@ -1,21 +1,18 @@
 export default function TelegramBubble() {
   return (
-    <div className="tg-wrap">
+    <div className="tg-standalone">
       <div className="tg-bubble" data-testid="card-tg-bubble">
-        <div className="tg-header">
-          <div>
-            <span className="tg-handle">@TradeLevelsProBot</span>
-            <span className="tg-handle-meta"> · After close</span>
-          </div>
+        <div className="tg-bubble-title">@TradeLevelsProBot · After close</div>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+          ES Daily Trade Plan — Sample
         </div>
-        <div className="tg-title">ES Daily Trade Plan — Sample</div>
         <div className="tg-line"><span className="tg-label">Bias:</span> <strong>Bullish above magnet</strong></div>
-        <div className="tg-line"><span className="tg-label">Dynamic Zone:</span> <span className="tg-num">5,812 – 5,824</span></div>
-        <div className="tg-line"><span className="tg-label">Magnet:</span> <span className="tg-num">5,818</span></div>
+        <div className="tg-line"><span className="tg-label">Magnet:</span> <span className="tg-num">5,872</span></div>
+        <div className="tg-line"><span className="tg-label">Dynamic Zone:</span> <span className="tg-num">5,864 – 5,880</span></div>
         <div className="tg-line" style={{ marginTop: 6 }}><span className="tg-label">Resistance:</span></div>
-        <div className="tg-line">R1 <span className="tg-num">5,832</span> │ R2 <span className="tg-num">5,847</span> │ R3 <span className="tg-num">5,861</span> │ R4 <span className="tg-num">5,878</span></div>
+        <div className="tg-line">R1 <span className="tg-num">5,887</span> │ R2 <span className="tg-num">5,901</span> │ R3 <span className="tg-num">5,918</span> │ R4 <span className="tg-num">5,932</span></div>
         <div className="tg-line" style={{ marginTop: 6 }}><span className="tg-label">Support:</span></div>
-        <div className="tg-line">S1 <span className="tg-num">5,804</span> │ S2 <span className="tg-num">5,790</span> │ S3 <span className="tg-num">5,776</span> │ S4 <span className="tg-num">5,761</span></div>
+        <div className="tg-line">S1 <span className="tg-num">5,856</span> │ S2 <span className="tg-num">5,841</span> │ S3 <span className="tg-num">5,824</span> │ S4 <span className="tg-num">5,808</span></div>
         <div className="tg-foot">
           <span>9:34 PM</span>
           <span className="tg-check">

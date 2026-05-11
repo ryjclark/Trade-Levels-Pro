@@ -1,19 +1,32 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 
+const NAV_ITEMS = [
+  { href: "/", label: "Home" },
+  { href: "/sample", label: "Sample" },
+  { href: "/how-it-works", label: "How It Works" },
+  { href: "/prop-firms", label: "Prop Firms" },
+  { href: "/learn", label: "Learn" },
+  { href: "/indicator", label: "Indicator" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/login", label: "Login" },
+];
+
 export default function PublicNav() {
   const [location] = useLocation();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => setScrolled(window.scrollY > 100);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const isActive = (path: string) =>
-    location === path ? "public-link public-link-active" : "public-link";
+  const isActive = (path: string) => {
+    if (path === "/") return location === "/";
+    return location === path || location.startsWith(path + "/");
+  };
 
   return (
     <div className={`public-nav-wrap ${scrolled ? "scrolled" : ""}`}>
@@ -29,29 +42,20 @@ export default function PublicNav() {
           </span>
         </Link>
         <div className="public-nav-links">
-          <Link href="/" className={isActive("/")} data-testid="link-home">
-            Home
-          </Link>
-          <Link href="/sample" className={isActive("/sample")} data-testid="link-sample">
-            Sample
-          </Link>
-          <Link
-            href="/how-it-works"
-            className={isActive("/how-it-works")}
-            data-testid="link-how-it-works"
-          >
-            How It Works
-          </Link>
-          <Link
-            href="/pricing"
-            className={isActive("/pricing")}
-            data-testid="link-pricing"
-          >
-            Pricing
-          </Link>
-          <Link href="/login" className={isActive("/login")} data-testid="link-login">
-            Login
-          </Link>
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={
+                isActive(item.href)
+                  ? "public-link public-link-active"
+                  : "public-link"
+              }
+              data-testid={`link-nav-${item.href.replace(/\//g, "") || "home"}`}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </nav>
     </div>

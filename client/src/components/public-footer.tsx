@@ -18,7 +18,13 @@ export default function PublicFooter() {
           <Link href="/sample" className="public-footer-link" data-testid="footer-link-sample">Sample</Link>
           <Link href="/how-it-works" className="public-footer-link" data-testid="footer-link-how">How It Works</Link>
           <Link href="/pricing" className="public-footer-link" data-testid="footer-link-pricing">Pricing</Link>
+          <Link href="/indicator" className="public-footer-link" data-testid="footer-link-indicator">Indicator</Link>
           <Link href="/login" className="public-footer-link" data-testid="footer-link-login">Login</Link>
+        </div>
+        <div className="public-footer-col">
+          <div className="public-footer-heading">Resources</div>
+          <Link href="/learn" className="public-footer-link" data-testid="footer-link-learn">Learn</Link>
+          <Link href="/prop-firms" className="public-footer-link" data-testid="footer-link-prop-firms">Prop Firms</Link>
         </div>
         <div className="public-footer-col">
           <div className="public-footer-heading">Legal</div>

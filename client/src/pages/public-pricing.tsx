@@ -1,9 +1,16 @@
+import { useState } from "react";
 import { Check } from "lucide-react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import FaqAccordion from "@/components/faq-accordion";
-import { CTA_TEXT, CTA_MAILTO, PRICE } from "@/lib/constants";
+import Reveal from "@/components/reveal";
+import SectionDivider from "@/components/section-divider";
+import { useSeo } from "@/hooks/use-seo";
+import {
+  CTA_TEXT, CTA_MAILTO, CTA_MAILTO_ANNUAL,
+  PRICE, PRICE_ANNUAL, ANNUAL_SAVINGS_LABEL, SITE_NAME,
+} from "@/lib/constants";
 
 const FAQ = [
   { q: "Is this ES only?", a: "Yes — ES only for now. NQ is on the roadmap." },
@@ -23,6 +30,28 @@ const FEATURES = [
 ];
 
 export default function PublicPricingPage() {
+  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
+
+  useSeo({
+    title: `Pricing — Founding Members | ${SITE_NAME}`,
+    description: "Founding Members pricing for Trade Levels Pro: $25/month or $250/year for daily ES futures trade plans delivered to a private Telegram channel.",
+    path: "/pricing",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: FAQ.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  });
+
+  const isAnnual = billing === "annual";
+  const price = isAnnual ? PRICE_ANNUAL : PRICE;
+  const period = isAnnual ? "per year" : "per month";
+  const ctaHref = isAnnual ? CTA_MAILTO_ANNUAL : CTA_MAILTO;
+
   return (
     <div className="public-page">
       <PublicNav />
@@ -32,7 +61,8 @@ export default function PublicPricingPage() {
             <div className="hero-orb-a" />
             <div className="hero-orb-b" />
           </div>
-          <div className="public-hero-content">
+          <div className="hero-noise" aria-hidden="true" />
+          <div className="public-hero-content public-hero-centered">
             <h1>
               Founding Members <span className="accent">Pricing</span>
             </h1>
@@ -43,33 +73,63 @@ export default function PublicPricingPage() {
           </div>
         </section>
 
-        <section className="public-section" style={{ paddingTop: 0 }}>
-          <div className="pricing-plan" data-testid="card-pricing-plan">
-            <div className="pricing-badge">FOUNDING MEMBERS</div>
-            <div className="pricing-plan-name">Trade Levels Pro</div>
-            <div className="pricing-plan-price">{PRICE}</div>
-            <div className="pricing-plan-period">per month</div>
-            <div className="pricing-features">
-              {FEATURES.map((f, i) => (
-                <div className="pricing-feature" key={i}>
-                  <span className="pricing-check"><Check size={12} strokeWidth={3} /></span>
-                  <span>{f}</span>
+        <Reveal>
+          <section className="public-section" style={{ paddingTop: 0 }}>
+            <div className="pricing-plan-wrap">
+              <div className="pricing-toggle" role="tablist" aria-label="Billing period">
+                <button
+                  role="tab"
+                  aria-selected={!isAnnual}
+                  className={`pricing-toggle-btn ${!isAnnual ? "active" : ""}`}
+                  onClick={() => setBilling("monthly")}
+                  data-testid="toggle-monthly"
+                >
+                  Monthly
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={isAnnual}
+                  className={`pricing-toggle-btn ${isAnnual ? "active" : ""}`}
+                  onClick={() => setBilling("annual")}
+                  data-testid="toggle-annual"
+                >
+                  Annual
+                  <span className="pricing-toggle-save">{ANNUAL_SAVINGS_LABEL}</span>
+                </button>
+              </div>
+              <div className="pricing-plan" data-testid="card-pricing-plan">
+                <div className="pricing-badge">FOUNDING MEMBERS</div>
+                <div className="pricing-plan-name">Trade Levels Pro</div>
+                <div className="pricing-plan-price" data-testid="text-price">{price}</div>
+                <div className="pricing-plan-period">{period}</div>
+                <div className="pricing-features">
+                  {FEATURES.map((f, i) => (
+                    <div className="pricing-feature" key={i}>
+                      <span className="pricing-check"><Check size={12} strokeWidth={3} /></span>
+                      <span>{f}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+                <a href={ctaHref} className="subscribe-button" data-testid="button-cta-pricing">
+                  {CTA_TEXT} →
+                </a>
+                <p className="subscribe-secure-text">No contracts · Cancel in one click</p>
+              </div>
             </div>
-            <a href={CTA_MAILTO} className="subscribe-button" data-testid="button-cta-pricing">
-              {CTA_TEXT} →
-            </a>
-            <p className="subscribe-secure-text">No contracts • Cancel in one click</p>
-          </div>
-        </section>
+          </section>
+        </Reveal>
 
-        <section className="public-section">
-          <div className="public-section-header">
-            <h2 className="public-section-title">Frequently Asked Questions</h2>
-          </div>
-          <FaqAccordion items={FAQ} />
-        </section>
+        <SectionDivider />
+
+        <Reveal>
+          <section className="public-section">
+            <div className="public-section-header">
+              <span className="public-section-eyebrow">FAQ</span>
+              <h2 className="public-section-title">Frequently Asked Questions</h2>
+            </div>
+            <FaqAccordion items={FAQ} />
+          </section>
+        </Reveal>
 
         <section className="public-cta-section">
           <div className="cta-orbs" aria-hidden="true">
@@ -77,7 +137,7 @@ export default function PublicPricingPage() {
             <div className="cta-orb-b" />
           </div>
           <h2 className="public-section-title">Ready to start?</h2>
-          <a href={CTA_MAILTO} className="public-cta" data-testid="button-cta-pricing-final">
+          <a href={ctaHref} className="btn-primary" data-testid="button-cta-pricing-final">
             {CTA_TEXT} →
           </a>
         </section>

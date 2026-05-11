@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { registerStripeRoutes } from "./stripe";
+import { registerSeoRoutes } from "./seo-routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedDatabase } from "./seed";
@@ -22,6 +23,7 @@ app.get("/subscribe", (_req, res) => res.redirect(301, "/pricing"));
 
 // Stripe webhook MUST receive raw body — register before express.json()
 registerStripeRoutes(app);
+registerSeoRoutes(app);
 
 declare module "http" {
   interface IncomingMessage {
