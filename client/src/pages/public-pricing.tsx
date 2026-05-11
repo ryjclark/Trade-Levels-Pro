@@ -1,15 +1,37 @@
+import { Check } from "lucide-react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
+import FaqAccordion from "@/components/faq-accordion";
 import { CTA_TEXT, CTA_MAILTO, PRICE } from "@/lib/constants";
+
+const FAQ = [
+  { q: "Is this ES only?", a: "Yes — ES only for now. NQ is on the roadmap." },
+  { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions." },
+  { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES session." },
+  { q: "What do I get each day?", a: "Dynamic Zone, Magnet, R1–R4 / S1–S4, daily bias, and 1–2 setups based on those levels." },
+  { q: "When are plans posted?", a: "After market close, for the next trading session." },
+  { q: "Can I cancel anytime?", a: "Yes. No contracts, no long-term commitment." },
+];
+
+const FEATURES = [
+  "Daily ES support & resistance levels",
+  "Dynamic Zone + Magnet",
+  "Daily bias + 1–2 high-quality setups",
+  "Delivered via Telegram after the close",
+  "Cancel anytime",
+];
 
 export default function PublicPricingPage() {
   return (
     <div className="public-page">
+      <PublicNav />
       <div className="public-container">
-        <PublicNav />
-
         <section className="public-hero">
+          <div className="hero-orbs" aria-hidden="true">
+            <div className="hero-orb-a" />
+            <div className="hero-orb-b" />
+          </div>
           <div className="public-hero-content">
             <h1>
               Founding Members <span className="accent">Pricing</span>
@@ -22,22 +44,20 @@ export default function PublicPricingPage() {
         </section>
 
         <section className="public-section" style={{ paddingTop: 0 }}>
-          <div className="pricing-plan">
-            <div className="pricing-plan-name">Trade Levels Pro — Founding Members</div>
+          <div className="pricing-plan" data-testid="card-pricing-plan">
+            <div className="pricing-badge">FOUNDING MEMBERS</div>
+            <div className="pricing-plan-name">Trade Levels Pro</div>
             <div className="pricing-plan-price">{PRICE}</div>
             <div className="pricing-plan-period">per month</div>
             <div className="pricing-features">
-              <div className="pricing-feature"><span className="pricing-check">✓</span><span>Daily ES support &amp; resistance levels</span></div>
-              <div className="pricing-feature"><span className="pricing-check">✓</span><span>Dynamic Zone + Magnet</span></div>
-              <div className="pricing-feature"><span className="pricing-check">✓</span><span>Daily bias + 1–2 high-quality setups</span></div>
-              <div className="pricing-feature"><span className="pricing-check">✓</span><span>Delivered via Telegram after the close</span></div>
-              <div className="pricing-feature"><span className="pricing-check">✓</span><span>Cancel anytime</span></div>
+              {FEATURES.map((f, i) => (
+                <div className="pricing-feature" key={i}>
+                  <span className="pricing-check"><Check size={12} strokeWidth={3} /></span>
+                  <span>{f}</span>
+                </div>
+              ))}
             </div>
-            <a
-              href={CTA_MAILTO}
-              className="subscribe-button"
-              data-testid="button-cta-pricing"
-            >
+            <a href={CTA_MAILTO} className="subscribe-button" data-testid="button-cta-pricing">
               {CTA_TEXT} →
             </a>
             <p className="subscribe-secure-text">No contracts • Cancel in one click</p>
@@ -48,23 +68,16 @@ export default function PublicPricingPage() {
           <div className="public-section-header">
             <h2 className="public-section-title">Frequently Asked Questions</h2>
           </div>
-          <div className="faq-list">
-            <div className="faq-item"><h3 className="faq-question">Is this ES only?</h3><p className="faq-answer">Yes — ES only for now. NQ is on the roadmap.</p></div>
-            <div className="faq-item"><h3 className="faq-question">Is this an alerts service?</h3><p className="faq-answer">No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions.</p></div>
-            <div className="faq-item"><h3 className="faq-question">Who is this for?</h3><p className="faq-answer">Prop traders and developing futures traders who want a repeatable, disciplined process around the ES session.</p></div>
-            <div className="faq-item"><h3 className="faq-question">What do I get each day?</h3><p className="faq-answer">Dynamic Zone, Magnet, R1–R4 / S1–S4, daily bias, and 1–2 setups based on those levels.</p></div>
-            <div className="faq-item"><h3 className="faq-question">When are plans posted?</h3><p className="faq-answer">After market close, for the next trading session.</p></div>
-            <div className="faq-item"><h3 className="faq-question">Can I cancel anytime?</h3><p className="faq-answer">Yes. No contracts, no long-term commitment.</p></div>
-          </div>
+          <FaqAccordion items={FAQ} />
         </section>
 
         <section className="public-cta-section">
+          <div className="cta-orbs" aria-hidden="true">
+            <div className="cta-orb-a" />
+            <div className="cta-orb-b" />
+          </div>
           <h2 className="public-section-title">Ready to start?</h2>
-          <a
-            href={CTA_MAILTO}
-            className="public-cta"
-            data-testid="button-cta-pricing-final"
-          >
+          <a href={CTA_MAILTO} className="public-cta" data-testid="button-cta-pricing-final">
             {CTA_TEXT} →
           </a>
         </section>

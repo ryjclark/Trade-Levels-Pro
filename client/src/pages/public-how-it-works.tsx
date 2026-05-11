@@ -1,15 +1,27 @@
+import { Activity, Target, Layers, Compass, Send } from "lucide-react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import { CTA_TEXT, CTA_MAILTO } from "@/lib/constants";
 
+const METHOD = [
+  { icon: Activity, title: "Map the Dynamic Zone", body: "Define the reactive band where price is most likely to consolidate or reverse." },
+  { icon: Target, title: "Identify the Magnet", body: "Locate the level price tends to pull back toward intraday." },
+  { icon: Layers, title: "Layer Support and Resistance", body: "Define R1–R4 and S1–S4 to frame the day's playable range." },
+  { icon: Compass, title: "Set the Bias", body: "Establish a directional lean based on context, not prediction." },
+  { icon: Send, title: "Define 1–2 High-Quality Setups", body: "Concrete, level-based ideas you can prepare for ahead of the open." },
+];
+
 export default function PublicHowItWorksPage() {
   return (
     <div className="public-page">
+      <PublicNav />
       <div className="public-container">
-        <PublicNav />
-
         <section className="public-hero">
+          <div className="hero-orbs" aria-hidden="true">
+            <div className="hero-orb-a" />
+            <div className="hero-orb-b" />
+          </div>
           <div className="public-hero-content">
             <h1>
               How <span className="accent">It Works</span>
@@ -44,41 +56,18 @@ export default function PublicHowItWorksPage() {
             </p>
           </div>
           <div className="method-list">
-            <div className="method-step">
-              <div className="public-step-num">1</div>
-              <div>
-                <h3>Map the Dynamic Zone</h3>
-                <p>Define the reactive band where price is most likely to consolidate or reverse.</p>
-              </div>
-            </div>
-            <div className="method-step">
-              <div className="public-step-num">2</div>
-              <div>
-                <h3>Identify the Magnet</h3>
-                <p>Locate the level price tends to pull back toward intraday.</p>
-              </div>
-            </div>
-            <div className="method-step">
-              <div className="public-step-num">3</div>
-              <div>
-                <h3>Layer Support and Resistance</h3>
-                <p>Define R1–R4 and S1–S4 to frame the day's playable range.</p>
-              </div>
-            </div>
-            <div className="method-step">
-              <div className="public-step-num">4</div>
-              <div>
-                <h3>Set the Bias</h3>
-                <p>Establish a directional lean based on context, not prediction.</p>
-              </div>
-            </div>
-            <div className="method-step">
-              <div className="public-step-num">5</div>
-              <div>
-                <h3>Define 1–2 High-Quality Setups</h3>
-                <p>Concrete, level-based ideas you can prepare for ahead of the open.</p>
-              </div>
-            </div>
+            {METHOD.map((m, i) => {
+              const Icon = m.icon;
+              return (
+                <div className="method-step" key={i} data-testid={`method-step-${i + 1}`}>
+                  <div className="method-icon"><Icon size={20} /></div>
+                  <div>
+                    <h3>{m.title}</h3>
+                    <p>{m.body}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -103,12 +92,12 @@ export default function PublicHowItWorksPage() {
         </section>
 
         <section className="public-cta-section">
+          <div className="cta-orbs" aria-hidden="true">
+            <div className="cta-orb-a" />
+            <div className="cta-orb-b" />
+          </div>
           <h2 className="public-section-title">Trade with structure tomorrow.</h2>
-          <a
-            href={CTA_MAILTO}
-            className="public-cta"
-            data-testid="button-cta-how"
-          >
+          <a href={CTA_MAILTO} className="public-cta" data-testid="button-cta-how">
             {CTA_TEXT} →
           </a>
         </section>

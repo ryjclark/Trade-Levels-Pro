@@ -6,10 +6,14 @@ import { CTA_TEXT, CTA_MAILTO } from "@/lib/constants";
 export default function PublicSamplePage() {
   return (
     <div className="public-page">
+      <PublicNav />
       <div className="public-container">
-        <PublicNav />
 
         <section className="public-hero" style={{ padding: "80px 0 40px" }}>
+          <div className="hero-orbs" aria-hidden="true">
+            <div className="hero-orb-a" />
+            <div className="hero-orb-b" />
+          </div>
           <div className="public-hero-content">
             <h1>
               Sample <span className="accent">Daily Plan</span>
@@ -81,6 +85,10 @@ export default function PublicSamplePage() {
         </section>
 
         <section className="public-cta-section">
+          <div className="cta-orbs" aria-hidden="true">
+            <div className="cta-orb-a" />
+            <div className="cta-orb-b" />
+          </div>
           <h2 className="public-section-title">Ready for tomorrow's plan?</h2>
           <a
             href={CTA_MAILTO}

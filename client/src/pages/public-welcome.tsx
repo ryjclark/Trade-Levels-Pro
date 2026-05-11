@@ -42,9 +42,13 @@ export default function PublicWelcomePage() {
 
   return (
     <div className="public-page">
+      <PublicNav />
       <div className="public-container">
-        <PublicNav />
         <section className="public-hero">
+          <div className="hero-orbs" aria-hidden="true">
+            <div className="hero-orb-a" />
+            <div className="hero-orb-b" />
+          </div>
           <div className="public-hero-content">
             <h1>
               Welcome to <span className="accent">Trade Levels Pro</span>

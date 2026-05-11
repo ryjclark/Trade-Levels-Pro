@@ -11,9 +11,13 @@ export default function PublicLegalPage({ kind }: LegalPageProps) {
   const content = LEGAL_CONTENT[kind];
   return (
     <div className="public-page">
+      <PublicNav />
       <div className="public-container">
-        <PublicNav />
         <section className="public-hero" style={{ padding: "80px 0 40px" }}>
+          <div className="hero-orbs" aria-hidden="true">
+            <div className="hero-orb-a" />
+            <div className="hero-orb-b" />
+          </div>
           <div className="public-hero-content">
             <h1>{content.title}</h1>
             <p className="public-hero-subtitle">Last updated: May 11, 2026</p>
