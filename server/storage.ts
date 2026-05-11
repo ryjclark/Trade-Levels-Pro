@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember } from "@shared/schema";
 
 export interface IStorage {
   getPlanById(id: number): Promise<Plan | undefined>;
@@ -14,6 +14,9 @@ export interface IStorage {
   insertPreview(data: InsertPreview): Promise<Preview>;
   getPreviousPlan(beforeDate: string, symbol: string): Promise<Plan | undefined>;
   getLatestPublishedPlan(): Promise<Plan | undefined>;
+  upsertMember(data: InsertMember): Promise<Member>;
+  getMemberByEmail(email: string): Promise<Member | undefined>;
+  markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -170,6 +173,40 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(plans.publishedAt))
       .limit(1);
     return result[0];
+  }
+
+  async upsertMember(data: InsertMember): Promise<Member> {
+    const [row] = await db
+      .insert(members)
+      .values(data)
+      .onConflictDoUpdate({
+        target: members.email,
+        set: {
+          stripeCustomerId: data.stripeCustomerId ?? null,
+          stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+          status: data.status ?? "active",
+          telegramInviteLink: data.telegramInviteLink ?? null,
+          telegramJoinedAt: data.telegramJoinedAt ?? null,
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async getMemberByEmail(email: string): Promise<Member | undefined> {
+    const result = await db
+      .select()
+      .from(members)
+      .where(eq(members.email, email))
+      .limit(1);
+    return result[0];
+  }
+
+  async markMemberInactiveBySubscription(subscriptionId: string): Promise<void> {
+    await db
+      .update(members)
+      .set({ status: "inactive" })
+      .where(eq(members.stripeSubscriptionId, subscriptionId));
   }
 
   async updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {

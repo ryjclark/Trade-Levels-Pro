@@ -15,6 +15,7 @@ import PublicPricingPage from "@/pages/public-pricing";
 import PublicSamplePage from "@/pages/public-sample";
 import PublicHowItWorksPage from "@/pages/public-how-it-works";
 import PublicLegalPage from "@/pages/public-legal";
+import PublicWelcomePage from "@/pages/public-welcome";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>
       <Route path="/privacy">{() => <PublicLegalPage kind="privacy" />}</Route>
       <Route path="/risk">{() => <PublicLegalPage kind="risk" />}</Route>
+      <Route path="/welcome" component={PublicWelcomePage} />
       <Route path="/login" component={PublicLoginRoute} />
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />

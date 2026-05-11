@@ -44,6 +44,25 @@ export const publishLogs = pgTable("publish_logs", {
   responsePayload: text("response_payload"),
 });
 
+export const members = pgTable("members", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  telegramInviteLink: text("telegram_invite_link"),
+  telegramJoinedAt: timestamp("telegram_joined_at"),
+});
+
+export const insertMemberSchema = createInsertSchema(members).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMember = z.infer<typeof insertMemberSchema>;
+export type Member = typeof members.$inferSelect;
+
 export const previews = pgTable("previews", {
   id: serial("id").primaryKey(),
   email: text("email").notNull(),
