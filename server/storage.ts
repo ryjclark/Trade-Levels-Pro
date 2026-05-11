@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview } from "@shared/schema";
 
 export interface IStorage {
   getPlanById(id: number): Promise<Plan | undefined>;
@@ -11,6 +11,9 @@ export interface IStorage {
   listPublishLogs(planId: number): Promise<PublishLog[]>;
   getSettings(): Promise<SiteSettingsData>;
   updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData>;
+  insertPreview(data: InsertPreview): Promise<Preview>;
+  getPreviousPlan(beforeDate: string, symbol: string): Promise<Plan | undefined>;
+  getLatestPublishedPlan(): Promise<Plan | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -141,6 +144,32 @@ export class DatabaseStorage implements IStorage {
       if (row.key === "footerEnabled") settings.footerEnabled = row.value === "true";
     }
     return settings;
+  }
+
+  async insertPreview(data: InsertPreview): Promise<Preview> {
+    const [row] = await db.insert(previews).values(data).returning();
+    return row;
+  }
+
+  async getPreviousPlan(beforeDate: string, symbol: string): Promise<Plan | undefined> {
+    const { lt } = await import("drizzle-orm");
+    const result = await db
+      .select()
+      .from(plans)
+      .where(and(eq(plans.symbol, symbol), lt(plans.date, beforeDate)))
+      .orderBy(desc(plans.date))
+      .limit(1);
+    return result[0];
+  }
+
+  async getLatestPublishedPlan(): Promise<Plan | undefined> {
+    const result = await db
+      .select()
+      .from(plans)
+      .where(eq(plans.status, "published"))
+      .orderBy(desc(plans.publishedAt))
+      .limit(1);
+    return result[0];
   }
 
   async updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {

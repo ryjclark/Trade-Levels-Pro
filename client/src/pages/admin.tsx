@@ -30,14 +30,21 @@ import {
   TrendingUp,
   TrendingDown,
   Activity,
-  Settings
+  Settings,
+  ClipboardCopy
 } from "lucide-react";
 
-function getTodayISO() {
+function getNextTradingDayISO() {
   const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
+  const day = now.getDay();
+  let add = 1;
+  if (day === 5) add = 3;
+  else if (day === 6) add = 2;
+  const next = new Date(now);
+  next.setDate(now.getDate() + add);
+  const yyyy = next.getFullYear();
+  const mm = String(next.getMonth() + 1).padStart(2, '0');
+  const dd = String(next.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
 
@@ -46,7 +53,7 @@ export default function AdminPage() {
   const { logout } = useAuth();
   const { toast } = useToast();
   
-  const [date, setDate] = useState(getTodayISO());
+  const [date, setDate] = useState(getNextTradingDayISO());
   const [symbol, setSymbol] = useState("ES");
   const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | "xPost" | null>(null);
   
@@ -167,6 +174,50 @@ export default function AdminPage() {
         variant: "destructive"
       });
     }
+  });
+
+  const { data: latestPublished } = useQuery<Plan | null>({
+    queryKey: ['/api/plans/latest-published'],
+  });
+
+  const copyPreviousMutation = useMutation({
+    mutationFn: async () => {
+      const token = getToken();
+      const res = await fetch(
+        `/api/plans/copy-previous?date=${date}&symbol=${symbol}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      if (res.status === 404) throw new Error("No previous plan found");
+      if (!res.ok) throw new Error("Failed to load previous plan");
+      return (await res.json()) as Plan;
+    },
+    onSuccess: (prev) => {
+      setFormData({
+        id: null,
+        contract: prev.contract || "",
+        tier: prev.tier || "pro",
+        dynamicZoneTop: prev.dynamicZoneTop?.toString() || "",
+        dynamicZoneBottom: prev.dynamicZoneBottom?.toString() || "",
+        magnet: prev.magnet?.toString() || "",
+        r1: prev.r1?.toString() || "",
+        r2: prev.r2?.toString() || "",
+        r3: prev.r3?.toString() || "",
+        r4: prev.r4?.toString() || "",
+        s1: prev.s1?.toString() || "",
+        s2: prev.s2?.toString() || "",
+        s3: prev.s3?.toString() || "",
+        s4: prev.s4?.toString() || "",
+        bias: prev.bias || "",
+        setup1: prev.setup1 || "",
+        setup2: prev.setup2 || "",
+        notes: prev.notes || "",
+        status: "draft",
+      });
+      toast({ title: "Prefilled from previous day", description: `Loaded ${prev.date}` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "No previous plan", description: err.message, variant: "destructive" });
+    },
   });
 
   const testTelegramMutation = useMutation({
@@ -299,6 +350,20 @@ export default function AdminPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
+        {latestPublished && (
+          <div
+            className="mb-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 flex items-center justify-between gap-3 flex-wrap"
+            data-testid="text-last-published"
+          >
+            <span>
+              Last published: <span className="text-white font-medium">{latestPublished.symbol}</span> for{" "}
+              <span className="text-white font-medium">{latestPublished.date}</span>
+              {latestPublished.publishedAt
+                ? ` at ${new Date(latestPublished.publishedAt).toLocaleString()}`
+                : ""}
+            </span>
+          </div>
+        )}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -362,6 +427,20 @@ export default function AdminPage() {
                   >
                     <Archive className="w-4 h-4 mr-2" />
                     View Archive
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => copyPreviousMutation.mutate()}
+                    disabled={copyPreviousMutation.isPending}
+                    data-testid="button-copy-previous"
+                  >
+                    {copyPreviousMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <ClipboardCopy className="w-4 h-4 mr-2" />
+                    )}
+                    Prefill from previous day
                   </Button>
                   <Button 
                     variant="outline" 

@@ -1,79 +1,94 @@
 import type { Plan } from "@shared/schema";
 
-function formatNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '';
+const MDV2_RESERVED = /[_*\[\]()~`>#+\-=|{}.!\\]/g;
+
+export function escapeMdV2(input: string | number | null | undefined): string {
+  if (input === null || input === undefined) return "";
+  return String(input).replace(MDV2_RESERVED, (m) => `\\${m}`);
+}
+
+function fmtNum(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "";
   const num = Number(value);
-  if (Number.isNaN(num)) return '';
+  if (Number.isNaN(num)) return "";
   return num.toString();
+}
+
+function tick(value: number | null | undefined): string {
+  const s = fmtNum(value);
+  return s ? "`" + s + "`" : "`-`";
 }
 
 function formatDateTitle(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 function formatDateTelegram(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 export function formatTitle(plan: Plan): string {
   const datePart = formatDateTitle(plan.date);
-  const contract = plan.contract ? ` (${plan.contract})` : '';
+  const contract = plan.contract ? ` (${plan.contract})` : "";
   return `${plan.symbol} Daily Trade Plan \u2014 ${datePart}${contract}`;
 }
 
-function formatTelegramHeader(plan: Plan): string {
-  const datePart = formatDateTelegram(plan.date);
-  const contract = plan.contract ? ` (${plan.contract})` : '';
-  return `\u{1F4CA} ${plan.symbol} Daily Trade Plan \u2014 ${datePart}${contract}`;
-}
-
 export function formatTelegramPro(plan: Plan): string {
-  const header = formatTelegramHeader(plan);
-  const lines = [
-    header,
-    '',
-    '\u{1F9ED} Bias',
-    `${plan.bias || ''}`,
-    '',
-    '\u{1F4C8} Dynamic Zone',
-    `${formatNumber(plan.dynamicZoneBottom)} \u2013 ${formatNumber(plan.dynamicZoneTop)}`,
-    '',
-    '\u{1F3AF} Magnet',
-    `${formatNumber(plan.magnet)}`,
-    '',
-    '\u{1F7E5} Resistance',
-    `R1: ${formatNumber(plan.r1)} | R2: ${formatNumber(plan.r2)} | R3: ${formatNumber(plan.r3)} | R4: ${formatNumber(plan.r4)}`,
-    '',
-    '\u{1F7E9} Support',
-    `S1: ${formatNumber(plan.s1)} | S2: ${formatNumber(plan.s2)} | S3: ${formatNumber(plan.s3)} | S4: ${formatNumber(plan.s4)}`,
-    '',
-    '\u26A1 Best Setups',
-    `\u2022 ${plan.setup1 || ''}`
-  ];
+  const datePart = escapeMdV2(formatDateTelegram(plan.date));
+  const symbol = escapeMdV2(plan.symbol);
+  const contract = plan.contract ? ` \\(${escapeMdV2(plan.contract)}\\)` : "";
 
-  if (plan.setup2) {
-    lines.push(`\u2022 ${plan.setup2}`);
+  const lines: string[] = [];
+  lines.push(`*${symbol} Daily Trade Plan \u2014 ${datePart}${contract}*`);
+  lines.push("");
+  lines.push(`*Bias:* ${escapeMdV2(plan.bias || "")}`);
+  lines.push("");
+  lines.push(
+    `*Dynamic Zone:* ${tick(plan.dynamicZoneBottom)} \u2013 ${tick(plan.dynamicZoneTop)}`
+  );
+  lines.push(`*Magnet:* ${tick(plan.magnet)}`);
+  lines.push("");
+  lines.push("*Resistance:*");
+  lines.push(
+    `R1 ${tick(plan.r1)} \u2502 R2 ${tick(plan.r2)} \u2502 R3 ${tick(plan.r3)} \u2502 R4 ${tick(plan.r4)}`
+  );
+  lines.push("");
+  lines.push("*Support:*");
+  lines.push(
+    `S1 ${tick(plan.s1)} \u2502 S2 ${tick(plan.s2)} \u2502 S3 ${tick(plan.s3)} \u2502 S4 ${tick(plan.s4)}`
+  );
+
+  if (plan.setup1 || plan.setup2) {
+    lines.push("");
+    lines.push("*Setups:*");
+    if (plan.setup1) lines.push(`\u2022 ${escapeMdV2(plan.setup1)}`);
+    if (plan.setup2) lines.push(`\u2022 ${escapeMdV2(plan.setup2)}`);
   }
 
   if (plan.notes) {
-    lines.push('', '\u{1F4DD} Notes', `${plan.notes}`);
+    lines.push("");
+    lines.push(`*Notes:* ${escapeMdV2(plan.notes)}`);
   }
 
-  lines.push('', '\u2014', 'Trade Smarter. React to Price. No Predictions.');
-  return lines.join('\n');
+  lines.push("");
+  lines.push("\\—");
+  lines.push(
+    "_Educational content only\\. Not investment advice\\. Trade Smarter\\. React to Price\\. No Predictions\\._"
+  );
+  return lines.join("\n");
 }
 
 export function formatTelegramFree(plan: Plan): string {
@@ -84,44 +99,24 @@ export function formatSubstackPro(plan: Plan): string {
   const title = formatTitle(plan);
   const lines = [
     `# ${title}`,
-    '',
-    `**Bias:** ${plan.bias || ''}`,
-    `**Dynamic Zone:** ${formatNumber(plan.dynamicZoneBottom)} \u2013 ${formatNumber(plan.dynamicZoneTop)}`,
-    `**Magnet:** ${formatNumber(plan.magnet)}`,
-    `**Resistance:** R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)} | R3 ${formatNumber(plan.r3)} | R4 ${formatNumber(plan.r4)}`,
-    `**Support:** S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)} | S3 ${formatNumber(plan.s3)} | S4 ${formatNumber(plan.s4)}`,
-    '',
-    '**Best Setups:**',
-    `- ${plan.setup1 || ''}`
+    "",
+    `**Bias:** ${plan.bias || ""}`,
+    `**Dynamic Zone:** ${fmtNum(plan.dynamicZoneBottom)} \u2013 ${fmtNum(plan.dynamicZoneTop)}`,
+    `**Magnet:** ${fmtNum(plan.magnet)}`,
+    `**Resistance:** R1 ${fmtNum(plan.r1)} | R2 ${fmtNum(plan.r2)} | R3 ${fmtNum(plan.r3)} | R4 ${fmtNum(plan.r4)}`,
+    `**Support:** S1 ${fmtNum(plan.s1)} | S2 ${fmtNum(plan.s2)} | S3 ${fmtNum(plan.s3)} | S4 ${fmtNum(plan.s4)}`,
+    "",
+    "**Setups:**",
+    `- ${plan.setup1 || ""}`,
   ];
-
-  if (plan.setup2) {
-    lines.push(`- ${plan.setup2}`);
-  }
-
-  if (plan.notes) {
-    lines.push('', `**Notes:** ${plan.notes}`);
-  }
-
-  lines.push('', 'Trade Smarter. React to Price. No Predictions.');
-  return lines.join('\n');
+  if (plan.setup2) lines.push(`- ${plan.setup2}`);
+  if (plan.notes) lines.push("", `**Notes:** ${plan.notes}`);
+  lines.push("", "Trade Smarter. React to Price. No Predictions.");
+  return lines.join("\n");
 }
 
 export function formatSubstackFree(plan: Plan): string {
-  const title = formatTitle(plan);
-  const lines = [
-    `# ${title}`,
-    '',
-    `**Bias:** ${plan.bias || ''}`,
-    `**Dynamic Zone:** ${formatNumber(plan.dynamicZoneBottom)} \u2013 ${formatNumber(plan.dynamicZoneTop)}`,
-    `**Magnet:** ${formatNumber(plan.magnet)}`,
-    `**Resistance:** R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)}`,
-    `**Support:** S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)}`,
-    '',
-    'Trade Smarter. React to Price. No Predictions.'
-  ];
-
-  return lines.join('\n');
+  return formatSubstackPro(plan);
 }
 
 export function formatTelegram(plan: Plan): string {
@@ -134,6 +129,6 @@ export function formatAll(plan: Plan) {
     telegramPro: formatTelegramPro(plan),
     telegramFree: formatTelegramFree(plan),
     substackPro: formatSubstackPro(plan),
-    substackFree: formatSubstackFree(plan)
+    substackFree: formatSubstackFree(plan),
   };
 }

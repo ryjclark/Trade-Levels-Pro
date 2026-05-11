@@ -569,8 +569,142 @@
   flex-shrink: 0;
 }
 
+/* Email capture */
+.capture-box {
+  background: rgba(45, 212, 191, 0.06);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+  border-radius: 14px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.capture-title { font-size: 20px; font-weight: 700; margin: 0 0 6px; color: #fff; }
+.capture-sub { color: rgba(255,255,255,0.6); margin: 0; font-size: 15px; }
+.capture-form { display: flex; gap: 12px; }
+.capture-input {
+  flex: 1; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  padding: 14px 16px; color: #fff; font-size: 15px; font-family: inherit;
+}
+.capture-input:focus { outline: none; border-color: #2dd4bf; }
+.capture-button {
+  background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%);
+  color: #0c1117; border: none; padding: 14px 24px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.capture-button:disabled { opacity: 0.6; cursor: not-allowed; }
+.capture-msg { margin: 0; font-size: 14px; }
+.capture-msg-ok { color: #2dd4bf; }
+.capture-msg-err { color: #f87171; }
+
+/* Sample card */
+.sample-card {
+  max-width: 640px; margin: 0 auto 32px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(45, 212, 191, 0.2);
+  border-radius: 14px; padding: 32px;
+}
+.sample-card-teaser { border-color: rgba(255,255,255,0.08); }
+.sample-title {
+  font-size: 18px; font-weight: 700; color: #2dd4bf;
+  margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sample-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.sample-label { color: rgba(255,255,255,0.55); font-size: 14px; font-weight: 500; }
+.sample-value { color: #fff; font-weight: 600; font-size: 15px; }
+.sample-block { padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.sample-block:last-child { border-bottom: none; }
+.sample-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 24px; margin-top: 8px;
+}
+.sample-grid > div { display: flex; align-items: center; gap: 8px; color: #fff; }
+.sample-tag {
+  display: inline-block; min-width: 26px; padding: 2px 6px;
+  background: rgba(45,212,191,0.15); color: #2dd4bf;
+  border-radius: 4px; font-size: 12px; font-weight: 700; text-align: center;
+}
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+.sample-list { color: rgba(255,255,255,0.7); padding-left: 20px; line-height: 1.7; margin: 8px 0 0; }
+.sample-cta-row { padding-top: 16px; text-align: center; }
+.public-link-arrow { color: #2dd4bf; font-weight: 600; font-size: 15px; text-decoration: none; }
+.public-link-arrow:hover { text-decoration: underline; }
+
+/* Glossary */
+.glossary-box {
+  max-width: 640px; margin: 0 auto;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 28px;
+}
+.glossary-box h3 { margin: 0 0 16px; color: #fff; font-size: 18px; }
+.glossary-list { margin: 0; }
+.glossary-list dt { color: #2dd4bf; font-weight: 600; margin-top: 14px; font-size: 14px; }
+.glossary-list dt:first-child { margin-top: 0; }
+.glossary-list dd { margin: 4px 0 0; color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6; }
+
+/* Who-for grid */
+.who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.who-col {
+  background: rgba(255,255,255,0.04); border-radius: 14px; padding: 32px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.who-col h3 { margin: 0 0 16px; color: #fff; font-size: 19px; }
+.who-col-for { border-color: rgba(45,212,191,0.25); }
+.who-col-not { border-color: rgba(248,113,113,0.18); }
+.who-col ul { list-style: none; padding: 0; margin: 0; }
+.who-col li { padding: 10px 0 10px 24px; position: relative; color: rgba(255,255,255,0.7); line-height: 1.55; }
+.who-col-for li::before {
+  content: '✓'; color: #2dd4bf; position: absolute; left: 0; font-weight: 700;
+}
+.who-col-not li::before {
+  content: '×'; color: #f87171; position: absolute; left: 0; font-weight: 700; font-size: 18px; line-height: 1.4;
+}
+
+/* Method list */
+.method-list { display: flex; flex-direction: column; gap: 16px; max-width: 720px; margin: 0 auto; }
+.method-step {
+  display: flex; gap: 20px; padding: 20px 24px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+.method-step .public-step-num { margin-bottom: 0; flex-shrink: 0; }
+.method-step h3 { margin: 0 0 6px; color: #fff; font-size: 17px; }
+.method-step p { margin: 0; color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6; }
+
+/* Footer block */
+.public-footer-block {
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 48px 0 24px; margin-top: 40px;
+}
+.public-footer-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; margin-bottom: 32px;
+}
+.public-footer-col { display: flex; flex-direction: column; gap: 8px; }
+.public-footer-brand { color: #fff; font-weight: 700; font-size: 16px; }
+.public-footer-tag { color: rgba(255,255,255,0.45); font-size: 14px; }
+.public-footer-heading { color: #fff; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.public-footer-link { color: rgba(255,255,255,0.55); text-decoration: none; font-size: 14px; padding: 2px 0; }
+.public-footer-link:hover { color: #2dd4bf; }
+.public-footer-bottom { padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); }
+.public-footer-disclaimer { color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; margin-bottom: 12px; }
+.public-footer-copy { color: rgba(255,255,255,0.3); font-size: 12px; }
+
+/* Legal */
+.legal-box p { font-size: 15px; }
+.legal-box a { color: #2dd4bf; }
+
 /* Responsive */
 @media (max-width: 768px) {
+  .capture-form { flex-direction: column; }
+  .who-grid { grid-template-columns: 1fr; }
+  .public-footer-grid { grid-template-columns: 1fr; gap: 24px; }
+  .sample-grid { grid-template-columns: 1fr; }
   .public-navbar {
     flex-direction: column;
     gap: 16px;

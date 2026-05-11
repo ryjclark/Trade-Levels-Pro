@@ -1,11 +1,28 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
-import { formatTelegramFree, formatTelegramPro, formatAll } from "./formatter";
+import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { insertPlanSchema } from "@shared/schema";
 import { z } from "zod";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again later." },
+});
+
+const previewLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please slow down." },
+});
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const SESSION_SECRET = process.env.SESSION_SECRET || "insecure-dev-secret";
@@ -41,7 +58,7 @@ export async function registerRoutes(
     res.json({ status: "ok" });
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", loginLimiter, (req, res) => {
     const { password } = req.body;
     if (!ADMIN_PASSWORD) {
       return res.status(500).json({ error: "Admin password not configured" });
@@ -157,7 +174,7 @@ export async function registerRoutes(
       const settings = await storage.getSettings();
       if (settings.footerEnabled && settings.footerText) {
         const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
-        telegramMessage += "\n\n" + footer;
+        telegramMessage += "\n\n" + escapeMdV2(footer);
       }
       
       try {
@@ -302,7 +319,7 @@ export async function registerRoutes(
         const settings = await storage.getSettings();
         if (settings.footerEnabled && settings.footerText) {
           const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
-          telegramMessage += "\n\n" + footer;
+          telegramMessage += "\n\n" + escapeMdV2(footer);
         }
 
         try {
@@ -515,6 +532,50 @@ export async function registerRoutes(
       res.json(settings);
     } catch (error) {
       res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  app.post("/api/preview-signup", previewLimiter, async (req, res) => {
+    try {
+      const schema = z.object({
+        email: z.string().email().max(254),
+        source: z.string().max(80).optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Please enter a valid email." });
+      }
+      await storage.insertPreview({
+        email: parsed.data.email.toLowerCase().trim(),
+        source: parsed.data.source ?? "home",
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("preview-signup error:", err);
+      res.status(500).json({ error: "Failed to save email." });
+    }
+  });
+
+  app.get("/api/plans/copy-previous", requireAdmin, async (req, res) => {
+    try {
+      const { date, symbol } = req.query;
+      if (!date || !symbol) {
+        return res.status(400).json({ error: "date and symbol required" });
+      }
+      const prev = await storage.getPreviousPlan(date as string, symbol as string);
+      if (!prev) return res.status(404).json({ error: "No previous plan found" });
+      res.json(prev);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to load previous plan" });
+    }
+  });
+
+  app.get("/api/plans/latest-published", requireAdmin, async (_req, res) => {
+    try {
+      const latest = await storage.getLatestPublishedPlan();
+      res.json(latest ?? null);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to load latest plan" });
     }
   });
 

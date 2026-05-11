@@ -12,9 +12,9 @@ import ArchiveDetailPage from "@/pages/archive-detail";
 import SettingsPage from "@/pages/settings";
 import PublicHomePage from "@/pages/public-home";
 import PublicPricingPage from "@/pages/public-pricing";
-import PublicTrackRecordPage from "@/pages/public-trackrecord";
-import PublicAboutPage from "@/pages/public-about";
-import PublicSubscribePage from "@/pages/public-subscribe";
+import PublicSamplePage from "@/pages/public-sample";
+import PublicHowItWorksPage from "@/pages/public-how-it-works";
+import PublicLegalPage from "@/pages/public-legal";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -36,7 +36,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
-function PublicRoute({ component: Component }: { component: React.ComponentType }) {
+function PublicLoginRoute() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -51,20 +51,22 @@ function PublicRoute({ component: Component }: { component: React.ComponentType 
     return <Redirect to="/admin" />;
   }
 
-  return <Component />;
+  return <LoginPage />;
 }
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={PublicHomePage} />
+      <Route path="/sample" component={PublicSamplePage} />
+      <Route path="/how-it-works" component={PublicHowItWorksPage} />
       <Route path="/pricing" component={PublicPricingPage} />
-      <Route path="/trackrecord" component={PublicTrackRecordPage} />
-      <Route path="/about" component={PublicAboutPage} />
-      <Route path="/subscribe" component={PublicSubscribePage} />
-      <Route path="/login">
-        <PublicRoute component={LoginPage} />
-      </Route>
+      <Route path="/about">{() => <Redirect to="/how-it-works" />}</Route>
+      <Route path="/subscribe">{() => <Redirect to="/pricing" />}</Route>
+      <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>
+      <Route path="/privacy">{() => <PublicLegalPage kind="privacy" />}</Route>
+      <Route path="/risk">{() => <PublicLegalPage kind="risk" />}</Route>
+      <Route path="/login" component={PublicLoginRoute} />
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />
       </Route>

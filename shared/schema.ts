@@ -44,6 +44,21 @@ export const publishLogs = pgTable("publish_logs", {
   responsePayload: text("response_payload"),
 });
 
+export const previews = pgTable("previews", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  source: text("source"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPreviewSchema = createInsertSchema(previews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPreview = z.infer<typeof insertPreviewSchema>;
+export type Preview = typeof previews.$inferSelect;
+
 export const siteSettings = pgTable("site_settings", {
   id: serial("id").primaryKey(),
   key: text("key").notNull().unique(),

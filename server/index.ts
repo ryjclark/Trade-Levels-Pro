@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -6,6 +7,17 @@ import { seedDatabase } from "./seed";
 
 const app = express();
 const httpServer = createServer(app);
+
+app.disable("x-powered-by");
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+app.get("/about", (_req, res) => res.redirect(301, "/how-it-works"));
+app.get("/subscribe", (_req, res) => res.redirect(301, "/pricing"));
 
 declare module "http" {
   interface IncomingMessage {
@@ -45,12 +57,22 @@ app.use((req, res, next) => {
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
+  const SENSITIVE_PATHS = new Set([
+    "/api/auth/login",
+    "/api/auth/check",
+    "/api/auth/logout",
+    "/api/preview-signup",
+  ]);
+
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      if (capturedJsonResponse && !SENSITIVE_PATHS.has(path)) {
+        const safe = { ...capturedJsonResponse };
+        if ("token" in safe) safe.token = "[REDACTED]";
+        if ("password" in safe) safe.password = "[REDACTED]";
+        logLine += ` :: ${JSON.stringify(safe)}`;
       }
 
       log(logLine);
