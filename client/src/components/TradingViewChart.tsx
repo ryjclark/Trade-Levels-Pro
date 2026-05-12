@@ -46,7 +46,7 @@ type Props = {
 };
 
 export default function TradingViewChart({
-  symbol = "CME_MINI:ES1!",
+  symbol = "SP:SPX",
   interval = "60",
   height = 500,
   theme = "dark",
@@ -97,7 +97,7 @@ export default function TradingViewChart({
       data-testid={`tv-chart-${symbol}`}
     >
       <div className="tv-chart-caption">
-        Live ES futures chart powered by TradingView
+        Live S&amp;P 500 index chart powered by TradingView — tracks ES futures during cash market hours
       </div>
       <div
         id={idRef.current}

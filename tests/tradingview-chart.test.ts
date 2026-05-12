@@ -4,11 +4,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import TradingViewChart from "../client/src/components/TradingViewChart";
 
 describe("TradingViewChart", () => {
-  it("renders a container div with the default ES symbol testid", () => {
+  it("renders a container div with the default SPX symbol testid", () => {
     const html = renderToStaticMarkup(createElement(TradingViewChart));
-    expect(html).toContain('data-testid="tv-chart-CME_MINI:ES1!"');
+    expect(html).toContain('data-testid="tv-chart-SP:SPX"');
     expect(html).toContain('data-testid="tv-chart-container"');
-    expect(html).toContain("Live ES futures chart powered by TradingView");
+    expect(html).toContain("Live S&amp;P 500 index chart powered by TradingView");
   });
 
   it("symbol prop overrides the default", () => {
@@ -16,7 +16,7 @@ describe("TradingViewChart", () => {
       createElement(TradingViewChart, { symbol: "CME_MINI:NQ1!" }),
     );
     expect(html).toContain('data-testid="tv-chart-CME_MINI:NQ1!"');
-    expect(html).not.toContain('data-testid="tv-chart-CME_MINI:ES1!"');
+    expect(html).not.toContain('data-testid="tv-chart-SP:SPX"');
   });
 
   it("respects custom height", () => {
