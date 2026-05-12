@@ -1,0 +1,54 @@
+# Simpler login system — execute
+
+Reduce scope from the previous plan. Build only what's listed below.
+
+## Goal
+- Username + password login
+- Login survives server restarts (the current bug)
+- That's it. No reset flow, no change-password UI, no rate limits, no email.
+
+## Schema
+- `admin_credentials(id serial pk, username text not null unique, password_hash text not null, updated_at timestamptz default now())` — single row by convention.
+- `admin_sessions(id serial pk, token text not null unique, created_at timestamptz default now(), expires_at timestamptz not null, last_seen_at timestamptz default now())`.
+
+Drop the `admin_password_resets` table from the prior plan — not needed.
+
+## Seeding
+On server boot, if `admin_credentials` is empty: insert one row with `username = "Ryan"`, `password_hash = bcrypt("Ryan", 12)`. Log: "Seeded admin login: username=Ryan. Change the password in Replit Secrets and restart, or via direct DB update."
+
+Use `bcryptjs` (no native build issues).
+
+## Routes
+- `POST /api/auth/login` body `{ username, password }`:
+  - Lookup row by `username` (case-sensitive).
+  - bcrypt-compare password. On match: insert session row (30-day TTL), return `{ token, expires_at }`. On mismatch or unknown user: `401 { error: "Invalid username or password" }`.
+- `POST /api/auth/logout`: delete session row by token from `Authorization: Bearer` header.
+- `requireAdmin` middleware: looks up token in DB, checks `expires_at > now()`, on every hit updates `last_seen_at = now()` and extends `expires_at = now() + 30 days` (rolling). On invalid/expired/missing: 401.
+- Cleanup expired sessions: run once on boot, then every hour via setInterval.
+
+## Frontend
+- Login page (`client/src/pages/login.tsx` or wherever it lives): add a `username` text input ABOVE the existing password input. Submit posts both to `/api/auth/login`.
+- Store the session token in `localStorage` under key `tlp_admin_session` (rename from `trade_levels_auth` so old orphaned tokens get cleared on next visit).
+- Update `client/src/lib/queryClient.ts` (or wherever fetch happens) to send `Authorization: Bearer {token}` on every admin request, and on any 401: clear stored token + redirect to `/login`.
+- Add a "Log out" button somewhere visible on the admin nav. Calls `/api/auth/logout`, clears localStorage, navigates to `/login`.
+
+## Out of scope (do NOT build)
+- Change-password UI
+- Reset-password flow
+- Rate limits
+- Username field on the existing user-facing pages (this is admin-only)
+- Migration UI for old tokens (the localStorage key rename handles it — old tokens just stop working)
+
+## Tests
+- Login with `Ryan` / `Ryan` succeeds, returns a token
+- Login with wrong password returns 401
+- Token persists across simulated server restart (test by clearing the in-memory state and verifying DB-backed lookup still works)
+- `requireAdmin` accepts valid token; rejects missing / expired
+
+## After it ships
+Walk me through:
+1. Republishing prod
+2. Logging in to `tradelevelspro.com/login` with `Ryan` / `Ryan`
+3. Confirming I stay logged in after you save a server file in the workspace (which would have logged me out before)
+
+Execute. Don't propose a plan — this IS the plan.

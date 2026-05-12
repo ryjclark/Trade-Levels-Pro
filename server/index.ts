@@ -7,6 +7,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedDatabase } from "./seed";
 import { registerCronJobs } from "./cron";
+import { seedAdminPasswordIfNeeded, cleanupExpiredSessions } from "./auth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -94,6 +95,18 @@ app.use((req, res, next) => {
   await seedDatabase().catch(err => {
     console.error("Failed to seed database:", err);
   });
+
+  // Pass 8: seed the admin password from ADMIN_PASSWORD env var on first boot
+  // of whichever environment starts first. After that the DB hash wins.
+  await seedAdminPasswordIfNeeded().catch(err => {
+    console.error("Failed to seed admin password:", err);
+  });
+
+  // Boot-time cleanup so restarts don't leave stale rows for an hour.
+  cleanupExpiredSessions().catch(err => console.warn("Initial session cleanup failed:", err));
+  setInterval(() => {
+    cleanupExpiredSessions().catch(err => console.warn("Hourly session cleanup failed:", err));
+  }, 60 * 60 * 1000);
 
   registerCronJobs();
 

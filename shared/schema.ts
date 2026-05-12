@@ -95,6 +95,41 @@ export const ingestLevelsSchema = z.object({
 });
 export type IngestLevelsPayload = z.infer<typeof ingestLevelsSchema>;
 
+// ===== Admin auth (Pass 8): durable credentials + sessions =====
+//
+// Dev preview and prod share the same Production database, so the seed below
+// runs exactly once on whichever environment boots first. After that, the
+// `ADMIN_PASSWORD` env var is ignored everywhere — the bcrypt hash in
+// `admin_credentials` is the source of truth. You only need ADMIN_PASSWORD
+// configured in Workspace Secrets (or a single seeding context) once.
+export const adminCredentials = pgTable("admin_credentials", {
+  id: serial("id").primaryKey(),
+  passwordHash: text("password_hash").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const adminSessions = pgTable("admin_sessions", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
+});
+
+export const adminPasswordResets = pgTable("admin_password_resets", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+});
+
+export type AdminCredential = typeof adminCredentials.$inferSelect;
+export type AdminSession = typeof adminSessions.$inferSelect;
+export type AdminPasswordReset = typeof adminPasswordResets.$inferSelect;
+
 export const aiParsedPlanSchema = z.object({
   target_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   symbol: z.string().min(1).max(8),

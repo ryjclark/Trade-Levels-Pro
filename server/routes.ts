@@ -10,6 +10,19 @@ import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
 import { PARSE_NEWSLETTER_PROMPT_VERSION } from "./lib/prompts/parse-newsletter";
 import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@shared/schema";
 import { z } from "zod";
+import {
+  requireAdmin,
+  createSession,
+  deleteSessionByToken,
+  deleteOtherSessions,
+  deleteAllSessions,
+  verifyAdminPassword,
+  isAdminConfigured,
+  setAdminPassword,
+  createPasswordResetToken,
+  consumePasswordResetToken,
+  type AdminAuthRequest,
+} from "./auth";
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -17,6 +30,22 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts, please try again later." },
+});
+
+const resetRequestLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many reset requests, try again in an hour." },
+});
+
+const resetConsumeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many reset attempts, slow down." },
 });
 
 const previewLimiter = rateLimit({
@@ -42,39 +71,15 @@ function timingSafeEq(a: string, b: string): boolean {
   return crypto.timingSafeEqual(ab, bb);
 }
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const SESSION_SECRET = process.env.SESSION_SECRET || "insecure-dev-secret";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-
-if (!ADMIN_PASSWORD) {
-  console.warn("WARNING: ADMIN_PASSWORD is not set. Admin login will be disabled.");
-}
-
-const validTokens = new Set<string>();
-
-function generateToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
-
-function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-    if (validTokens.has(token)) {
-      (req as any).adminToken = token;
-      return next();
-    }
-  }
-  return res.status(401).json({ error: "Unauthorized" });
-}
 
 // Per-admin-token rate limiter for the Claude parse endpoint (20/min/token).
 // Hit logs go to console so we can spot if we're banging into the cap.
 const PARSE_LIMIT_PER_MIN = 20;
 const parseRateBuckets = new Map<string, number[]>();
-function parseRateLimit(req: Request, res: Response, next: NextFunction) {
-  const token = (req as any).adminToken as string | undefined;
+function parseRateLimit(req: AdminAuthRequest, res: Response, next: NextFunction) {
+  const token = req.session?.token;
   const key = token || (req.ip ?? "anon");
   const now = Date.now();
   const windowStart = now - 60_000;
@@ -98,36 +103,98 @@ export async function registerRoutes(
     res.json({ status: "ok" });
   });
 
-  app.post("/api/auth/login", loginLimiter, (req, res) => {
-    const { password } = req.body;
-    if (!ADMIN_PASSWORD) {
-      return res.status(500).json({ error: "Admin password not configured" });
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
+    const { password } = req.body || {};
+    if (typeof password !== "string" || password.length === 0) {
+      return res.status(400).json({ code: "INVALID_PASSWORD", error: "Password required" });
     }
-    if (password === ADMIN_PASSWORD) {
-      const token = generateToken();
-      validTokens.add(token);
-      return res.json({ success: true, token });
+    if (!(await isAdminConfigured())) {
+      return res.status(503).json({
+        code: "NOT_CONFIGURED",
+        error: "Admin password not yet configured. Check the server logs or contact the site owner.",
+      });
     }
-    return res.status(401).json({ error: "Invalid password" });
+    const ok = await verifyAdminPassword(password);
+    if (!ok) {
+      return res.status(401).json({ code: "INVALID_PASSWORD", error: "Incorrect password" });
+    }
+    const session = await createSession({
+      userAgent: req.headers["user-agent"] || null,
+      ip: req.ip || null,
+    });
+    return res.json({
+      success: true,
+      token: session.token,
+      expires_at: session.expiresAt.toISOString(),
+    });
   });
 
-  app.get("/api/auth/check", (req, res) => {
+  app.get("/api/auth/check", requireAdmin, (req: AdminAuthRequest, res) => {
+    return res.json({
+      authenticated: true,
+      expires_at: req.session!.expiresAt.toISOString(),
+    });
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.substring(7);
-      if (validTokens.has(token)) {
-        return res.json({ authenticated: true });
-      }
+      await deleteSessionByToken(token).catch(() => {});
     }
-    return res.status(401).json({ authenticated: false });
+    return res.json({ success: true });
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      validTokens.delete(token);
+  // ----- Password rotation -----
+  app.post("/api/admin/change-password", requireAdmin, async (req: AdminAuthRequest, res) => {
+    const { current_password, new_password, revoke_other_sessions } = req.body || {};
+    if (typeof current_password !== "string" || typeof new_password !== "string") {
+      return res.status(400).json({ error: "current_password and new_password required" });
     }
+    if (new_password.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+    const ok = await verifyAdminPassword(current_password);
+    if (!ok) {
+      return res.status(401).json({ code: "INVALID_PASSWORD", error: "Current password is incorrect" });
+    }
+    await setAdminPassword(new_password);
+    let revokedCount = 0;
+    if (revoke_other_sessions === true) {
+      revokedCount = await deleteOtherSessions(req.session!.token);
+    }
+    return res.json({ success: true, revoked_other_sessions: revokedCount });
+  });
+
+  // ----- Reset flow (escape hatch). Token is printed to server logs only. -----
+  app.post("/api/admin/reset-password/request", resetRequestLimiter, async (_req, res) => {
+    const token = await createPasswordResetToken();
+    console.log(
+      "\n========================================\n" +
+        "[auth] PASSWORD RESET TOKEN (valid 15 min, single use):\n" +
+        `  ${token}\n` +
+        "POST it to /api/admin/reset-password/consume with a new_password to set a new admin password.\n" +
+        "========================================\n",
+    );
+    // No oracle: always 202.
+    return res.status(202).json({ success: true });
+  });
+
+  app.post("/api/admin/reset-password/consume", resetConsumeLimiter, async (req, res) => {
+    const { reset_token, new_password } = req.body || {};
+    if (typeof reset_token !== "string" || typeof new_password !== "string") {
+      return res.status(400).json({ error: "reset_token and new_password required" });
+    }
+    if (new_password.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+    const ok = await consumePasswordResetToken(reset_token);
+    if (!ok) {
+      return res.status(400).json({ code: "INVALID_RESET_TOKEN", error: "Reset token invalid, expired, or already used" });
+    }
+    await setAdminPassword(new_password);
+    // Reset always invalidates every existing session — fresh login required.
+    await deleteAllSessions();
     return res.json({ success: true });
   });
 

@@ -1,0 +1,35 @@
+Approved. Five small additions before you execute, then go.
+
+## Additions to your plan
+
+1. **Rate limit on the reset flow.** Both reset endpoints are unauthenticated, so add limits:
+   - `POST /api/admin/reset-password/request`: 5 per hour per IP. Also: at most ONE active (unconsumed, unexpired) reset token at a time — a new request invalidates any prior active token.
+   - `POST /api/admin/reset-password/consume`: 5 per minute per IP. Mostly defense-in-depth; the 32-byte token is uncrackable but rate limiting prevents log spam.
+
+2. **`cleanupExpiredSessions()` also runs on boot**, not just hourly. The setInterval doesn't fire until 1hr after start; without a boot-time run, restarts leave stale rows untouched for an hour.
+
+3. **`admin_credentials` single-row enforcement**: `getAdminCredential` should always `ORDER BY id ASC LIMIT 1` (defensive against accidental extra rows via direct SQL). `setAdminPasswordHash` is `INSERT ... ON CONFLICT (id) DO UPDATE` targeting id = 1, OR delete-then-insert in a transaction. Either works.
+
+4. **Document the shared-DB seeding behavior** in a code comment near the seed logic AND in `replit.md`:
+   - Dev preview and prod share the same Production database (already confirmed)
+   - Therefore the seed runs exactly once on first boot of either environment, whichever happens first
+   - After that, the env var `ADMIN_PASSWORD` is ignored everywhere — DB hash is source of truth
+   - This means: I only need `ADMIN_PASSWORD` set in Workspace Secrets for the initial seed, NOT in Deployment Secrets
+
+5. **Login error code mapping in the UI**: be explicit about what each code renders as. Use this exact mapping:
+   - `INVALID_PASSWORD` → "Incorrect password."
+   - `NOT_CONFIGURED` → "Admin password not yet configured. Check the server logs or contact the site owner."
+   - `SESSION_EXPIRED` → "Your session expired. Please sign in again."
+   - `NOT_AUTHENTICATED` → no banner, just redirect silently (this is the normal "not logged in" case)
+
+## Order of work
+
+Phase 1a — Schema + seed + auth routes + tests passing. Verify with `npm test`. Don't touch frontend yet.
+
+Phase 1b — Frontend: login page error codes, 401 interceptor, change-password UI, logout button, reset-password page.
+
+Phase 1c — Manual verification (Phase 2 in my prior message): you walk me through logging in fresh, changing the password, then testing the reset flow end-to-end.
+
+Pause between 1a and 1b for a quick checkpoint — once schema + backend is solid, I want to confirm the dev preview still boots cleanly and the seed log line appeared before you start ripping up the frontend.
+
+Execute.
