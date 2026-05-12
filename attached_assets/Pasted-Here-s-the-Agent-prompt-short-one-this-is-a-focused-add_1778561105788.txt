@@ -1,0 +1,68 @@
+Here's the Agent prompt — short one, this is a focused add.
+
+````
+# TradingView widget integration
+
+Add an embeddable TradingView chart for ES futures to specific pages. Free widget, no API key needed.
+
+## What to use
+
+TradingView's "Advanced Chart" widget (the full-featured one with timeframe toggle and drawing tools). Reference: https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/
+
+Symbol: `CME_MINI:ES1!` (front-month E-mini S&P continuous)
+
+## Implementation
+
+Build a single React component `client/src/components/TradingViewChart.tsx`:
+
+```tsx
+type Props = {
+  symbol?: string;       // default "CME_MINI:ES1!"
+  interval?: string;     // default "60" (1h)
+  height?: number;       // default 500
+  theme?: "dark" | "light"; // default "dark"
+};
+```
+
+- Renders a unique container div per instance (use a ref + useEffect to inject the script)
+- Loads TradingView's embed script `https://s3.tradingview.com/tv.js` (only once globally — guard with `window.TradingView` check)
+- Initializes `new window.TradingView.widget({...})` with sensible defaults: hide_top_toolbar=false, allow_symbol_change=false, autosize=true, studies=["RSI@tv-basicstudies"], style="1" (bars), locale="en"
+- Clean up on unmount (the iframe TradingView injects)
+- TypeScript-friendly: declare `window.TradingView` minimally in a `.d.ts` if needed to silence ts errors
+
+## Where to place it
+
+Three pages:
+1. **Homepage** (`client/src/pages/home.tsx`): drop it below the hero / value-prop section, above whatever's currently below. Height 500. Default ES interval 60.
+2. **Sample page** (`client/src/pages/sample.tsx`): below the sample plan content. Height 400.
+3. **Public archive plan detail page** (whichever route renders a single published plan, likely `/archive/:date` or similar): below the plan content. Height 400.
+
+Do NOT add it to the admin dashboard or any admin sub-pages. Admin is utilitarian — extra chart noise hurts focus.
+
+## Styling
+
+- Match site dark theme (theme="dark")
+- Container has the same card padding / border-radius as other cards on the page (steal from an existing card component)
+- Above the widget, small text: `Live ES futures chart powered by TradingView`
+- TradingView's widget includes its own attribution at the bottom — required by their TOS, don't try to hide it
+
+## Out of scope
+
+- No level overlays on the chart (just live price action)
+- No interaction with your plan data — purely embedded chart
+- No admin embed
+- No paid features (we use only the free widget)
+
+## Tests
+
+- Component mounts and renders the container div
+- Symbol prop overrides default
+- Unmount doesn't leak the global script (it's fine to leave the script loaded; just verify the widget instance is cleaned up)
+
+## Execute
+Don't propose a plan. This is the plan. Build it, push it, republish.
+````
+
+Paste it and let it ship.
+
+One small heads-up: TradingView widgets load via their CDN, so first paint on those pages will be ~200-500ms slower than current. It's their standard, expected behavior. If the homepage ever needs to feel snappier, you can lazy-mount the widget below the fold so it doesn't block initial render — but the Agent's default rendering should be fine for now.

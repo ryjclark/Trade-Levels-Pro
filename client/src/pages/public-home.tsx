@@ -14,6 +14,7 @@ import TelegramBubble from "@/components/telegram-bubble";
 import FaqAccordion from "@/components/faq-accordion";
 import Reveal from "@/components/reveal";
 import SectionDivider from "@/components/section-divider";
+import TradingViewChart from "@/components/TradingViewChart";
 import { useSeo } from "@/hooks/use-seo";
 import {
   CTA_TEXT, CTA_MAILTO, PRICE_PER_MONTH, TAGLINE, SITE_NAME, SITE_URL,
@@ -137,6 +138,15 @@ export default function PublicHomePage() {
             </Reveal>
           </div>
         </section>
+
+        <SectionDivider />
+
+        {/* Live ES chart */}
+        <Reveal>
+          <section className="public-section" style={{ paddingTop: 0 }}>
+            <TradingViewChart height={500} />
+          </section>
+        </Reveal>
 
         <SectionDivider />
 

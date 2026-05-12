@@ -3,6 +3,7 @@ import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
+import TradingViewChart from "@/components/TradingViewChart";
 import { useSeo } from "@/hooks/use-seo";
 import { CTA_TEXT, CTA_MAILTO, SITE_NAME } from "@/lib/constants";
 
@@ -100,6 +101,12 @@ export default function PublicSamplePage() {
                 <dd>A specific, level-based trade idea — a starting point, not a signal.</dd>
               </dl>
             </div>
+          </section>
+        </Reveal>
+
+        <Reveal>
+          <section className="public-section" style={{ paddingTop: 0 }}>
+            <TradingViewChart height={400} />
           </section>
         </Reveal>
 
