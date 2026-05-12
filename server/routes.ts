@@ -579,6 +579,181 @@ export async function registerRoutes(
     }
   });
 
+  // ---- Pass 5 additions ----
+
+  // TradingView webhook → creates a draft plan from a JSON alert payload.
+  // Header: `X-TV-Secret: <TV_WEBHOOK_SECRET>`
+  // Body example:
+  // {
+  //   "date": "2026-05-13",
+  //   "symbol": "ES",
+  //   "contract": "ESM26",
+  //   "magnet": 5872, "dynamicZoneTop": 5880, "dynamicZoneBottom": 5864,
+  //   "r1": 5894, "r2": 5908, "r3": 5926, "r4": 5945,
+  //   "s1": 5856, "s2": 5840, "s3": 5821, "s4": 5802,
+  //   "bias": "Neutral with upside lean",
+  //   "setup1": "Long failed breakdown of S1",
+  //   "setup2": "Short rejection at R2"
+  // }
+  app.post("/api/tv-webhook", async (req, res) => {
+    const expected = process.env.TV_WEBHOOK_SECRET;
+    const provided = req.header("X-TV-Secret") || req.header("x-tv-secret");
+    if (!expected) return res.status(503).json({ error: "TV_WEBHOOK_SECRET not configured" });
+    if (provided !== expected) return res.status(401).json({ error: "Unauthorized" });
+
+    const tvSchema = z.object({
+      date: z.string().transform((s) => {
+        // Accept YYYY-MM-DD or any ISO-ish string; normalize to YYYY-MM-DD.
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+        const d = new Date(s);
+        if (isNaN(d.getTime())) throw new Error("Invalid date");
+        return d.toISOString().slice(0, 10);
+      }),
+      symbol: z.enum(["ES", "NQ"]),
+      contract: z.string().nullable().optional(),
+      tier: z.string().optional(),
+      dynamicZoneTop: z.coerce.number().nullable().optional(),
+      dynamicZoneBottom: z.coerce.number().nullable().optional(),
+      magnet: z.coerce.number().nullable().optional(),
+      r1: z.coerce.number().nullable().optional(),
+      r2: z.coerce.number().nullable().optional(),
+      r3: z.coerce.number().nullable().optional(),
+      r4: z.coerce.number().nullable().optional(),
+      s1: z.coerce.number().nullable().optional(),
+      s2: z.coerce.number().nullable().optional(),
+      s3: z.coerce.number().nullable().optional(),
+      s4: z.coerce.number().nullable().optional(),
+      bias: z.string().nullable().optional(),
+      setup1: z.string().nullable().optional(),
+      setup2: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+    });
+    const parsed = tvSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid TV payload", details: parsed.error.errors });
+    }
+    try {
+      const d = parsed.data;
+      const plan = await storage.upsertPlan({
+        date: d.date,
+        symbol: d.symbol,
+        contract: d.contract ?? null,
+        tier: d.tier ?? "pro",
+        dynamicZoneTop: d.dynamicZoneTop ?? null,
+        dynamicZoneBottom: d.dynamicZoneBottom ?? null,
+        magnet: d.magnet ?? null,
+        r1: d.r1 ?? null, r2: d.r2 ?? null, r3: d.r3 ?? null, r4: d.r4 ?? null,
+        s1: d.s1 ?? null, s2: d.s2 ?? null, s3: d.s3 ?? null, s4: d.s4 ?? null,
+        bias: d.bias ?? null,
+        setup1: d.setup1 ?? null,
+        setup2: d.setup2 ?? null,
+        notes: d.notes ?? null,
+        status: "draft",
+        publishedAt: null,
+        telegramMessageId: null,
+        telegramMessage: null,
+        telegramMessageVariant: null,
+      });
+      res.json({ success: true, planId: plan.id, status: plan.status });
+    } catch (err: any) {
+      console.error("tv-webhook error:", err);
+      res.status(500).json({ error: err?.message || "Failed to save plan" });
+    }
+  });
+
+  // Schedule a draft plan to publish later.
+  app.post("/api/plans/schedule", requireAdmin, async (req, res) => {
+    const schema = z.object({
+      id: z.number(),
+      scheduledFor: z.string(), // ISO datetime
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Invalid schedule payload" });
+    const when = new Date(parsed.data.scheduledFor);
+    if (isNaN(when.getTime())) return res.status(400).json({ error: "Invalid scheduledFor datetime" });
+    try {
+      const updated = await storage.updatePlan(parsed.data.id, {
+        status: "scheduled",
+        scheduledFor: when,
+      } as any);
+      if (!updated) return res.status(404).json({ error: "Plan not found" });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to schedule plan" });
+    }
+  });
+
+  // Paste-import: accept JSON object OR `key: value` lines; returns parsed fields.
+  app.post("/api/plans/parse-paste", requireAdmin, (req, res) => {
+    const raw = String(req.body?.text || "").trim();
+    if (!raw) return res.status(400).json({ error: "Empty paste" });
+    const numericKeys = ["dynamicZoneTop","dynamicZoneBottom","magnet","r1","r2","r3","r4","s1","s2","s3","s4"];
+    const aliasMap: Record<string, string> = {
+      "dz top": "dynamicZoneTop", "dztop": "dynamicZoneTop", "dynamic zone top": "dynamicZoneTop",
+      "dz bottom": "dynamicZoneBottom", "dzbottom": "dynamicZoneBottom", "dynamic zone bottom": "dynamicZoneBottom",
+      "magnet": "magnet",
+      "r1": "r1","r2": "r2","r3": "r3","r4": "r4",
+      "s1": "s1","s2": "s2","s3": "s3","s4": "s4",
+      "bias": "bias", "setup1": "setup1", "setup 1": "setup1", "setup2": "setup2", "setup 2": "setup2",
+      "notes": "notes", "contract": "contract", "symbol": "symbol", "date": "date",
+    };
+    const out: Record<string, any> = {};
+    // Try JSON first
+    try {
+      const j = JSON.parse(raw);
+      if (j && typeof j === "object") {
+        for (const [k, v] of Object.entries(j)) out[k] = v;
+        return res.json(out);
+      }
+    } catch {}
+    // Fallback: line-by-line key:value
+    for (const line of raw.split(/\r?\n/)) {
+      const m = line.match(/^\s*([^:=]+)\s*[:=]\s*(.+?)\s*$/);
+      if (!m) continue;
+      const key = aliasMap[m[1].trim().toLowerCase()] || m[1].trim();
+      let val: any = m[2].trim();
+      if (numericKeys.includes(key)) {
+        const n = parseFloat(val.replace(/,/g, ""));
+        val = Number.isFinite(n) ? n : null;
+      }
+      out[key] = val;
+    }
+    res.json(out);
+  });
+
+  // Public archive — last 30 published plans (gated bias/setups handled client-side).
+  app.get("/api/public/archive", async (_req, res) => {
+    try {
+      const list = await storage.listPublicPlans(30);
+      const ids = list.map((p) => p.id);
+      const results = await storage.listResultsForPlanIds(ids);
+      const byPlan = new Map<number, boolean>();
+      for (const r of results) byPlan.set(r.planId, true);
+      const safe = list.map((p) => ({
+        id: p.id,
+        date: p.date,
+        symbol: p.symbol,
+        contract: p.contract,
+        dynamicZoneTop: p.dynamicZoneTop,
+        dynamicZoneBottom: p.dynamicZoneBottom,
+        magnet: p.magnet,
+        r1: p.r1, r2: p.r2, r3: p.r3, r4: p.r4,
+        s1: p.s1, s2: p.s2, s3: p.s3, s4: p.s4,
+        publishedAt: p.publishedAt,
+        hasResult: byPlan.has(p.id),
+      }));
+      res.json(safe);
+    } catch (err) {
+      console.error("public archive error:", err);
+      res.status(500).json({ error: "Failed to load archive" });
+    }
+  });
+
+  app.get("/api/public/site-config", (_req, res) => {
+    res.json({ clarityProjectId: process.env.CLARITY_PROJECT_ID || null });
+  });
+
   app.get("/api/public/settings", async (_req, res) => {
     try {
       const settings = await storage.getSettings();

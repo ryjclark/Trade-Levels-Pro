@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 import LoginPage from "@/pages/login";
 import AdminPage from "@/pages/admin";
 import ArchivePage from "@/pages/archive";
@@ -20,6 +21,8 @@ import PublicPropFirmsPage from "@/pages/public-prop-firms";
 import PublicIndicatorPage from "@/pages/public-indicator";
 import PublicLearnPage from "@/pages/public-learn";
 import PublicArticlePage from "@/pages/public-article";
+import PublicArchivePage from "@/pages/public-archive";
+import PublicAboutPage from "@/pages/public-about";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
 
@@ -70,7 +73,8 @@ function Router() {
       <Route path="/indicator" component={PublicIndicatorPage} />
       <Route path="/learn" component={PublicLearnPage} />
       <Route path="/learn/:slug" component={PublicArticlePage} />
-      <Route path="/about">{() => <Redirect to="/how-it-works" />}</Route>
+      <Route path="/about" component={PublicAboutPage} />
+      <Route path="/archive" component={PublicArchivePage} />
       <Route path="/subscribe">{() => <Redirect to="/pricing" />}</Route>
       <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>
       <Route path="/privacy">{() => <PublicLegalPage kind="privacy" />}</Route>
@@ -83,15 +87,36 @@ function Router() {
       <Route path="/admin/settings">
         <ProtectedRoute component={SettingsPage} />
       </Route>
-      <Route path="/archive">
+      <Route path="/admin/archive">
         <ProtectedRoute component={ArchivePage} />
       </Route>
-      <Route path="/archive/:id">
+      <Route path="/admin/archive/:id">
         <ProtectedRoute component={ArchiveDetailPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>
   );
+}
+
+function ClarityLoader() {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ((window as any).__clarityLoaded) return;
+    fetch("/api/public/site-config")
+      .then((r) => r.json())
+      .then((cfg: { clarityProjectId?: string | null }) => {
+        const id = cfg?.clarityProjectId;
+        if (!id) return;
+        (window as any).__clarityLoaded = true;
+        const s = document.createElement("script");
+        s.type = "text/javascript";
+        s.async = true;
+        s.text = `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${id}");`;
+        document.head.appendChild(s);
+      })
+      .catch(() => {});
+  }, []);
+  return null;
 }
 
 function App() {
@@ -100,6 +125,7 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="trade-levels-theme">
         <TooltipProvider>
           <Toaster />
+          <ClarityLoader />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

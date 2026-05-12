@@ -106,7 +106,7 @@ export default function ArchivePage() {
                 {plans.map((plan) => (
                   <button
                     key={plan.id}
-                    onClick={() => setLocation(`/archive/${plan.id}`)}
+                    onClick={() => setLocation(`/admin/archive/${plan.id}`)}
                     className="w-full flex items-center justify-between gap-4 py-4 px-2 hover-elevate rounded-lg text-left transition-colors"
                     data-testid={`link-plan-${plan.id}`}
                   >

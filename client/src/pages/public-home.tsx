@@ -8,6 +8,7 @@ import {
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
+import StickyCta from "@/components/sticky-cta";
 import PhonePreview from "@/components/phone-preview";
 import TelegramBubble from "@/components/telegram-bubble";
 import FaqAccordion from "@/components/faq-accordion";
@@ -359,6 +360,7 @@ export default function PublicHomePage() {
         </section>
 
         <PublicFooter />
+        <StickyCta />
       </div>
     </div>
   );

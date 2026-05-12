@@ -6,6 +6,7 @@ import { registerSeoRoutes } from "./seo-routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedDatabase } from "./seed";
+import { registerCronJobs } from "./cron";
 
 const app = express();
 const httpServer = createServer(app);
@@ -18,7 +19,6 @@ app.use(
   })
 );
 
-app.get("/about", (_req, res) => res.redirect(301, "/how-it-works"));
 app.get("/subscribe", (_req, res) => res.redirect(301, "/pricing"));
 
 // Stripe webhook MUST receive raw body — register before express.json()
@@ -94,6 +94,8 @@ app.use((req, res, next) => {
   await seedDatabase().catch(err => {
     console.error("Failed to seed database:", err);
   });
+
+  registerCronJobs();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

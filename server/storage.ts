@@ -1,6 +1,6 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, lte, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, members, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, planResults, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult } from "@shared/schema";
 
 export interface IStorage {
   getPlanById(id: number): Promise<Plan | undefined>;
@@ -17,6 +17,11 @@ export interface IStorage {
   upsertMember(data: InsertMember): Promise<Member>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
   markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
+  listDueScheduledPlans(now: Date): Promise<Plan[]>;
+  claimScheduledPlan(id: number): Promise<Plan | undefined>;
+  listPublicPlans(limit?: number): Promise<Plan[]>;
+  insertPlanResult(data: InsertPlanResult): Promise<PlanResult>;
+  listResultsForPlanIds(planIds: number[]): Promise<PlanResult[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -207,6 +212,49 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ status: "inactive" })
       .where(eq(members.stripeSubscriptionId, subscriptionId));
+  }
+
+  async listDueScheduledPlans(now: Date): Promise<Plan[]> {
+    return db
+      .select()
+      .from(plans)
+      .where(
+        and(
+          eq(plans.status, "scheduled"),
+          isNotNull(plans.scheduledFor),
+          lte(plans.scheduledFor, now),
+        ),
+      );
+  }
+
+  async claimScheduledPlan(id: number): Promise<Plan | undefined> {
+    // Atomic claim: only succeeds for the worker that flips status first.
+    const [row] = await db
+      .update(plans)
+      .set({ status: "publishing", updatedAt: new Date() })
+      .where(and(eq(plans.id, id), eq(plans.status, "scheduled")))
+      .returning();
+    return row;
+  }
+
+  async listPublicPlans(limit: number = 30): Promise<Plan[]> {
+    return db
+      .select()
+      .from(plans)
+      .where(eq(plans.status, "published"))
+      .orderBy(desc(plans.date), plans.symbol)
+      .limit(limit);
+  }
+
+  async insertPlanResult(data: InsertPlanResult): Promise<PlanResult> {
+    const [row] = await db.insert(planResults).values(data).returning();
+    return row;
+  }
+
+  async listResultsForPlanIds(planIds: number[]): Promise<PlanResult[]> {
+    if (planIds.length === 0) return [];
+    const { inArray } = await import("drizzle-orm");
+    return db.select().from(planResults).where(inArray(planResults.planId, planIds));
   }
 
   async updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {

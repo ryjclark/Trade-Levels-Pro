@@ -29,9 +29,35 @@ export const plans = pgTable("plans", {
   telegramMessageId: text("telegram_message_id"),
   telegramMessage: text("telegram_message"),
   telegramMessageVariant: text("telegram_message_variant"),
+  scheduledFor: timestamp("scheduled_for"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const planResults = pgTable("plan_results", {
+  id: serial("id").primaryKey(),
+  planId: integer("plan_id").notNull().references(() => plans.id),
+  date: text("date").notNull(),
+  symbol: text("symbol").notNull(),
+  open: real("open"),
+  high: real("high"),
+  low: real("low"),
+  close: real("close"),
+  hitR1: integer("hit_r1"),
+  hitR2: integer("hit_r2"),
+  hitS1: integer("hit_s1"),
+  hitS2: integer("hit_s2"),
+  hitMagnet: integer("hit_magnet"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPlanResultSchema = createInsertSchema(planResults).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPlanResult = z.infer<typeof insertPlanResultSchema>;
+export type PlanResult = typeof planResults.$inferSelect;
 
 export const publishLogs = pgTable("publish_logs", {
   id: serial("id").primaryKey(),

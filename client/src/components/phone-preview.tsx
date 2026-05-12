@@ -2,7 +2,7 @@ import { Signal, Wifi, BatteryFull } from "lucide-react";
 
 export default function PhonePreview() {
   return (
-    <div className="phone-frame" aria-hidden="true" data-testid="phone-preview">
+    <div className="phone-frame phone-float" aria-hidden="true" data-testid="phone-preview">
       <div className="phone-screen">
         <div className="phone-notch" />
         <div className="phone-status">
@@ -23,13 +23,42 @@ export default function PhonePreview() {
         <div className="phone-chat">
           <div className="tg-bubble">
             <div className="tg-bubble-title">ES Daily Trade Plan</div>
-            <div className="tg-line"><span className="tg-label">Bias:</span> <strong>Bullish above magnet</strong></div>
-            <div className="tg-line"><span className="tg-label">Magnet:</span> <span className="tg-num">5,872</span></div>
-            <div className="tg-line"><span className="tg-label">Dynamic Zone:</span> <span className="tg-num">5,864 – 5,880</span></div>
-            <div className="tg-line" style={{ marginTop: 4 }}><span className="tg-label">Resistance</span></div>
-            <div className="tg-line">R1 <span className="tg-num">5,887</span> · R2 <span className="tg-num">5,901</span> · R3 <span className="tg-num">5,918</span> · R4 <span className="tg-num">5,932</span></div>
-            <div className="tg-line" style={{ marginTop: 4 }}><span className="tg-label">Support</span></div>
-            <div className="tg-line">S1 <span className="tg-num">5,856</span> · S2 <span className="tg-num">5,841</span> · S3 <span className="tg-num">5,824</span> · S4 <span className="tg-num">5,808</span></div>
+            <div className="tg-line">
+              <span className="tg-label">Bias:</span>{" "}
+              <strong>Neutral · upside lean</strong>
+            </div>
+            <div className="tg-line">
+              <span className="tg-label">Magnet:</span>{" "}
+              <span className="tg-num">5,872</span>
+            </div>
+            <div className="tg-line">
+              <span className="tg-label">Dynamic Zone:</span>{" "}
+              <span className="tg-num">5,864 – 5,880</span>
+            </div>
+            <div className="tg-line" style={{ marginTop: 4 }}>
+              <span className="tg-label">Resistance</span>
+            </div>
+            <div className="tg-line">
+              R1 <span className="tg-num">5,894</span> · R2{" "}
+              <span className="tg-num">5,908</span> · R3{" "}
+              <span className="tg-num">5,926</span> · R4{" "}
+              <span className="tg-num">5,945</span>
+            </div>
+            <div className="tg-line" style={{ marginTop: 4 }}>
+              <span className="tg-label">Support</span>
+            </div>
+            <div className="tg-line">
+              S1 <span className="tg-num">5,856</span> · S2{" "}
+              <span className="tg-num">5,840</span> · S3{" "}
+              <span className="tg-num">5,821</span> · S4{" "}
+              <span className="tg-num">5,802</span>
+            </div>
+            <div className="tg-line" style={{ marginTop: 6 }}>
+              <span className="tg-label">Setup:</span>{" "}
+              <span style={{ color: "rgba(255,255,255,0.85)" }}>
+                Long failed breakdown of S1
+              </span>
+            </div>
             <div className="tg-foot">
               <span>9:34 PM</span>
               <span className="tg-check">

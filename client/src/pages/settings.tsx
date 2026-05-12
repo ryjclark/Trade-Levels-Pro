@@ -77,7 +77,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link href="/admin"><Button variant="outline" size="sm" data-testid="link-admin" className="text-white/70 border-white/20">Admin</Button></Link>
-            <Link href="/archive"><Button variant="outline" size="sm" data-testid="link-archive" className="text-white/70 border-white/20">Archive</Button></Link>
+            <Link href="/admin/archive"><Button variant="outline" size="sm" data-testid="link-archive" className="text-white/70 border-white/20">Archive</Button></Link>
           </div>
         </div>
       </header>

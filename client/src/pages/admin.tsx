@@ -31,7 +31,9 @@ import {
   TrendingDown,
   Activity,
   Settings,
-  ClipboardCopy
+  ClipboardCopy,
+  Clock,
+  ClipboardPaste
 } from "lucide-react";
 
 function getNextTradingDayISO() {
@@ -55,6 +57,8 @@ export default function AdminPage() {
   
   const [date, setDate] = useState(getNextTradingDayISO());
   const [symbol, setSymbol] = useState("ES");
+  const [scheduledFor, setScheduledFor] = useState<string>("");
+  const [pasteText, setPasteText] = useState<string>("");
   const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | "xPost" | null>(null);
   
   const [formData, setFormData] = useState({
@@ -217,6 +221,60 @@ export default function AdminPage() {
     },
     onError: (err: Error) => {
       toast({ title: "No previous plan", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: async () => {
+      if (!formData.id) throw new Error("Save the draft first, then schedule.");
+      if (!scheduledFor) throw new Error("Pick a date & time first.");
+      const res = await apiRequest("POST", "/api/plans/schedule", {
+        id: formData.id,
+        scheduledFor: new Date(scheduledFor).toISOString(),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/plans/lookup'] });
+      toast({ title: "Scheduled", description: `Will publish at ${new Date(scheduledFor).toLocaleString()}` });
+      refetch();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Schedule failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const pasteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/plans/parse-paste", { text: pasteText });
+      return res.json();
+    },
+    onSuccess: (parsed: any) => {
+      setFormData((prev) => ({
+        ...prev,
+        contract: parsed.contract ?? prev.contract,
+        bias: parsed.bias ?? prev.bias,
+        dynamicZoneTop: parsed.dynamicZoneTop != null ? String(parsed.dynamicZoneTop) : prev.dynamicZoneTop,
+        dynamicZoneBottom: parsed.dynamicZoneBottom != null ? String(parsed.dynamicZoneBottom) : prev.dynamicZoneBottom,
+        magnet: parsed.magnet != null ? String(parsed.magnet) : prev.magnet,
+        r1: parsed.r1 != null ? String(parsed.r1) : prev.r1,
+        r2: parsed.r2 != null ? String(parsed.r2) : prev.r2,
+        r3: parsed.r3 != null ? String(parsed.r3) : prev.r3,
+        r4: parsed.r4 != null ? String(parsed.r4) : prev.r4,
+        s1: parsed.s1 != null ? String(parsed.s1) : prev.s1,
+        s2: parsed.s2 != null ? String(parsed.s2) : prev.s2,
+        s3: parsed.s3 != null ? String(parsed.s3) : prev.s3,
+        s4: parsed.s4 != null ? String(parsed.s4) : prev.s4,
+        setup1: parsed.setup1 ?? prev.setup1,
+        setup2: parsed.setup2 ?? prev.setup2,
+        notes: parsed.notes ?? prev.notes,
+      }));
+      if (parsed.date) setDate(parsed.date);
+      if (parsed.symbol) setSymbol(parsed.symbol);
+      toast({ title: "Imported", description: "Form fields filled from paste." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Import failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -422,7 +480,7 @@ export default function AdminPage() {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => setLocation("/archive")}
+                    onClick={() => setLocation("/admin/archive")}
                     data-testid="link-archive"
                   >
                     <Archive className="w-4 h-4 mr-2" />
@@ -656,6 +714,69 @@ export default function AdminPage() {
                         )}
                         Publish to Telegram
                       </Button>
+                    </div>
+
+                    <div className="pt-4 mt-2 border-t border-white/10 space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Clock className="w-4 h-4" /> Schedule publish
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
+                        <div className="space-y-2">
+                          <Label htmlFor="scheduledFor">Publish date & time (local)</Label>
+                          <Input
+                            id="scheduledFor"
+                            type="datetime-local"
+                            value={scheduledFor}
+                            onChange={(e) => setScheduledFor(e.target.value)}
+                            data-testid="input-scheduled-for"
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => scheduleMutation.mutate()}
+                          disabled={scheduleMutation.isPending || !formData.id || !scheduledFor}
+                          data-testid="button-schedule"
+                        >
+                          {scheduleMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Clock className="w-4 h-4 mr-2" />
+                          )}
+                          Schedule
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Saves status as <code>scheduled</code>. A cron job runs every minute and publishes when the time arrives.
+                      </p>
+                    </div>
+
+                    <div className="pt-4 mt-2 border-t border-white/10 space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <ClipboardPaste className="w-4 h-4" /> Paste-import
+                      </div>
+                      <Textarea
+                        rows={5}
+                        value={pasteText}
+                        onChange={(e) => setPasteText(e.target.value)}
+                        placeholder={`Paste JSON or key:value lines, e.g.\nmagnet: 5872\ndzTop: 5880\ndzBottom: 5864\nr1: 5894\ns1: 5856\nbias: Neutral upside lean`}
+                        data-testid="input-paste"
+                      />
+                      <div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pasteMutation.mutate()}
+                          disabled={pasteMutation.isPending || !pasteText.trim()}
+                          data-testid="button-paste-import"
+                        >
+                          {pasteMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <ClipboardPaste className="w-4 h-4 mr-2" />
+                          )}
+                          Import into form
+                        </Button>
+                      </div>
                     </div>
                   </>
                 )}

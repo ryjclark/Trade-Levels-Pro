@@ -177,7 +177,7 @@ export default function ArchiveDetailPage() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setLocation("/archive")}
+            onClick={() => setLocation("/admin/archive")}
             data-testid="link-back"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

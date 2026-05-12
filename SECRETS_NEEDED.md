@@ -43,3 +43,37 @@ local development.
 
 - `APP_BASE_URL` — defaults to `https://tradelevelspro.com`. Override only if
   testing checkout against a non-production host.
+
+## Pass 5 additions
+
+- `TV_WEBHOOK_SECRET` — shared secret for the TradingView alert webhook.
+  Set this to a long random string and include it as the `X-TV-Secret`
+  header in every TradingView alert that targets `POST /api/tv-webhook`.
+  When unset the endpoint returns `503` so it's safe to leave blank in dev.
+- `CLARITY_PROJECT_ID` — Microsoft Clarity project ID. Read by the server
+  and exposed via `GET /api/public/site-config`; the frontend lazy-loads
+  the Clarity tag only when this is present. Skip entirely to disable.
+
+### TradingView alert message example
+
+```json
+{
+  "date": "{{time}}",
+  "symbol": "ES",
+  "contract": "ESM26",
+  "magnet": 5872,
+  "dynamicZoneTop": 5880,
+  "dynamicZoneBottom": 5864,
+  "r1": 5894, "r2": 5908, "r3": 5926, "r4": 5945,
+  "s1": 5856, "s2": 5840, "s3": 5821, "s4": 5802,
+  "bias": "Neutral · upside lean",
+  "setup1": "Long failed breakdown of S1",
+  "setup2": "Short rejection at R2"
+}
+```
+
+In TradingView, set the alert webhook URL to
+`https://tradelevelspro.com/api/tv-webhook` and add the custom HTTP header
+`X-TV-Secret: <your TV_WEBHOOK_SECRET value>` (TradingView Pro+ supports
+custom headers — otherwise put the secret in the JSON body and read it
+server-side instead).

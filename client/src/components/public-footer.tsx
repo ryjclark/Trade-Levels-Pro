@@ -25,6 +25,8 @@ export default function PublicFooter() {
           <div className="public-footer-heading">Resources</div>
           <Link href="/learn" className="public-footer-link" data-testid="footer-link-learn">Learn</Link>
           <Link href="/prop-firms" className="public-footer-link" data-testid="footer-link-prop-firms">Prop Firms</Link>
+          <Link href="/archive" className="public-footer-link" data-testid="footer-link-archive">Archive</Link>
+          <Link href="/about" className="public-footer-link" data-testid="footer-link-about">About</Link>
         </div>
         <div className="public-footer-col">
           <div className="public-footer-heading">Legal</div>
