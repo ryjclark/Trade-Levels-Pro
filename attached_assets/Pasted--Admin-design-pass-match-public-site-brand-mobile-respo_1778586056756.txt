@@ -1,0 +1,80 @@
+# Admin design pass: match public site brand + mobile responsive
+
+This is a pure visual/responsive change. Do NOT change layout, copy, functionality, route structure, or component logic. Only theming tokens, CSS classes, and responsive breakpoints.
+
+## Phase 0 — Audit (do first, do not write code yet)
+
+1. Inspect the public-site theming. Read `client/src/pages/home.tsx`, `pages/sample.tsx`, `pages/how-it-works.tsx`, and whatever `tailwind.config.ts` and `client/index.css` look like. Identify:
+   - Background color tokens (the dark base)
+   - Card / panel background color
+   - Primary accent color (the teal/cyan used on "plan", "Get Instant Access" button, "Founding Members" badge)
+   - Text color hierarchy (primary, secondary, muted)
+   - Typography (font family, scales)
+   - Border colors, radius, shadow conventions
+   - Button styles (primary, secondary, tertiary)
+
+2. Inspect the admin theming. Read `client/src/pages/admin.tsx`, `pages/settings.tsx`, `pages/admin/parse-newsletter.tsx`, `pages/login.tsx`. Identify:
+   - Current background and card colors (you'll see they're lighter / more utilitarian)
+   - Where styling diverges from the public site
+
+3. Report a short diff: "Admin uses bg-X / cards bg-Y; public uses bg-A / cards bg-B. To align, I need to change [list of files]."
+
+Wait for my approval before continuing.
+
+## Phase 1 — Theme alignment
+
+Apply the public site's dark theme tokens to every admin page. Use the existing Tailwind utility classes / CSS variables already in the codebase — do NOT introduce new color values. If the public site uses a CSS variable like `--background-primary` or a Tailwind token like `bg-zinc-950`, reuse the same one in admin.
+
+Specific targets:
+- Admin dashboard (`/admin`): main background, all cards, Utilities buttons, Load Plan / Daily Plan / Midday Update / X Post / Substack / Telegram preview cards
+- Settings page: Newsletter Parser (Claude) card, Site Settings card, Algorithm Ingest API card, Save Settings button
+- Parse Newsletter page: paste textarea card, Parse with Claude button, form fields (once populated)
+- Login page: form card, inputs, Sign In button, error states
+- Admin nav header (the "Trade Levels Pro / Admin Dashboard" bar + Logout button)
+- Form inputs: text/number/date/select — all use the same dark-friendly input styling the public site uses for its few forms (or shadcn dark theme equivalents if already set up)
+- Buttons: primary actions (Save, Publish to Telegram, Parse with Claude) use the teal accent button style; secondary (Save Draft, Cancel) use a muted dark-card style
+
+Do NOT touch:
+- The TradingView widget (it's already dark-themed)
+- The Algorithm Ingest API endpoint URL display, key reveal, curl example formatting (functionally unchanged, just adapt to the new card background)
+- The public-site pages themselves — they're already on-brand
+
+## Phase 2 — Mobile responsive
+
+Once theming is done, audit each admin page at three viewport widths and fix anything broken:
+- 375px (iPhone SE / small phone)
+- 768px (iPad portrait / tablet)
+- 1024px+ (desktop, current state)
+
+Specific patterns to apply (use Tailwind responsive prefixes — `sm:`, `md:`, `lg:`):
+- Multi-column card layouts → stack to single column on mobile (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3` pattern)
+- Form fields with side-by-side labels → labels stack above inputs on mobile
+- Buttons grouped horizontally → either stack vertically OR remain horizontal with `flex-wrap` if they fit
+- Header (the dashboard title + Logout button) → stays on one line if it fits, otherwise collapses
+- Tables (if any in archive view) → horizontal scroll wrapper, OR stack as cards on mobile
+- Touch targets: minimum 44×44px for any tappable element on mobile (Apple HIG standard). Buttons, icons, eye-reveal toggles, copy buttons — all must hit this.
+- Textareas (newsletter paste box, plan notes): full width on mobile, taller default height (at least 200px) so paste-and-review is usable from a phone
+- Date pickers and select dropdowns: full width on mobile, native browser controls are fine
+
+The admin parse-newsletter page is the highest priority for mobile because that's the daily-use page — you want to be able to paste a newsletter from a phone if needed.
+
+## Phase 3 — Verify
+
+- Run typecheck + existing test suite. Both must remain green.
+- Manually verify in dev preview at all three viewport widths. Take screenshots and reference them in your report (paths in the workspace, not embedded).
+- Specifically confirm: log in still works on mobile, parse-newsletter is usable on mobile, manual plan form is usable on mobile, Settings page reads cleanly on mobile.
+
+## Do NOT
+
+- Add any new pages or routes
+- Change any copy
+- Reorganize any layouts (e.g. don't move cards to different positions, just restyle them)
+- Change component logic (handlers, state, network calls)
+- Introduce new dependencies (no new icon libraries, no new component libraries)
+- Touch public-site pages
+- Touch the TradingView widget
+- Add animations or transitions beyond what already exists
+
+## Execute
+
+Start with Phase 0. Report the diff. Wait for my approval. Then Phase 1, brief checkpoint, then Phase 2.
