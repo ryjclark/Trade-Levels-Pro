@@ -63,7 +63,7 @@ export default function ParseNewsletterPage() {
   const [sendTelegram, setSendTelegram] = useState(true);
   const [collision, setCollision] = useState<CollisionInfo | null>(null);
 
-  const authHeader = () => {
+  const authHeader = (): Record<string, string> => {
     const t = getToken();
     return t ? { Authorization: `Bearer ${t}` } : {};
   };

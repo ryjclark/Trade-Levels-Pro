@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, real, timestamp, integer, serial, jsonb, numeric, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, timestamp, integer, serial, jsonb, numeric, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -42,7 +42,13 @@ export const plans = pgTable("plans", {
   claudeApiCallId: integer("claude_api_call_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Authoritative uniqueness for the (date, symbol) pair. The 409 collision
+  // path in /api/admin/save-parsed-plan does an app-level check first; this
+  // index guarantees that a racing concurrent insert cannot silently corrupt
+  // the row — the second writer will hit a constraint violation instead.
+  dateSymbolUniq: uniqueIndex("plans_date_symbol_uniq").on(table.date, table.symbol),
+}));
 
 export const claudeApiCalls = pgTable("claude_api_calls", {
   id: serial("id").primaryKey(),
