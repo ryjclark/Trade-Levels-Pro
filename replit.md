@@ -70,6 +70,7 @@ shared/
 - `SESSION_SECRET`: Secret for session encryption
 - `TELEGRAM_BOT_TOKEN`: Telegram bot token from @BotFather
 - `TELEGRAM_CHAT_ID`: Target Telegram chat/channel ID
+- `ALGORITHM_INGEST_API_KEY`: Bearer token for `POST /api/levels/ingest` (Pass 6)
 
 ## API Endpoints
 - `GET /api/health` - Health check endpoint
@@ -86,6 +87,9 @@ shared/
 - `GET /api/settings` - Get admin settings (protected)
 - `POST /api/settings` - Update admin settings (protected)
 - `GET /api/public/settings` - Get public settings (joinUrl, substackUrl, xUrl, priceText)
+- `POST /api/levels/ingest` - **Algorithm ingest** (Bearer auth via `ALGORITHM_INGEST_API_KEY`). Upserts ES/NQ levels by `(target_date, symbol)` with `source="algorithm"`; auto-sends to Telegram with a `🤖 Algorithm vX.Y` prefix when the auto-send setting is on. Rate-limited 30/min.
+- `GET /api/admin/algorithm-plans` - Recent algorithm-sourced plans (admin only).
+- `GET /api/admin/ingest-key` - Reveal the configured ingest key for the admin Settings page (admin only).
 
 ## Navigation (Public)
 Home | About | Pricing | Subscribe

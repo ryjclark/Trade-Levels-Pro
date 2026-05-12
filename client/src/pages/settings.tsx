@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Copy, Check, KeyRound, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,10 @@ export default function SettingsPage() {
     priceText: "",
     footerText: "",
     footerEnabled: false,
+    algorithmAutoSend: true,
   });
+  const [revealKey, setRevealKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
 
   const { isLoading } = useQuery<SiteSettingsData>({
     queryKey: ["/api/settings"],
@@ -33,10 +36,26 @@ export default function SettingsPage() {
       });
       if (!response.ok) throw new Error("Failed to fetch settings");
       const data = await response.json();
-      setFormData(data);
+      setFormData({ algorithmAutoSend: true, ...data });
       return data;
     },
   });
+
+  const { data: keyInfo } = useQuery<{ configured: boolean; key: string; length: number }>({
+    queryKey: ["/api/admin/ingest-key"],
+    queryFn: async () => {
+      const token = getToken();
+      const response = await fetch("/api/admin/ingest-key", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) throw new Error("Failed to fetch ingest key");
+      return response.json();
+    },
+  });
+
+  const ingestUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/api/levels/ingest`
+    : "/api/levels/ingest";
 
   const saveMutation = useMutation({
     mutationFn: async (data: SiteSettingsData) => {
@@ -170,6 +189,26 @@ export default function SettingsPage() {
                 </Label>
               </div>
 
+              <div className="pt-4 border-t border-white/10 space-y-2">
+                <Label className="font-medium">Algorithm ingest</Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="algorithmAutoSend"
+                    checked={formData.algorithmAutoSend}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, algorithmAutoSend: checked === true })
+                    }
+                    data-testid="checkbox-algorithm-auto-send"
+                  />
+                  <Label htmlFor="algorithmAutoSend" className="font-normal">
+                    Auto-send algorithm levels to Telegram on ingest
+                  </Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  When off, ingested levels still appear on the dashboard but you have to press <em>Resend</em> to fire them.
+                </p>
+              </div>
+
               <Button
                 type="submit"
                 disabled={saveMutation.isPending}
@@ -184,6 +223,102 @@ export default function SettingsPage() {
                 Save Settings
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5" /> Algorithm Ingest API
+            </CardTitle>
+            <CardDescription>
+              Endpoint your external algorithm POSTs levels to. Auth via <code>Authorization: Bearer &lt;key&gt;</code>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Endpoint URL</Label>
+              <div className="flex gap-2">
+                <Input value={ingestUrl} readOnly data-testid="input-ingest-url" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigator.clipboard.writeText(ingestUrl)}
+                  data-testid="button-copy-url"
+                  title="Copy URL"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>API Key (from Replit Secret <code>ALGORITHM_INGEST_API_KEY</code>)</Label>
+              {keyInfo?.configured ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={revealKey ? keyInfo.key : "•".repeat(Math.max(20, Math.min(64, keyInfo.length || 32)))}
+                    readOnly
+                    type="text"
+                    data-testid="input-ingest-key"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setRevealKey((v) => !v)}
+                    data-testid="button-reveal-key"
+                    title={revealKey ? "Hide" : "Reveal"}
+                  >
+                    {revealKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={!revealKey}
+                    onClick={() => {
+                      navigator.clipboard.writeText(keyInfo.key);
+                      setCopiedKey(true);
+                      setTimeout(() => setCopiedKey(false), 1500);
+                    }}
+                    data-testid="button-copy-key"
+                    title="Copy key"
+                  >
+                    {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 rounded border border-orange-500/30 bg-orange-500/10 text-sm">
+                  <AlertCircle className="w-4 h-4 mt-0.5 text-orange-400 shrink-0" />
+                  <span className="text-orange-200">
+                    <code>ALGORITHM_INGEST_API_KEY</code> is not set. Add it in the Replit Secrets tab and restart the workflow — the ingest endpoint will return <code>503</code> until then.
+                  </span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                To rotate: open the Replit Secrets tab, replace the value of <code>ALGORITHM_INGEST_API_KEY</code>, and restart the workflow. The key isn't stored in the app database — only in Replit Secrets.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Example request</Label>
+              <pre className="text-xs bg-black/30 border border-white/10 rounded p-3 overflow-x-auto" data-testid="text-example-curl">{`curl -X POST ${ingestUrl} \\
+  -H "Authorization: Bearer <YOUR_API_KEY>" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "symbol": "ES",
+    "target_date": "2026-05-13",
+    "current_price": 7438.75,
+    "dynamic_zone_high": 7454.75,
+    "dynamic_zone_low": 7410.00,
+    "magnet": 7438.75,
+    "r1": 7445.75, "r2": 7454.75, "r3": null, "r4": null,
+    "s1": 7434.75, "s2": 7427.46, "s3": 7410.00, "s4": 7345.60,
+    "algorithm_version": "v1.1"
+  }'`}</pre>
+            </div>
           </CardContent>
         </Card>
       </main>

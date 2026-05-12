@@ -44,6 +44,47 @@ local development.
 - `APP_BASE_URL` — defaults to `https://tradelevelspro.com`. Override only if
   testing checkout against a non-production host.
 
+## Pass 6 additions
+
+- `ALGORITHM_INGEST_API_KEY` — Bearer token your external algorithm sends
+  with every `POST /api/levels/ingest` request. Generate a long random
+  string (e.g. `openssl rand -hex 32`) and paste it into the Replit
+  **Secrets** tab. The endpoint returns `503` while unset and `401` for
+  any mismatch (timing-safe comparison). Rotate by replacing the value
+  in Replit Secrets and restarting the workflow — the key is never
+  stored in the database.
+
+  **Endpoint:** `POST https://<your-deployment>/api/levels/ingest`
+  **Auth header:** `Authorization: Bearer <ALGORITHM_INGEST_API_KEY>`
+  **Body** (`application/json`):
+
+  ```json
+  {
+    "symbol": "ES",
+    "target_date": "2026-05-13",
+    "current_price": 7438.75,
+    "dynamic_zone_high": 7454.75,
+    "dynamic_zone_low": 7410.00,
+    "magnet": 7438.75,
+    "r1": 7445.75, "r2": 7454.75, "r3": null, "r4": null,
+    "s1": 7434.75, "s2": 7427.46, "s3": 7410.00, "s4": 7345.60,
+    "algorithm_version": "v1.1"
+  }
+  ```
+
+  Behaviour:
+  - Upserts on `(target_date, symbol)` with `source="algorithm"`.
+  - When **Algorithm auto-send** is on (Settings page, default ON), the
+    plan is immediately formatted with `formatTelegramPro`, prefixed with
+    `🤖 Algorithm <version>`, and sent to Telegram. Status flips to
+    `published` on success or `publish_failed` on error.
+  - When auto-send is off, the row stays `draft` and can be fired with
+    the **Resend** button on the new "Algorithm Levels" panel of the
+    admin dashboard.
+  - Algorithm-sourced rows are hidden from the public archive
+    (`/archive`) until you flip the filter in `listPublicPlans`.
+  - Rate limit: 30 requests/minute per IP.
+
 ## Pass 5 additions
 
 - `TV_WEBHOOK_SECRET` — shared secret for the TradingView alert webhook.

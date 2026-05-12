@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro, formatMiddayUpdate, formatXPost } from "@/lib/formatter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
+import AlgorithmLevelsPanel from "@/components/AlgorithmLevelsPanel";
 import { 
   LogOut, 
   Save, 
@@ -408,6 +409,9 @@ export default function AdminPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="mb-6">
+          <AlgorithmLevelsPanel />
+        </div>
         {latestPublished && (
           <div
             className="mb-4 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 flex items-center justify-between gap-3 flex-wrap"
