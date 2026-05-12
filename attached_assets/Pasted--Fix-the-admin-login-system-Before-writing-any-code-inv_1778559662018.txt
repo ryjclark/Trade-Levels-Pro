@@ -1,0 +1,86 @@
+# Fix the admin login system
+
+Before writing any code: investigate the current state and report back. Do not write code in this first turn.
+
+## Phase 0 — Investigate (this turn)
+
+1. Find and read the current auth code (likely `server/routes.ts` or a dedicated auth file): the `POST /api/auth/login` route, the `requireAdmin` middleware, the validTokens Set.
+2. Identify the env var name(s) the login compares against. State the exact name.
+3. Check what's actually in `process.env` for that name at runtime (write a one-line print, run it, then remove). Confirm whether the secret is set in this Workspace, and note whether it appears to be set in Deployment Secrets too (you may not be able to see the deployed value directly — flag the assumption).
+4. Inspect any existing sessions/tokens table in the schema. Note whether tokens are in-memory only.
+5. Confirm the frontend login flow: what page, what request, where the returned token is stored (cookie / localStorage / memory), how it's sent on subsequent admin requests.
+
+Report:
+- The env var name
+- Whether it's set in Workspace Secrets (yes/no)
+- Whether the in-memory token Set hypothesis is correct (yes/no — quote the code)
+- Whether the current frontend stores the token in localStorage (so a tab close survives) or in memory (lost on refresh)
+- A 1-line diagnosis: most likely reason the user can't log in right now
+- The plan for Phase 1 below — for my approval
+
+## Phase 1 — Rebuild login durably (after I approve)
+
+Goals:
+- I can always log in if I know the password I set
+- I can rotate the password without losing access
+- Sessions survive Repl restarts and republishes
+- Deployment and Workspace use the same source-of-truth for the password
+- Clear error messages distinguishing "wrong password" from "session expired" from "password not configured"
+
+Implementation:
+
+### Password storage
+- Add `admin_credentials` table to schema: `id`, `password_hash text NOT NULL`, `updated_at timestamp default now()`. Single-row table; enforce via app-level check or a CHECK constraint.
+- On server boot, if the table is empty:
+  - If env var `ADMIN_PASSWORD` is set → bcrypt-hash it (cost 12) and write to the table. Log: "Seeded admin password from ADMIN_PASSWORD env var. You may now unset that env var."
+  - If env var is NOT set → log a clear warning: "Admin password not configured. Set ADMIN_PASSWORD in Replit Secrets and restart, OR call POST /api/admin/seed-password from the Repl shell." Return 503 from `/api/auth/login` until configured.
+- If the table is populated, env var is ignored (hash in DB wins).
+- Use `bcryptjs` (pure JS, no native build issues on Replit).
+
+### Sessions
+- Add `admin_sessions` table: `id`, `token text NOT NULL UNIQUE`, `created_at timestamp default now()`, `expires_at timestamp NOT NULL`, `last_seen_at timestamp default now()`, `user_agent text`, `ip text`.
+- `POST /api/auth/login`: bcrypt-compare password against the hash. On match, create a session row, return `{token, expires_at}`. Token is a 32-byte random hex string. Default TTL: 30 days, rolling — every authenticated request bumps `last_seen_at` and extends `expires_at` to `now() + 30d`.
+- `POST /api/auth/logout`: delete the session row by token.
+- `requireAdmin` middleware: looks up token in DB, checks `expires_at > now()`, updates `last_seen_at` / `expires_at`, attaches `req.session`.
+- On invalid token: respond `401 { code: "SESSION_EXPIRED", error: "..." }`. On no token: `401 { code: "NOT_AUTHENTICATED", error: "..." }`. On wrong password: `401 { code: "INVALID_PASSWORD", error: "..." }`.
+- Periodic cleanup: a once-an-hour job deletes expired sessions.
+
+### Password rotation
+- New endpoint `POST /api/admin/change-password` (behind `requireAdmin`): body `{ current_password, new_password }`. Verifies current, hashes new, writes to table, returns OK. Optionally invalidates all OTHER sessions (a checkbox in the UI).
+- New endpoint `POST /api/admin/reset-password` (NOT behind auth, but behind a one-shot reset token): generates a single-use reset token, prints it to the server console / Replit logs. User pastes it into a reset UI to set a new password. Token expires after 15 minutes and is single-use. This is the "I lost my password" escape hatch — and the only way to use it is to have access to the Repl logs (which only the owner has).
+
+### Frontend
+- Store session token in `localStorage` under `tlp_admin_session` (not memory) so refreshes don't log you out.
+- Login form shows specific error text per error code from backend.
+- Add a "Change password" link in the admin Settings page.
+- Add a "Log out" button in the admin nav.
+- On any admin API call returning 401, clear the stored token and redirect to `/login` with a banner: "Your session expired. Please sign in again."
+- After login, redirect to the page they were trying to reach (use `?next=` query param).
+
+### Migration / seeding
+- On first deploy of this change, the existing in-memory token approach goes away. Any current "logged-in" tabs will get a 401 next request and re-prompt for password. That's expected — they'll log in once with the seeded password and never get kicked out again unless someone runs the reset flow or the session genuinely expires.
+- The seed happens automatically on next server boot if `ADMIN_PASSWORD` is set. After confirming login works, I'll remove `ADMIN_PASSWORD` from Replit Secrets so it can't be exfiltrated.
+
+### Tests
+- bcrypt round-trip works
+- `POST /api/auth/login` with correct password returns a token; with wrong returns 401 INVALID_PASSWORD; with unconfigured returns 503
+- Session is created in DB; `requireAdmin` accepts the token; expired token returns SESSION_EXPIRED
+- Password rotation invalidates other sessions when requested
+- Reset-token flow: token can only be used once, expires after 15 min
+
+## Phase 2 — Help me actually log in right now (after Phase 1 ships)
+
+Walk me through:
+1. Setting `ADMIN_PASSWORD` in BOTH Workspace Secrets and Deployment Secrets (or just Workspace if we're testing dev preview first)
+2. Restarting the dev server / republishing prod
+3. Confirming login at the appropriate URL
+4. Confirming I can change the password from the new UI
+5. Confirming I can hit the reset endpoint if I "forget" (test it)
+
+## Do not touch
+
+- `/admin/parse-newsletter` page and everything from Pass 7 — leave alone
+- Algorithm ingest / Algorithm Levels panel — leave alone
+- Public archive, scheduled publish, TV webhook — leave alone
+
+Start with Phase 0 only. Report your findings.
