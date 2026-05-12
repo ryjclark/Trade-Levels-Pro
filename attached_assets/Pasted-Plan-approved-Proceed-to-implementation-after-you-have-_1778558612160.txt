@@ -1,0 +1,71 @@
+Plan approved. Proceed to implementation after you have these answers.
+
+## Q1 — Model id
+
+Use `claude-sonnet-4-6`. That is the published model id for the latest Sonnet (Sonnet 4.6, GA). Do NOT fall back to `claude-sonnet-4-5`. If your SDK version pre-dates Sonnet 4.6 awareness, that's fine — the Anthropic SDK doesn't validate model ids client-side; it forwards the string to the API. If a call returns 404 on the model id, surface a clear error message ("model not found — likely SDK or API version issue") so we can debug; do NOT silently downgrade.
+
+Install the latest `@anthropic-ai/sdk` (don't pin to an old major).
+
+## Q2 — Same-date collision
+
+Block with HTTP 409 if a row for (date, symbol) exists with `source != "ai_parsed"`. Response body includes the existing plan id, its source, and its `updated_at`. The UI should:
+
+- Show a confirmation dialog: "A {existing_source} plan already exists for {symbol} {date} (last updated {updated_at}). Replace it with this AI-parsed version?"
+- Two buttons: "Replace" (sends a follow-up POST with `force_overwrite: true`) and "Cancel"
+- On Replace: backend allows the overwrite, sets `source = "ai_parsed"`, and writes a row to a small new audit log entry (or to `claude_api_calls.notes`) recording that an overwrite happened, what source it replaced, and the prior plan id
+
+For the **same-source** case (existing `ai_parsed` row + new `ai_parsed` for same date+symbol — i.e. I re-ran the parser): silent overwrite is fine and is the desired behavior. No 409, no prompt.
+
+## Q3 — Test harness
+
+Install **vitest** with a minimal config. Don't skip tests. Cost-tracking accuracy and the source-filter behavior are too easy to silently break on a future refactor. One-time setup, ongoing regression net.
+
+Scope to the tests I listed in the spec plus:
+- Same-date 409 collision test
+- Force-overwrite path test
+- 503 when `ANTHROPIC_API_KEY` is unset
+- `claude_api_calls` cost calculation matches the formula for a fixed token shape
+
+Wire a `test` script in `package.json`. Don't add it to a CI workflow yet — I'll run locally.
+
+## Q4 — Rate limit on `/api/admin/parse-newsletter`
+
+Add a 20/minute soft limiter per admin token. Use a simple in-memory counter — same scope as the existing `validTokens` set, no Redis needed. On limit hit: 429 with `Retry-After` header. Log limit hits to console so I can see if I'm ever banging into it.
+
+## Q5 — Bias storage
+
+Yes: AI plans store the enum value (`bullish` | `neutral` | `bearish`) in `plans.bias` and the human paragraph in `plans.bias_reasoning`. Manual plans continue to use free-text in `plans.bias` (no constraint, no validation change). Application-layer only — no DB enum.
+
+## Pricing constants for `server/lib/claude.ts`
+
+Seed these for Sonnet 4.6 (per million tokens, USD):
+
+```
+const PRICING = {
+  "claude-sonnet-4-6": {
+    input: 3.00,
+    cache_creation: 3.75,   // 1.25× input
+    cache_read: 0.30,       // 0.10× input
+    output: 15.00,
+  },
+};
+```
+
+Cost formula: `(input × 3 + cache_creation × 3.75 + cache_read × 0.30 + output × 15) / 1_000_000`. Store as `numeric(10,6)`. Add a comment above the table that prices were captured on 2026-05-11 and to re-verify when bumping the model.
+
+If the model id is missing from the PRICING table, fall back to charging at the listed `input`/`output` rates with `cache_creation` = `cache_read` = `input` and log a warning — don't crash.
+
+## Two small additions on top of your plan
+
+1. **Republish dispatch by source**: when the existing `/api/plans/:id/republish` route fires, it should pick the formatter based on `plan.source` (`manual` → `formatManualPlan`, `ai_parsed` → `formatAiParsedPlan`, `algorithm` → `formatAlgorithmPlan`). Don't introduce a separate `variant` request-body field — derive from the row. The republish behavior for existing manual plans must be byte-identical to today.
+
+2. **Newsletter text retention**: persist the raw `newsletter_text` that was submitted to Claude. Add `newsletter_text text` (nullable) to `claude_api_calls`. This lets me re-run prompt iterations against the original input later when tuning the system prompt.
+
+## Order of work
+
+1. Schema changes + Drizzle push first; verify with a one-off SELECT that no existing data was harmed.
+2. Backend wrapper + routes + tests; verify with `npm test`.
+3. Frontend page.
+4. Manual end-to-end: paste a real newsletter, generate, edit one field, save+send, confirm row in DB and Telegram message lands.
+
+Hold for my "go" after each phase if anything unexpected comes up. Otherwise barrel through.

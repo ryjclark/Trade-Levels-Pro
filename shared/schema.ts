@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, real, timestamp, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, timestamp, integer, serial, jsonb, numeric, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -34,9 +34,39 @@ export const plans = pgTable("plans", {
   algorithmVersion: text("algorithm_version"),
   generatedAt: timestamp("generated_at"),
   currentPrice: real("current_price"),
+  biasReasoning: text("bias_reasoning"),
+  topLongTrade: text("top_long_trade"),
+  topShortTrade: text("top_short_trade"),
+  promptVersion: text("prompt_version"),
+  editedFields: jsonb("edited_fields").$type<string[] | null>(),
+  claudeApiCallId: integer("claude_api_call_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const claudeApiCalls = pgTable("claude_api_calls", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  model: text("model").notNull(),
+  requestType: text("request_type").notNull(),
+  promptVersion: text("prompt_version"),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  cacheCreationInputTokens: integer("cache_creation_input_tokens").notNull().default(0),
+  cacheReadInputTokens: integer("cache_read_input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  estimatedCostUsd: numeric("estimated_cost_usd", { precision: 10, scale: 6 }).notNull().default("0"),
+  success: boolean("success").notNull().default(false),
+  errorMessage: text("error_message"),
+  newsletterText: text("newsletter_text"),
+  notes: text("notes"),
+});
+
+export const insertClaudeApiCallSchema = createInsertSchema(claudeApiCalls).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertClaudeApiCall = z.infer<typeof insertClaudeApiCallSchema>;
+export type ClaudeApiCall = typeof claudeApiCalls.$inferSelect;
 
 export const ingestLevelsSchema = z.object({
   symbol: z.enum(["ES", "NQ"]),
@@ -58,6 +88,30 @@ export const ingestLevelsSchema = z.object({
   bias: z.string().nullable().optional(),
 });
 export type IngestLevelsPayload = z.infer<typeof ingestLevelsSchema>;
+
+export const aiParsedPlanSchema = z.object({
+  target_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  symbol: z.string().min(1).max(8),
+  dynamic_zone_high: z.number(),
+  dynamic_zone_low: z.number(),
+  magnet: z.number(),
+  r1: z.number(), r2: z.number(), r3: z.number(), r4: z.number(),
+  s1: z.number(), s2: z.number(), s3: z.number(), s4: z.number(),
+  bias: z.enum(["bullish", "neutral", "bearish"]),
+  bias_reasoning: z.string(),
+  top_long_trade: z.string(),
+  top_short_trade: z.string(),
+});
+export type AiParsedPlan = z.infer<typeof aiParsedPlanSchema>;
+
+export const saveParsedPlanSchema = aiParsedPlanSchema.extend({
+  edited_fields: z.array(z.string()).default([]),
+  claude_api_call_id: z.number().int().positive(),
+  prompt_version: z.string().min(1),
+  send_telegram: z.boolean().default(false),
+  force_overwrite: z.boolean().default(false),
+});
+export type SaveParsedPlanPayload = z.infer<typeof saveParsedPlanSchema>;
 
 export const planResults = pgTable("plan_results", {
   id: serial("id").primaryKey(),
@@ -140,6 +194,8 @@ export const insertPlanSchema = createInsertSchema(plans).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  editedFields: z.array(z.string()).nullish(),
 });
 
 export const insertPublishLogSchema = createInsertSchema(publishLogs).omit({

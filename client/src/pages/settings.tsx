@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff, Copy, Check, KeyRound, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Copy, Check, KeyRound, AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,21 @@ export default function SettingsPage() {
     ? `${window.location.origin}/api/levels/ingest`
     : "/api/levels/ingest";
 
+  const { data: claudeUsage } = useQuery<{
+    days: number; totalCalls: number; successCalls: number; successRate: number | null;
+    totalCostUsd: number; promptVersion: string; anthropicConfigured: boolean;
+  }>({
+    queryKey: ["/api/admin/claude-usage", 30],
+    queryFn: async () => {
+      const token = getToken();
+      const r = await fetch("/api/admin/claude-usage?days=30", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) throw new Error("Failed to fetch claude usage");
+      return r.json();
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (data: SiteSettingsData) => {
       return apiRequest("POST", "/api/settings", data);
@@ -101,7 +116,42 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-4 py-8 max-w-2xl space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> Newsletter Parser (Claude)
+            </CardTitle>
+            <CardDescription>
+              {claudeUsage?.anthropicConfigured
+                ? `Active • prompt ${claudeUsage.promptVersion}`
+                : "ANTHROPIC_API_KEY not configured — parser will return 503"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {claudeUsage ? (
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-xs text-muted-foreground">Calls (last {claudeUsage.days}d)</div>
+                  <div className="text-lg font-semibold" data-testid="text-claude-calls">{claudeUsage.totalCalls}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Success rate</div>
+                  <div className="text-lg font-semibold" data-testid="text-claude-success">
+                    {claudeUsage.successRate === null ? "—" : `${Math.round(claudeUsage.successRate * 100)}%`}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Total cost</div>
+                  <div className="text-lg font-semibold" data-testid="text-claude-cost">${claudeUsage.totalCostUsd.toFixed(4)}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Loading…</div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Site Settings</CardTitle>

@@ -5,7 +5,10 @@ import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
-import { insertPlanSchema, ingestLevelsSchema } from "@shared/schema";
+import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
+import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
+import { PARSE_NEWSLETTER_PROMPT_VERSION } from "./lib/prompts/parse-newsletter";
+import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginLimiter = rateLimit({
@@ -59,10 +62,32 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
     if (validTokens.has(token)) {
+      (req as any).adminToken = token;
       return next();
     }
   }
   return res.status(401).json({ error: "Unauthorized" });
+}
+
+// Per-admin-token rate limiter for the Claude parse endpoint (20/min/token).
+// Hit logs go to console so we can spot if we're banging into the cap.
+const PARSE_LIMIT_PER_MIN = 20;
+const parseRateBuckets = new Map<string, number[]>();
+function parseRateLimit(req: Request, res: Response, next: NextFunction) {
+  const token = (req as any).adminToken as string | undefined;
+  const key = token || (req.ip ?? "anon");
+  const now = Date.now();
+  const windowStart = now - 60_000;
+  const bucket = (parseRateBuckets.get(key) || []).filter((t) => t > windowStart);
+  if (bucket.length >= PARSE_LIMIT_PER_MIN) {
+    const retryMs = Math.max(0, bucket[0] + 60_000 - now);
+    console.warn(`[parse-newsletter] rate limit hit for token ${key.slice(0, 8)}…; retry in ${Math.ceil(retryMs / 1000)}s`);
+    res.set("Retry-After", String(Math.ceil(retryMs / 1000)));
+    return res.status(429).json({ error: "Too many parse requests; slow down." });
+  }
+  bucket.push(now);
+  parseRateBuckets.set(key, bucket);
+  next();
 }
 
 export async function registerRoutes(
@@ -183,9 +208,13 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Telegram not configured" });
       }
 
-      const variant = (req.body.variant as string) || "pro";
-      let telegramMessage = variant === "free" ? formatTelegramFree(plan) : formatTelegramPro(plan);
-      
+      // Pass 7: dispatch formatter by plan.source so manual/algorithm/ai_parsed
+      // each render with their own template. Manual rows remain byte-identical.
+      const variant = plan.source === "ai_parsed" ? "ai_parsed"
+        : plan.source === "algorithm" ? "algorithm"
+        : "pro";
+      let telegramMessage = formatBySource(plan);
+
       const settings = await storage.getSettings();
       if (settings.footerEnabled && settings.footerText) {
         const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
@@ -763,6 +792,198 @@ export async function registerRoutes(
       console.error("public archive error:", err);
       res.status(500).json({ error: "Failed to load archive" });
     }
+  });
+
+  // ===== Newsletter Parser (Pass 7) =====
+
+  app.post("/api/admin/parse-newsletter", requireAdmin, parseRateLimit, async (req, res) => {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({ error: "ANTHROPIC_API_KEY not configured" });
+    }
+    const text = String(req.body?.newsletter_text || "").trim();
+    if (text.length < 50) {
+      return res.status(400).json({ error: "newsletter_text is required (min 50 chars)" });
+    }
+    try {
+      const result = await parseNewsletter(text);
+      return res.json({
+        ok: true,
+        plan: result.plan,
+        prompt_version: result.promptVersion,
+        claude_api_call_id: result.apiCall.id,
+        cost_usd: Number(result.apiCall.estimatedCostUsd || 0),
+        tokens: {
+          input: result.apiCall.inputTokens,
+          cache_creation: result.apiCall.cacheCreationInputTokens,
+          cache_read: result.apiCall.cacheReadInputTokens,
+          output: result.apiCall.outputTokens,
+        },
+      });
+    } catch (err: any) {
+      if (err instanceof ClaudeApiKeyMissingError) {
+        return res.status(503).json({ error: err.message });
+      }
+      const status = err?.originalStatus === 404 ? 502 : 502;
+      console.error("[parse-newsletter] error:", err?.message);
+      return res.status(status).json({
+        error: err?.message || "Claude call failed",
+        claude_api_call_id: err?.apiCall?.id,
+      });
+    }
+  });
+
+  app.post("/api/admin/save-parsed-plan", requireAdmin, async (req, res) => {
+    const parsed = saveParsedPlanSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid payload", details: parsed.error.errors });
+    }
+    const d = parsed.data;
+    if (d.dynamic_zone_high <= d.dynamic_zone_low) {
+      return res.status(400).json({ error: "dynamic_zone_high must be greater than dynamic_zone_low" });
+    }
+
+    const apiCall = await storage.getClaudeApiCallById(d.claude_api_call_id);
+    if (!apiCall) {
+      return res.status(400).json({ error: "Unknown claude_api_call_id" });
+    }
+
+    // Same-date collision check: refuse to overwrite a non-ai_parsed row unless force_overwrite.
+    const existing = await storage.getPlanByDateSymbol(d.target_date, d.symbol);
+    if (existing && existing.source !== "ai_parsed" && !d.force_overwrite) {
+      return res.status(409).json({
+        error: "collision",
+        existing_plan_id: existing.id,
+        existing_source: existing.source,
+        existing_updated_at: existing.updatedAt,
+      });
+    }
+
+    const overwriteNote = existing && existing.source !== "ai_parsed" && d.force_overwrite
+      ? `overwrote ${existing.source} plan id=${existing.id} (was updated_at=${existing.updatedAt?.toISOString?.() || existing.updatedAt})`
+      : null;
+
+    const plan = await storage.upsertPlan({
+      date: d.target_date,
+      symbol: d.symbol,
+      contract: null,
+      tier: "pro",
+      dynamicZoneTop: d.dynamic_zone_high,
+      dynamicZoneBottom: d.dynamic_zone_low,
+      magnet: d.magnet,
+      r1: d.r1, r2: d.r2, r3: d.r3, r4: d.r4,
+      s1: d.s1, s2: d.s2, s3: d.s3, s4: d.s4,
+      bias: d.bias,
+      setup1: null, setup2: null, notes: null,
+      status: "draft",
+      publishedAt: null,
+      telegramMessageId: null,
+      telegramMessage: null,
+      telegramMessageVariant: null,
+      source: "ai_parsed",
+      biasReasoning: d.bias_reasoning,
+      topLongTrade: d.top_long_trade,
+      topShortTrade: d.top_short_trade,
+      promptVersion: d.prompt_version,
+      editedFields: d.edited_fields,
+      claudeApiCallId: d.claude_api_call_id,
+    } as any);
+
+    if (overwriteNote) {
+      try {
+        // Annotate the audit log via claude_api_calls.notes for this call.
+        const { db } = await import("./db");
+        const { claudeApiCalls } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await db
+          .update(claudeApiCalls)
+          .set({ notes: overwriteNote })
+          .where(eq(claudeApiCalls.id, d.claude_api_call_id));
+      } catch (e) {
+        console.warn("[save-parsed-plan] failed to annotate overwrite note:", e);
+      }
+    }
+
+    let telegramSent = false;
+    let telegramError: string | null = null;
+    let updatedPlan = plan;
+
+    if (d.send_telegram) {
+      if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        telegramError = "Telegram credentials not configured";
+        await storage.insertPublishLog({
+          planId: plan.id,
+          destination: "telegram",
+          variant: "ai_parsed",
+          status: "error",
+          errorMessage: telegramError,
+        });
+      } else {
+        const settings = await storage.getSettings();
+        let text = formatAiParsedPlan(plan);
+        if (settings.footerEnabled && settings.footerText) {
+          const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
+          text += "\n\n" + escapeMdV2(footer);
+        }
+        try {
+          const resp = await sendTelegramMessage({
+            token: TELEGRAM_BOT_TOKEN,
+            chatId: TELEGRAM_CHAT_ID,
+            text,
+          });
+          const messageId = resp.result?.message_id?.toString() || "";
+          updatedPlan = await storage.upsertPlan({
+            ...plan,
+            status: "published",
+            publishedAt: new Date().toISOString(),
+            telegramMessageId: messageId,
+            telegramMessage: text,
+            telegramMessageVariant: "ai_parsed",
+          } as any);
+          await storage.insertPublishLog({
+            planId: plan.id,
+            destination: "telegram",
+            variant: "ai_parsed",
+            status: "success",
+            responsePayload: JSON.stringify({ messageId }),
+          });
+          telegramSent = true;
+        } catch (sendErr: any) {
+          telegramError = sendErr?.message || String(sendErr);
+          updatedPlan = await storage.upsertPlan({ ...plan, status: "publish_failed" } as any);
+          await storage.insertPublishLog({
+            planId: plan.id,
+            destination: "telegram",
+            variant: "ai_parsed",
+            status: "error",
+            errorMessage: telegramError,
+          });
+        }
+      }
+    }
+
+    return res.json({
+      ok: true,
+      plan: updatedPlan,
+      telegramSent,
+      telegramError,
+      overwroteSource: overwriteNote ? existing!.source : null,
+    });
+  });
+
+  app.get("/api/admin/claude-usage", requireAdmin, async (req, res) => {
+    const days = Math.max(1, Math.min(365, parseInt(String(req.query.days || "30"), 10) || 30));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const usage = await storage.getClaudeUsageSince(since);
+    const successRate = usage.totalCalls === 0 ? null : usage.successCalls / usage.totalCalls;
+    return res.json({
+      days,
+      totalCalls: usage.totalCalls,
+      successCalls: usage.successCalls,
+      successRate,
+      totalCostUsd: Number(usage.totalCostUsd.toFixed(6)),
+      promptVersion: PARSE_NEWSLETTER_PROMPT_VERSION,
+      anthropicConfigured: !!process.env.ANTHROPIC_API_KEY,
+    });
   });
 
   // ===== Algorithm Ingest API (Pass 6) =====

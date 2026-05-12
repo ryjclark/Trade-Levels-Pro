@@ -34,7 +34,8 @@ import {
   Settings,
   ClipboardCopy,
   Clock,
-  ClipboardPaste
+  ClipboardPaste,
+  Sparkles,
 } from "lucide-react";
 
 function getNextTradingDayISO() {
@@ -489,6 +490,15 @@ export default function AdminPage() {
                   >
                     <Archive className="w-4 h-4 mr-2" />
                     View Archive
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setLocation("/admin/parse-newsletter")}
+                    data-testid="link-parse-newsletter"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Parse Newsletter (AI)
                   </Button>
                   <Button 
                     variant="outline" 

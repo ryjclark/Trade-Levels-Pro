@@ -11,6 +11,7 @@ import AdminPage from "@/pages/admin";
 import ArchivePage from "@/pages/archive";
 import ArchiveDetailPage from "@/pages/archive-detail";
 import SettingsPage from "@/pages/settings";
+import ParseNewsletterPage from "@/pages/parse-newsletter";
 import PublicHomePage from "@/pages/public-home";
 import PublicPricingPage from "@/pages/public-pricing";
 import PublicSamplePage from "@/pages/public-sample";
@@ -89,6 +90,9 @@ function Router() {
       </Route>
       <Route path="/admin/archive">
         <ProtectedRoute component={ArchivePage} />
+      </Route>
+      <Route path="/admin/parse-newsletter">
+        <ProtectedRoute component={ParseNewsletterPage} />
       </Route>
       <Route path="/admin/archive/:id">
         <ProtectedRoute component={ArchiveDetailPage} />

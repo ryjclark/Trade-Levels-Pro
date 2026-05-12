@@ -71,6 +71,7 @@ shared/
 - `TELEGRAM_BOT_TOKEN`: Telegram bot token from @BotFather
 - `TELEGRAM_CHAT_ID`: Target Telegram chat/channel ID
 - `ALGORITHM_INGEST_API_KEY`: Bearer token for `POST /api/levels/ingest` (Pass 6)
+- `ANTHROPIC_API_KEY`: Anthropic API key for the Newsletter Parser (Pass 7). When unset, `/api/admin/parse-newsletter` returns 503.
 
 ## API Endpoints
 - `GET /api/health` - Health check endpoint
@@ -90,6 +91,15 @@ shared/
 - `POST /api/levels/ingest` - **Algorithm ingest** (Bearer auth via `ALGORITHM_INGEST_API_KEY`). Upserts ES/NQ levels by `(target_date, symbol)` with `source="algorithm"`; auto-sends to Telegram with a `🤖 Algorithm vX.Y` prefix when the auto-send setting is on. Rate-limited 30/min.
 - `GET /api/admin/algorithm-plans` - Recent algorithm-sourced plans (admin only).
 - `GET /api/admin/ingest-key` - Reveal the configured ingest key for the admin Settings page (admin only).
+- `POST /api/admin/parse-newsletter` - **Newsletter Parser** (Pass 7, admin only, 20/min/token). Sends pasted newsletter text to Claude (`claude-sonnet-4-6`) via tool-use API and returns a structured plan plus `claude_api_call_id`, cost, and token usage. Returns 503 when `ANTHROPIC_API_KEY` is unset.
+- `POST /api/admin/save-parsed-plan` - Persist the reviewed AI plan with `source="ai_parsed"`. Optionally sends to Telegram with the AI template. Returns **409** when a non-`ai_parsed` plan exists for the same `(date, symbol)`; client retries with `force_overwrite: true`.
+- `GET /api/admin/claude-usage?days=30` - Aggregate cost / success-rate stats for the Claude usage card.
+
+## Pass 7: Newsletter Parser
+- New admin page at `/admin/parse-newsletter`.
+- Public archive visibility is gated by `PUBLIC_PLAN_SOURCES` in `shared/constants.ts` (currently `["manual"]`); flip there to expose `ai_parsed` rows publicly.
+- Republish dispatches the formatter by `plan.source` (`manual` → `formatManualPlan`, `algorithm` → `formatAlgorithmPlan`, `ai_parsed` → `formatAiParsedPlan`).
+- Tests: `npm test` runs Vitest against the dev DB. Tests use a mock Claude client; no live API calls.
 
 ## Navigation (Public)
 Home | About | Pricing | Subscribe

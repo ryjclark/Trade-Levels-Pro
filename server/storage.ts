@@ -1,6 +1,7 @@
 import { eq, and, desc, lte, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, members, planResults, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, planResults, claudeApiCalls, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall } from "@shared/schema";
+import { PUBLIC_PLAN_SOURCES } from "@shared/constants";
 
 export interface IStorage {
   getPlanById(id: number): Promise<Plan | undefined>;
@@ -21,6 +22,9 @@ export interface IStorage {
   claimScheduledPlan(id: number): Promise<Plan | undefined>;
   listPublicPlans(limit?: number): Promise<Plan[]>;
   listAlgorithmPlans(limit?: number): Promise<Plan[]>;
+  insertClaudeApiCall(data: InsertClaudeApiCall): Promise<ClaudeApiCall>;
+  getClaudeApiCallById(id: number): Promise<ClaudeApiCall | undefined>;
+  getClaudeUsageSince(since: Date): Promise<{ totalCalls: number; successCalls: number; totalCostUsd: number }>;
   insertPlanResult(data: InsertPlanResult): Promise<PlanResult>;
   listResultsForPlanIds(planIds: number[]): Promise<PlanResult[]>;
 }
@@ -91,6 +95,12 @@ export class DatabaseStorage implements IStorage {
           ...(data.algorithmVersion !== undefined ? { algorithmVersion: data.algorithmVersion } : {}),
           ...(data.generatedAt !== undefined ? { generatedAt: data.generatedAt } : {}),
           ...(data.currentPrice !== undefined ? { currentPrice: data.currentPrice } : {}),
+          ...(data.biasReasoning !== undefined ? { biasReasoning: data.biasReasoning } : {}),
+          ...(data.topLongTrade !== undefined ? { topLongTrade: data.topLongTrade } : {}),
+          ...(data.topShortTrade !== undefined ? { topShortTrade: data.topShortTrade } : {}),
+          ...(data.promptVersion !== undefined ? { promptVersion: data.promptVersion } : {}),
+          ...(data.editedFields !== undefined ? { editedFields: data.editedFields } : {}),
+          ...(data.claudeApiCallId !== undefined ? { claudeApiCallId: data.claudeApiCallId } : {}),
           updatedAt: now
         })
         .where(eq(plans.id, existing.id));
@@ -245,14 +255,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listPublicPlans(limit: number = 30): Promise<Plan[]> {
-    // Hide algorithm-sourced plans from the public archive (validation phase).
-    // Flip this filter or remove it later to commercialize algorithm output.
+    // Public visibility is gated by `PUBLIC_PLAN_SOURCES` in shared/constants.ts.
+    // Edit only that constant to expose `ai_parsed` or `algorithm` rows publicly.
+    const { inArray } = await import("drizzle-orm");
     return db
       .select()
       .from(plans)
-      .where(and(eq(plans.status, "published"), eq(plans.source, "manual")))
+      .where(
+        and(
+          eq(plans.status, "published"),
+          inArray(plans.source, PUBLIC_PLAN_SOURCES as unknown as string[]),
+        ),
+      )
       .orderBy(desc(plans.date), plans.symbol)
       .limit(limit);
+  }
+
+  async insertClaudeApiCall(data: InsertClaudeApiCall): Promise<ClaudeApiCall> {
+    const [row] = await db.insert(claudeApiCalls).values(data).returning();
+    return row;
+  }
+
+  async getClaudeApiCallById(id: number): Promise<ClaudeApiCall | undefined> {
+    const result = await db.select().from(claudeApiCalls).where(eq(claudeApiCalls.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getClaudeUsageSince(since: Date): Promise<{ totalCalls: number; successCalls: number; totalCostUsd: number }> {
+    const { gte } = await import("drizzle-orm");
+    const rows = await db
+      .select()
+      .from(claudeApiCalls)
+      .where(gte(claudeApiCalls.createdAt, since));
+    let totalCostUsd = 0;
+    let successCalls = 0;
+    for (const r of rows) {
+      totalCostUsd += Number(r.estimatedCostUsd || 0);
+      if (r.success) successCalls += 1;
+    }
+    return { totalCalls: rows.length, successCalls, totalCostUsd };
   }
 
   async listAlgorithmPlans(limit: number = 20): Promise<Plan[]> {
