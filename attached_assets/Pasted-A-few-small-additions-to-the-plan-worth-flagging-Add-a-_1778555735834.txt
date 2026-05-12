@@ -1,0 +1,21 @@
+A few small additions to the plan worth flagging:
+Add a "Disable auto-Telegram" toggle. Somewhere in settings, a simple checkbox: "Auto-send algorithm levels to Telegram on ingest." If you toggle it off, ingested levels still appear in the dashboard but don't fire to Telegram. This gives you an escape hatch if the algorithm starts producing weird output during validation. Default: on.
+The "🤖 Algorithm v1.1" prefix tag is good. Visually distinguishable from your manual sends without redesigning the format. Keep that.
+The retry logic on Telegram fail (mark publish_failed, return 200, retry button on dashboard) is correct. Good defensive design.
+The rate limit (30/min per IP) is fine. Real traffic from the algorithm is 2 requests/day, so 30/min is generous safety margin.
+Tell the Agent:
+"Plan looks great. Answers to your two questions:
+
+API key storage: Replit Secret. Manual regen is fine, this isn't a key you'll rotate often. Better security than putting it in the app DB.
+Public archive visibility: Hide algorithm-ingested rows from /archive for now. They appear in admin dashboard and go to Telegram, but not public. We're in a validation phase for the next 2-4 weeks and may want to commercialize algorithm output later as a paid tier. Easier to flip hidden-to-public later than to retract public levels. Add a column or flag (maybe 'public_visible' boolean or just filter by source='manual' on the archive query) so this is easy to flip later.
+
+One addition to the plan: add a settings toggle 'Auto-send algorithm levels to Telegram on ingest' (default: on). If toggled off, algorithm levels still ingest to the dashboard but don't fire to Telegram. This gives me an escape hatch during validation if the algorithm produces weird output.
+Green light to build. Proceed with steps A through F. After the build, give me:
+
+The ALGORITHM_INGEST_API_KEY value from the new admin panel (or instructions on how to find it).
+The exact URL for the ingest endpoint so I can paste it into the algorithm project's secrets.
+A summary of what was built and any tests you ran."
+
+When the Agent finishes the build and gives you those three things, paste them here. We'll verify with a manual test (you can curl the endpoint yourself with a sample payload) before moving to prompt 2 in the algorithm project.
+While the Agent builds, you can do one quick prep step: open your trade-levels-algorithm Repl (the R&D project) and confirm it still works. Run python scripts/generate_levels.py --symbol ES. Should print levels to console. If that still works, the algorithm project is ready for prompt 2 whenever the website side is done.
+Paste back what the Agent builds.

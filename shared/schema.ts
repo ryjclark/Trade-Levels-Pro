@@ -30,9 +30,34 @@ export const plans = pgTable("plans", {
   telegramMessage: text("telegram_message"),
   telegramMessageVariant: text("telegram_message_variant"),
   scheduledFor: timestamp("scheduled_for"),
+  source: text("source").notNull().default("manual"),
+  algorithmVersion: text("algorithm_version"),
+  generatedAt: timestamp("generated_at"),
+  currentPrice: real("current_price"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const ingestLevelsSchema = z.object({
+  symbol: z.enum(["ES", "NQ"]),
+  target_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "target_date must be YYYY-MM-DD"),
+  current_price: z.number().nullable().optional(),
+  dynamic_zone_high: z.number().nullable().optional(),
+  dynamic_zone_low: z.number().nullable().optional(),
+  magnet: z.number().nullable().optional(),
+  r1: z.number().nullable().optional(),
+  r2: z.number().nullable().optional(),
+  r3: z.number().nullable().optional(),
+  r4: z.number().nullable().optional(),
+  s1: z.number().nullable().optional(),
+  s2: z.number().nullable().optional(),
+  s3: z.number().nullable().optional(),
+  s4: z.number().nullable().optional(),
+  algorithm_version: z.string().min(1).max(64),
+  contract: z.string().nullable().optional(),
+  bias: z.string().nullable().optional(),
+});
+export type IngestLevelsPayload = z.infer<typeof ingestLevelsSchema>;
 
 export const planResults = pgTable("plan_results", {
   id: serial("id").primaryKey(),
@@ -137,4 +162,5 @@ export interface SiteSettingsData {
   priceText: string;
   footerText: string;
   footerEnabled: boolean;
+  algorithmAutoSend: boolean;
 }

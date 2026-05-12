@@ -20,6 +20,7 @@ export interface IStorage {
   listDueScheduledPlans(now: Date): Promise<Plan[]>;
   claimScheduledPlan(id: number): Promise<Plan | undefined>;
   listPublicPlans(limit?: number): Promise<Plan[]>;
+  listAlgorithmPlans(limit?: number): Promise<Plan[]>;
   insertPlanResult(data: InsertPlanResult): Promise<PlanResult>;
   listResultsForPlanIds(planIds: number[]): Promise<PlanResult[]>;
 }
@@ -86,6 +87,10 @@ export class DatabaseStorage implements IStorage {
           telegramMessageId: data.telegramMessageId,
           telegramMessage: data.telegramMessage,
           telegramMessageVariant: data.telegramMessageVariant,
+          ...(data.source !== undefined ? { source: data.source } : {}),
+          ...(data.algorithmVersion !== undefined ? { algorithmVersion: data.algorithmVersion } : {}),
+          ...(data.generatedAt !== undefined ? { generatedAt: data.generatedAt } : {}),
+          ...(data.currentPrice !== undefined ? { currentPrice: data.currentPrice } : {}),
           updatedAt: now
         })
         .where(eq(plans.id, existing.id));
@@ -142,6 +147,7 @@ export class DatabaseStorage implements IStorage {
       priceText: "",
       footerText: "",
       footerEnabled: false,
+      algorithmAutoSend: true,
     };
     for (const row of rows) {
       if (row.key === "joinUrl") settings.joinUrl = row.value || "";
@@ -150,6 +156,7 @@ export class DatabaseStorage implements IStorage {
       if (row.key === "priceText") settings.priceText = row.value || "";
       if (row.key === "footerText") settings.footerText = row.value || "";
       if (row.key === "footerEnabled") settings.footerEnabled = row.value === "true";
+      if (row.key === "algorithmAutoSend") settings.algorithmAutoSend = row.value !== "false";
     }
     return settings;
   }
@@ -238,10 +245,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listPublicPlans(limit: number = 30): Promise<Plan[]> {
+    // Hide algorithm-sourced plans from the public archive (validation phase).
+    // Flip this filter or remove it later to commercialize algorithm output.
     return db
       .select()
       .from(plans)
-      .where(eq(plans.status, "published"))
+      .where(and(eq(plans.status, "published"), eq(plans.source, "manual")))
+      .orderBy(desc(plans.date), plans.symbol)
+      .limit(limit);
+  }
+
+  async listAlgorithmPlans(limit: number = 20): Promise<Plan[]> {
+    return db
+      .select()
+      .from(plans)
+      .where(eq(plans.source, "algorithm"))
       .orderBy(desc(plans.date), plans.symbol)
       .limit(limit);
   }

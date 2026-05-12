@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
-import { insertPlanSchema } from "@shared/schema";
+import { insertPlanSchema, ingestLevelsSchema } from "@shared/schema";
 import { z } from "zod";
 
 const loginLimiter = rateLimit({
@@ -23,6 +23,21 @@ const previewLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many requests, please slow down." },
 });
+
+const ingestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many ingest requests, slow down." },
+});
+
+function timingSafeEq(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const SESSION_SECRET = process.env.SESSION_SECRET || "insecure-dev-secret";
@@ -747,6 +762,154 @@ export async function registerRoutes(
     } catch (err) {
       console.error("public archive error:", err);
       res.status(500).json({ error: "Failed to load archive" });
+    }
+  });
+
+  // ===== Algorithm Ingest API (Pass 6) =====
+
+  app.get("/api/admin/ingest-key", requireAdmin, (_req, res) => {
+    const key = process.env.ALGORITHM_INGEST_API_KEY || "";
+    res.json({
+      configured: !!key,
+      key: key,
+      length: key.length,
+    });
+  });
+
+  app.get("/api/admin/algorithm-plans", requireAdmin, async (_req, res) => {
+    try {
+      const list = await storage.listAlgorithmPlans(20);
+      res.json(list);
+    } catch (err) {
+      console.error("listAlgorithmPlans error:", err);
+      res.status(500).json({ error: "Failed to load algorithm plans" });
+    }
+  });
+
+  app.post("/api/levels/ingest", ingestLimiter, async (req, res) => {
+    const expected = process.env.ALGORITHM_INGEST_API_KEY;
+    if (!expected) {
+      return res.status(503).json({ error: "ALGORITHM_INGEST_API_KEY not configured" });
+    }
+    const auth = req.header("authorization") || req.header("Authorization") || "";
+    if (!auth.toLowerCase().startsWith("bearer ")) {
+      return res.status(401).json({ error: "Missing Bearer token" });
+    }
+    const provided = auth.slice(7).trim();
+    if (!timingSafeEq(provided, expected)) {
+      return res.status(401).json({ error: "Invalid API key" });
+    }
+
+    const parsed = ingestLevelsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid payload", details: parsed.error.errors });
+    }
+    const d = parsed.data;
+
+    if (d.dynamic_zone_high != null && d.dynamic_zone_low != null && d.dynamic_zone_high <= d.dynamic_zone_low) {
+      return res.status(400).json({ error: "dynamic_zone_high must be greater than dynamic_zone_low" });
+    }
+
+    try {
+      let plan = await storage.upsertPlan({
+        date: d.target_date,
+        symbol: d.symbol,
+        contract: d.contract ?? null,
+        tier: "pro",
+        dynamicZoneTop: d.dynamic_zone_high ?? null,
+        dynamicZoneBottom: d.dynamic_zone_low ?? null,
+        magnet: d.magnet ?? null,
+        r1: d.r1 ?? null, r2: d.r2 ?? null, r3: d.r3 ?? null, r4: d.r4 ?? null,
+        s1: d.s1 ?? null, s2: d.s2 ?? null, s3: d.s3 ?? null, s4: d.s4 ?? null,
+        bias: d.bias ?? null,
+        setup1: null, setup2: null, notes: null,
+        status: "draft",
+        publishedAt: null,
+        telegramMessageId: null,
+        telegramMessage: null,
+        telegramMessageVariant: null,
+        source: "algorithm",
+        algorithmVersion: d.algorithm_version,
+        generatedAt: new Date(),
+        currentPrice: d.current_price ?? null,
+      } as any);
+
+      const settings = await storage.getSettings();
+      const autoSend = settings.algorithmAutoSend !== false;
+
+      if (!autoSend) {
+        return res.status(200).json({
+          ok: true,
+          plan,
+          telegramSent: false,
+          reason: "auto-send disabled in settings",
+        });
+      }
+
+      if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+        await storage.insertPublishLog({
+          planId: plan.id,
+          destination: "telegram",
+          variant: "algorithm",
+          status: "error",
+          errorMessage: "Telegram credentials not configured",
+        });
+        return res.status(200).json({ ok: true, plan, telegramSent: false, reason: "telegram-not-configured" });
+      }
+
+      let body = formatTelegramPro(plan);
+      const tag = `🤖 Algorithm ${escapeMdV2(d.algorithm_version)}\n`;
+      let text = tag + body;
+      if (settings.footerEnabled && settings.footerText) {
+        const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
+        text += "\n\n" + escapeMdV2(footer);
+      }
+
+      try {
+        const resp = await sendTelegramMessage({
+          token: TELEGRAM_BOT_TOKEN,
+          chatId: TELEGRAM_CHAT_ID,
+          text,
+        });
+        const messageId = resp.result?.message_id?.toString() || "";
+        plan = await storage.upsertPlan({
+          ...plan,
+          status: "published",
+          publishedAt: new Date().toISOString(),
+          telegramMessageId: messageId,
+          telegramMessage: text,
+          telegramMessageVariant: "algorithm",
+        } as any);
+        await storage.insertPublishLog({
+          planId: plan.id,
+          destination: "telegram",
+          variant: "algorithm",
+          status: "success",
+          responsePayload: JSON.stringify({ messageId }),
+        });
+        return res.status(200).json({ ok: true, plan, telegramSent: true });
+      } catch (sendErr: any) {
+        plan = await storage.upsertPlan({
+          ...plan,
+          status: "publish_failed",
+        } as any);
+        await storage.insertPublishLog({
+          planId: plan.id,
+          destination: "telegram",
+          variant: "algorithm",
+          status: "error",
+          errorMessage: sendErr?.message || String(sendErr),
+        });
+        return res.status(200).json({
+          ok: true,
+          plan,
+          telegramSent: false,
+          reason: sendErr?.message || "telegram send failed",
+        });
+      }
+    } catch (err: any) {
+      console.error("ingest error:", err);
+      return res.status(500).json({ error: err?.message || "Ingest failed" });
     }
   });
 
