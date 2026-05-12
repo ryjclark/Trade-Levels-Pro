@@ -144,16 +144,16 @@ export default function ParseNewsletterPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:relative">
           <Link href="/admin">
             <Button variant="ghost" size="sm" data-testid="link-back-admin">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back to Admin
             </Button>
           </Link>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h1 className="text-xl font-semibold flex items-center gap-2 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
             <Sparkles className="w-5 h-5 text-primary" /> Newsletter Parser
           </h1>
-          <div className="w-32" />
+          <div className="hidden sm:block w-32" />
         </div>
       </header>
 
@@ -235,7 +235,7 @@ export default function ParseNewsletterPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label>DZ High</Label>
                   <Input type="number" step="0.01" value={plan.dynamic_zone_high}
@@ -256,7 +256,7 @@ export default function ParseNewsletterPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold text-rose-500">Resistance</Label>
                   {(["r1", "r2", "r3", "r4"] as const).map((k) => (

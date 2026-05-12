@@ -32,7 +32,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="dark min-h-screen flex items-center justify-center bg-background text-foreground">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -42,7 +42,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Redirect to="/login" />;
   }
 
-  return <Component />;
+  return (
+    <div className="dark bg-background text-foreground min-h-screen">
+      <Component />
+    </div>
+  );
 }
 
 function PublicLoginRoute() {
@@ -50,7 +54,7 @@ function PublicLoginRoute() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="dark min-h-screen flex items-center justify-center bg-background text-foreground">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -60,7 +64,11 @@ function PublicLoginRoute() {
     return <Redirect to="/admin" />;
   }
 
-  return <LoginPage />;
+  return (
+    <div className="dark bg-background text-foreground min-h-screen">
+      <LoginPage />
+    </div>
+  );
 }
 
 function Router() {

@@ -93,35 +93,36 @@
   --opaque-button-border-intensity: 9;
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
-  --background: 220 20% 10%;
+  /* Trade Levels Pro public-site brand alignment */
+  --background: 215 32% 7%;        /* #0c1117 */
   --foreground: 0 0% 95%;
   --border: 220 15% 18%;
-  --card: 220 18% 13%;
+  --card: 215 30% 9%;              /* slightly lifted from bg, no gradient */
   --card-foreground: 0 0% 95%;
-  --card-border: 220 15% 16%;
-  --sidebar: 220 22% 8%;
+  --card-border: 215 25% 14%;
+  --sidebar: 215 35% 5%;
   --sidebar-foreground: 0 0% 95%;
-  --sidebar-border: 220 15% 14%;
-  --sidebar-primary: 199 89% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 15% 16%;
+  --sidebar-border: 215 25% 12%;
+  --sidebar-primary: 172 76% 64%;
+  --sidebar-primary-foreground: 220 30% 4%;
+  --sidebar-accent: 215 25% 14%;
   --sidebar-accent-foreground: 0 0% 92%;
-  --sidebar-ring: 199 89% 48%;
-  --popover: 220 18% 15%;
+  --sidebar-ring: 172 76% 64%;
+  --popover: 215 30% 11%;
   --popover-foreground: 0 0% 95%;
-  --popover-border: 220 15% 20%;
-  --primary: 199 89% 48%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 15% 20%;
+  --popover-border: 215 25% 16%;
+  --primary: 172 76% 64%;          /* #5EEAD4 teal — public site accent */
+  --primary-foreground: 220 30% 4%;/* #050810 dark text on teal, matches .btn-primary */
+  --secondary: 215 22% 16%;
   --secondary-foreground: 0 0% 95%;
-  --muted: 220 12% 22%;
-  --muted-foreground: 220 10% 60%;
-  --accent: 199 25% 18%;
-  --accent-foreground: 0 0% 95%;
+  --muted: 215 20% 14%;
+  --muted-foreground: 0 0% 62%;
+  --accent: 172 40% 18%;           /* subtle teal accent */
+  --accent-foreground: 172 76% 80%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --input: 220 15% 30%;
-  --ring: 199 89% 48%;
+  --input: 215 22% 18%;
+  --ring: 172 76% 64%;             /* teal focus ring */
   --chart-1: 199 89% 58%;
   --chart-2: 142 71% 55%;
   --chart-3: 24 95% 63%;
