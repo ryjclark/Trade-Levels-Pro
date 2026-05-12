@@ -1,0 +1,58 @@
+I have an existing trade levels website (this Repl). Current flow: I manually type ES and NQ levels into a dashboard, then click a button to send them to Telegram. I want to add an API endpoint that lets an external algorithm POST levels directly, store them, display them on the dashboard, and automatically push them to Telegram using the existing Telegram send function. No manual button press needed for algorithm-sourced levels.
+
+Before writing any code:
+
+1. Read the existing codebase. Tell me:
+   - Tech stack (Next.js? Express? Flask? something else?)
+   - Database type and existing schema for the levels table (if any)
+   - The dashboard page where I type levels
+   - The "Send to Telegram" button's backend function, where the bot token is stored, the message format
+   - The existing auth setup
+
+2. Propose a plan covering:
+   - Database changes if needed (might be minor if levels are already stored, or a new table if they're not stored at all)
+   - New POST /api/levels/ingest endpoint with API key authentication
+   - Dashboard display update for incoming algorithm levels
+   - Automatic Telegram send when algorithm levels are ingested, reusing the existing send function
+   - Admin panel showing the API key
+
+3. Wait for my approval before writing code.
+
+Implementation requirements once approved:
+
+A) Database. If levels are currently stored in a table, add an 'algorithm_version' column and a 'generated_at' timestamp. If levels are not currently stored (i.e. the site only formats and sends, never stores), create a new 'levels' table with columns: id, symbol, target_date, current_price, dynamic_zone_high, dynamic_zone_low, magnet, r1, r2, r3, r4, s1, s2, s3, s4, algorithm_version, generated_at, sent_to_telegram (boolean), telegram_sent_at (timestamp nullable). Unique on (symbol, target_date).
+
+B) POST /api/levels/ingest endpoint. Accepts JSON:
+{
+  "symbol": "ES",
+  "target_date": "2026-05-12",
+  "current_price": 7438.75,
+  "dynamic_zone_high": 7454.75,
+  "dynamic_zone_low": 7410.00,
+  "magnet": 7438.75,
+  "r1": 7445.75, "r2": 7454.75, "r3": null, "r4": null,
+  "s1": 7434.75, "s2": 7427.46, "s3": 7410.00, "s4": 7345.60,
+  "algorithm_version": "v1.1"
+}
+Authorization header 'Bearer <KEY>'. API key from Replit Secret ALGORITHM_INGEST_API_KEY. Reject without valid key with 401.
+Upsert on (symbol, target_date). Return 200 with the upserted row.
+
+C) After successful upsert, automatically call the existing send-to-Telegram function with the ingested levels. The Telegram message should use the same format as the existing manual-send flow (so it looks identical to messages you send yourself via the dashboard button), but include a small tag at the top so I know it came from the algorithm. Suggested format:
+
+📊 ES Levels for [target_date] (Algorithm)
+[then the existing format below]
+
+Or whatever the existing format is, just prepend "(Algorithm)" to the existing title. Don't redesign the message, just tag it.
+
+If the Telegram send fails after a successful ingest, log the error but return 200 to the ingest endpoint (the levels are saved, the user can resend from the dashboard if needed). Mark sent_to_telegram=false in the database. Add a "Retry Telegram" button on the dashboard for rows that have sent_to_telegram=false.
+
+D) Dashboard update. The dashboard should display ingested algorithm levels for ES and NQ. Layout:
+- Today's algorithm levels visible at the top of the dashboard, separate from the manual entry form below
+- Show: target_date, symbol, current_price, dynamic_zone, magnet, R1-R4, S1-S4, when they were ingested, whether Telegram send succeeded
+- A "Send to Telegram" button on each row in case the auto-send failed or I want to re-send
+
+E) Admin panel. Show the current ALGORITHM_INGEST_API_KEY (protected by existing site auth). "Reveal" and optional "Regenerate" buttons.
+
+F) Don't break the existing manual entry flow. The current dashboard form for typing levels by hand and the existing manual send-to-Telegram button continue working unchanged.
+
+Start by reading the codebase and proposing the plan. Don't write code until I approve.
