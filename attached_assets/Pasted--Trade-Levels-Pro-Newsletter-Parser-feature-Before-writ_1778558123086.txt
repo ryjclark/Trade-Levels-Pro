@@ -1,0 +1,192 @@
+# Trade Levels Pro — Newsletter Parser feature
+
+Before writing code: read this entire spec, examine current shared/schema.ts, server/routes, server/storage.ts, the existing Telegram send code, and the existing admin pages. Then propose a step-by-step plan (files you'll create/edit, schema diff, route list, UI structure). Wait for my approval before writing code.
+
+## Workflow context (the "why")
+
+I get a trading newsletter at 2:30pm Central each day. Today I paste it into ChatGPT, ask it to distill to a structured plan, then manually re-type the result into this app's admin dashboard and click Send to Telegram. I want to replace steps 2 and 3 with: paste newsletter → Claude parses → I review/edit → save and send. This is replacing my manual daily flow.
+
+The "algorithm ingest" feature we built earlier today (POST /api/levels/ingest, Algorithm Levels admin panel, source="algorithm") stays in the codebase but is dormant — no removal. The new feature is additive and lives alongside it.
+
+## What to build
+
+### 1. New admin page: `/admin/parse-newsletter`
+
+- File: `client/src/pages/admin/parse-newsletter.tsx`
+- Same admin auth guard as existing admin pages
+- Add a link in the admin nav
+- Page layout (top to bottom):
+  1. **Newsletter input section**: large textarea (min 400px height), placeholder "Paste today's newsletter here...", a "Generate Plan" button below
+  2. **Generate state**: button shows loading spinner while the Claude call runs; disable other controls; show estimated cost / latency once available
+  3. **Generated plan section** (appears after Generate succeeds): a form, **NOT a JSON blob** — every field is its own labeled input
+     - `target_date` (date picker)
+     - `symbol` (text, defaults "ES")
+     - `dynamic_zone_high` / `dynamic_zone_low` / `magnet` (number inputs, step 0.25)
+     - `r1, r2, r3, r4` (number inputs)
+     - `s1, s2, s3, s4` (number inputs)
+     - `bias` (select: bullish / neutral / bearish)
+     - `bias_reasoning` (textarea)
+     - `top_long_trade` (textarea)
+     - `top_short_trade` (textarea)
+     - A read-only display of `prompt_version` (e.g. "v1.0") so I know which prompt produced this
+  4. **Telegram preview** below the form: live-rendered preview of what the Telegram message will look like, updating as I edit fields
+  5. **Action buttons**: "Save and Send to Telegram" (primary), "Save Draft (no Telegram)" (secondary), "Discard" (tertiary)
+
+- **Edit tracking**: when Generate returns, snapshot the parsed JSON in component state. On Save, compute the diff between snapshot and current form values. Include the list of edited field names in the Save request body. Backend writes that list to the plan row.
+
+### 2. Backend routes
+
+All under existing admin auth middleware.
+
+- `POST /api/admin/parse-newsletter`
+  - Body: `{ newsletter_text: string }`
+  - Calls Claude via the wrapper (see below), returns the parsed plan JSON + the `prompt_version` used + the `claude_api_call_id`
+  - On Claude error: return 502 with descriptive message; do NOT lose the user's input (the frontend still has it)
+- `POST /api/admin/save-parsed-plan`
+  - Body: parsed plan fields + `edited_fields: string[]` + `claude_api_call_id: number` + `send_telegram: boolean`
+  - Inserts row in `plans` with `source = "ai_parsed"`
+  - If `send_telegram` is true: calls existing Telegram send pipeline with the new `ai_parsed` variant
+  - Returns the saved plan
+
+### 3. Claude API integration
+
+- Install `@anthropic-ai/sdk`
+- Replit Secret: `ANTHROPIC_API_KEY` (I will set this after you scaffold; if missing, the parse endpoint returns 503 with a clear message)
+- File: `server/lib/claude.ts`
+  - Single exported function `parseNewsletter(newsletterText: string)`
+  - Model: `claude-sonnet-4-6`
+  - Use the **tool-use API** for structured output — define one tool named `submit_trade_plan` with `input_schema` matching the exact shape below. Force tool use via `tool_choice: { type: "tool", name: "submit_trade_plan" }`. The tool's `input` IS the structured output; do not parse free-text JSON.
+  - System prompt is split into two content blocks: (a) the long stable instructions, with `cache_control: { type: "ephemeral" }`; (b) any per-call dynamic context (none for now, but leave the structure ready)
+  - Retry: `maxRetries: 3` on the SDK client + manual exponential backoff (1s/2s/4s) on 529 overloaded responses
+  - On every call (success or fail): write a row to `claude_api_calls` with model, request_type="parse_newsletter", input_tokens, cache_creation_input_tokens, cache_read_input_tokens, output_tokens, computed estimated_cost_usd, success, error_message, prompt_version. Return the new row's id so the frontend can pass it back to `save-parsed-plan`.
+
+- Tool input_schema shape (exact field names and types):
+  ```json
+  {
+    "type": "object",
+    "required": ["target_date","symbol","dynamic_zone_high","dynamic_zone_low","magnet","r1","r2","r3","r4","s1","s2","s3","s4","bias","bias_reasoning","top_long_trade","top_short_trade"],
+    "properties": {
+      "target_date": {"type":"string","description":"ISO date YYYY-MM-DD for the trading day the plan applies to"},
+      "symbol": {"type":"string","description":"Futures symbol, default 'ES'"},
+      "dynamic_zone_high": {"type":"number"},
+      "dynamic_zone_low": {"type":"number"},
+      "magnet": {"type":"number"},
+      "r1": {"type":"number"}, "r2": {"type":"number"}, "r3": {"type":"number"}, "r4": {"type":"number"},
+      "s1": {"type":"number"}, "s2": {"type":"number"}, "s3": {"type":"number"}, "s4": {"type":"number"},
+      "bias": {"type":"string","enum":["bullish","neutral","bearish"]},
+      "bias_reasoning": {"type":"string"},
+      "top_long_trade": {"type":"string"},
+      "top_short_trade": {"type":"string","description":"Use 'Author does not short, no short trade provided' if newsletter explicitly avoids shorts"}
+    }
+  }
+  ```
+
+### 4. System prompt — versioned
+
+- File: `server/lib/prompts/parse-newsletter.ts`
+- Export `PARSE_NEWSLETTER_PROMPT_VERSION = "v1.0"` and `PARSE_NEWSLETTER_SYSTEM_PROMPT = "..."`
+- When I tune the prompt, I bump the version string. The version flows through `claude_api_calls.prompt_version` and `plans.prompt_version`.
+- Prompt content rules (compose these into a coherent system prompt):
+  - You extract a structured futures trade plan from a daily newsletter.
+  - Read the entire newsletter carefully before extracting.
+  - Identify the trading date the plan is for — usually "tomorrow" relative to the newsletter's publication date. If the newsletter explicitly names a date, use it.
+  - Levels marked "major" take priority over minor levels.
+  - For the 4 supports and 4 resistances: prefer the closest major levels to the current/implied price. Closest = `r1`/`s1`, farthest = `r4`/`s4`. If the newsletter doesn't reference current price, order by absolute price (resistances ascending from r1, supports descending from s1).
+  - Bias: read the newsletter's bull case / bear case sections. Output one of `bullish` / `neutral` / `bearish`. Provide 1–2 sentence reasoning.
+  - Top long: the highest-conviction long setup the author describes, including entry / stop / target if given.
+  - Top short: same for shorts. If the author explicitly states they don't short, return exactly: `"Author does not short, no short trade provided"`.
+  - Always call the `submit_trade_plan` tool — never respond with prose.
+
+### 5. Database (Drizzle, `shared/schema.ts`)
+
+- Add to `plans` table if not present:
+  - `bias_reasoning text` (nullable)
+  - `top_long_trade text` (nullable)
+  - `top_short_trade text` (nullable)
+  - `prompt_version text` (nullable)
+  - `edited_fields jsonb` (nullable, default null) — array of field names edited before save
+  - `claude_api_call_id integer` (nullable FK to claude_api_calls.id)
+- `source` column: extend the allowed values to include `"ai_parsed"` alongside `"manual"`, `"algorithm"`
+- New table `claude_api_calls`:
+  - `id serial primary key`
+  - `created_at timestamp default now()`
+  - `model text`
+  - `request_type text` (e.g. "parse_newsletter")
+  - `prompt_version text`
+  - `input_tokens integer`
+  - `cache_creation_input_tokens integer`
+  - `cache_read_input_tokens integer`
+  - `output_tokens integer`
+  - `estimated_cost_usd numeric(10,6)`
+  - `success boolean`
+  - `error_message text` (nullable)
+- Run `npm run db:push` (Drizzle) and verify schema applied.
+
+### 6. Public archive flip — one-line change
+
+Create a constant `PUBLIC_PLAN_SOURCES = ["manual"]` exported from `shared/constants.ts` (or wherever fits). Use this constant inside `listPublicPlans` in `server/storage.ts` instead of a hardcoded `eq(plans.source, "manual")`. To later make `ai_parsed` public, I'll edit only that constant. Add a code comment by the constant explaining the intent.
+
+### 7. Telegram
+
+- Refactor: if the Telegram message builder isn't already in a single file, extract it to `server/lib/telegram-format.ts` with a function-per-variant pattern: `formatManualPlan(plan)`, `formatAlgorithmPlan(plan)`, `formatAiParsedPlan(plan)`. Reuse the existing MarkdownV2 escape utility (the one producing `v1\\.0\\-curl\\-test` style escapes I saw earlier).
+- New format `formatAiParsedPlan`:
+
+  ```
+  📊 *ES Trade Plan for {target_date}*
+  *Bias:* {bias} — {bias_reasoning}
+
+  *Dynamic Zone:* `{dz_low}` – `{dz_high}`
+  *Magnet:* `{magnet}`
+
+  *Resistance:*
+  R1: `{r1}`
+  R2: `{r2}`
+  R3: `{r3}`
+  R4: `{r4}`
+
+  *Support:*
+  S1: `{s1}`
+  S2: `{s2}`
+  S3: `{s3}`
+  S4: `{s4}`
+
+  🟢 *Top Long:* {top_long_trade}
+  🔴 *Top Short:* {top_short_trade}
+
+  \\—
+  _Educational content only\\. Not investment advice\\._
+  ```
+
+  All dynamic values pass through the MarkdownV2 escaper.
+
+### 8. Cost tracking surface
+
+- On the existing admin Settings page, add a small card: "Claude API usage (last 30 days)" showing total cost, total calls, success rate. Query from `claude_api_calls`.
+
+## Tests (write these; all must pass)
+
+- `parseNewsletter` returns structured fields when given a realistic sample newsletter (you can synthesize one in the test).
+- Tool-use mode is enforced: if the API somehow returns plain text, the wrapper throws.
+- `claude_api_calls` row written on success AND on failure.
+- `POST /api/admin/save-parsed-plan` writes a `plans` row with `source="ai_parsed"`, `prompt_version` set, `edited_fields` populated.
+- `listPublicPlans` excludes `ai_parsed` rows (current behavior).
+- Flipping `PUBLIC_PLAN_SOURCES` to include `"ai_parsed"` in a test makes the rows public.
+- Telegram `formatAiParsedPlan` produces a string that round-trips through the MarkdownV2 escaper without throwing and includes all required sections.
+- Existing manual flow tests still pass.
+
+## Do NOT touch
+
+- Manual entry dashboard, manual save/publish, scheduled publish, archive page, TV webhook handler
+- Existing `manual` Telegram variant
+- Algorithm ingest endpoint, Algorithm Levels admin panel, algorithm Telegram variant — leave dormant
+- Any existing test that's currently green
+
+## Deliverables for the plan-only step
+
+Reply with:
+1. Confirmation you've read the existing code (call out the files you inspected).
+2. The diff list: files created, files modified, schema migration summary.
+3. Open questions, if any.
+4. A 1–2 line summary of how the user (me) will use this once shipped.
+
+Wait for my approval. Do not write code yet.
