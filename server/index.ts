@@ -7,7 +7,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedDatabase } from "./seed";
 import { registerCronJobs } from "./cron";
-import { seedAdminPasswordIfNeeded, cleanupExpiredSessions } from "./auth";
+import { seedAdminIfNeeded, cleanupExpiredSessions } from "./auth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,10 +96,10 @@ app.use((req, res, next) => {
     console.error("Failed to seed database:", err);
   });
 
-  // Pass 8: seed the admin password from ADMIN_PASSWORD env var on first boot
-  // of whichever environment starts first. After that the DB hash wins.
-  await seedAdminPasswordIfNeeded().catch(err => {
-    console.error("Failed to seed admin password:", err);
+  // Pass 8: seed default admin login (Ryan/Ryan) on first boot of whichever
+  // environment starts first. After that the DB row wins.
+  await seedAdminIfNeeded().catch(err => {
+    console.error("Failed to seed admin credential:", err);
   });
 
   // Boot-time cleanup so restarts don't leave stale rows for an hour.

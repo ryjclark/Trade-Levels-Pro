@@ -13,12 +13,9 @@ beforeAll(async () => {
   if (!process.env.ANTHROPIC_API_KEY) {
     process.env.ANTHROPIC_API_KEY = "test-mock-key";
   }
-  // Pass 8: ensure admin credential is seeded so /api/auth/login works in tests.
-  // Tests share the dev DB; we always (re)seed to whatever ADMIN_PASSWORD test
-  // env value is in effect so the suite is hermetic regardless of prior state.
-  if (!process.env.ADMIN_PASSWORD) {
-    process.env.ADMIN_PASSWORD = "test-admin-password";
-  }
-  const { setAdminPassword } = await import("../server/auth");
-  await setAdminPassword(process.env.ADMIN_PASSWORD);
+  // Pass 8: ensure the default admin credential exists so /api/auth/login works
+  // in tests. Tests share the dev DB; we (re)seed Ryan/Ryan deterministically
+  // so the suite is hermetic regardless of prior state.
+  const { setAdminCredential } = await import("../server/auth");
+  await setAdminCredential("Ryan", "Ryan");
 });

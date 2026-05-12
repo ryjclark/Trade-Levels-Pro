@@ -14,39 +14,9 @@ import {
   requireAdmin,
   createSession,
   deleteSessionByToken,
-  deleteOtherSessions,
-  deleteAllSessions,
-  verifyAdminPassword,
-  isAdminConfigured,
-  setAdminPassword,
-  createPasswordResetToken,
-  consumePasswordResetToken,
+  verifyLogin,
   type AdminAuthRequest,
 } from "./auth";
-
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many login attempts, please try again later." },
-});
-
-const resetRequestLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many reset requests, try again in an hour." },
-});
-
-const resetConsumeLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many reset attempts, slow down." },
-});
 
 const previewLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -103,25 +73,16 @@ export async function registerRoutes(
     res.json({ status: "ok" });
   });
 
-  app.post("/api/auth/login", loginLimiter, async (req, res) => {
-    const { password } = req.body || {};
-    if (typeof password !== "string" || password.length === 0) {
-      return res.status(400).json({ code: "INVALID_PASSWORD", error: "Password required" });
+  app.post("/api/auth/login", async (req, res) => {
+    const { username, password } = req.body || {};
+    if (typeof username !== "string" || typeof password !== "string") {
+      return res.status(400).json({ error: "Invalid username or password" });
     }
-    if (!(await isAdminConfigured())) {
-      return res.status(503).json({
-        code: "NOT_CONFIGURED",
-        error: "Admin password not yet configured. Check the server logs or contact the site owner.",
-      });
-    }
-    const ok = await verifyAdminPassword(password);
+    const ok = await verifyLogin(username, password);
     if (!ok) {
-      return res.status(401).json({ code: "INVALID_PASSWORD", error: "Incorrect password" });
+      return res.status(401).json({ error: "Invalid username or password" });
     }
-    const session = await createSession({
-      userAgent: req.headers["user-agent"] || null,
-      ip: req.ip || null,
-    });
+    const session = await createSession();
     return res.json({
       success: true,
       token: session.token,
@@ -142,59 +103,6 @@ export async function registerRoutes(
       const token = authHeader.substring(7);
       await deleteSessionByToken(token).catch(() => {});
     }
-    return res.json({ success: true });
-  });
-
-  // ----- Password rotation -----
-  app.post("/api/admin/change-password", requireAdmin, async (req: AdminAuthRequest, res) => {
-    const { current_password, new_password, revoke_other_sessions } = req.body || {};
-    if (typeof current_password !== "string" || typeof new_password !== "string") {
-      return res.status(400).json({ error: "current_password and new_password required" });
-    }
-    if (new_password.length < 8) {
-      return res.status(400).json({ error: "New password must be at least 8 characters" });
-    }
-    const ok = await verifyAdminPassword(current_password);
-    if (!ok) {
-      return res.status(401).json({ code: "INVALID_PASSWORD", error: "Current password is incorrect" });
-    }
-    await setAdminPassword(new_password);
-    let revokedCount = 0;
-    if (revoke_other_sessions === true) {
-      revokedCount = await deleteOtherSessions(req.session!.token);
-    }
-    return res.json({ success: true, revoked_other_sessions: revokedCount });
-  });
-
-  // ----- Reset flow (escape hatch). Token is printed to server logs only. -----
-  app.post("/api/admin/reset-password/request", resetRequestLimiter, async (_req, res) => {
-    const token = await createPasswordResetToken();
-    console.log(
-      "\n========================================\n" +
-        "[auth] PASSWORD RESET TOKEN (valid 15 min, single use):\n" +
-        `  ${token}\n` +
-        "POST it to /api/admin/reset-password/consume with a new_password to set a new admin password.\n" +
-        "========================================\n",
-    );
-    // No oracle: always 202.
-    return res.status(202).json({ success: true });
-  });
-
-  app.post("/api/admin/reset-password/consume", resetConsumeLimiter, async (req, res) => {
-    const { reset_token, new_password } = req.body || {};
-    if (typeof reset_token !== "string" || typeof new_password !== "string") {
-      return res.status(400).json({ error: "reset_token and new_password required" });
-    }
-    if (new_password.length < 8) {
-      return res.status(400).json({ error: "New password must be at least 8 characters" });
-    }
-    const ok = await consumePasswordResetToken(reset_token);
-    if (!ok) {
-      return res.status(400).json({ code: "INVALID_RESET_TOKEN", error: "Reset token invalid, expired, or already used" });
-    }
-    await setAdminPassword(new_password);
-    // Reset always invalidates every existing session — fresh login required.
-    await deleteAllSessions();
     return res.json({ success: true });
   });
 

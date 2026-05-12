@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const AUTH_TOKEN_KEY = "trade_levels_auth";
+export const AUTH_TOKEN_KEY = "tlp_admin_session";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -17,12 +17,17 @@ export function useAuth() {
       setIsLoading(false);
       return;
     }
-    
+
     try {
       const response = await fetch("/api/auth/check", {
         headers: { "Authorization": `Bearer ${token}` }
       });
-      setIsAuthenticated(response.ok);
+      if (response.ok) {
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        setIsAuthenticated(false);
+      }
     } catch {
       setIsAuthenticated(false);
     } finally {
@@ -30,12 +35,12 @@ export function useAuth() {
     }
   };
 
-  const login = async (password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ username, password })
       });
       if (response.ok) {
         const data = await response.json();
@@ -50,6 +55,15 @@ export function useAuth() {
   };
 
   const logout = async () => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+      } catch {}
+    }
     localStorage.removeItem(AUTH_TOKEN_KEY);
     setIsAuthenticated(false);
   };

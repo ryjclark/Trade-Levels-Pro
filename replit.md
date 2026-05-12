@@ -64,10 +64,17 @@ shared/
 └── schema.ts           # Database schema and types
 ```
 
+## Admin Login (Pass 8)
+- DB-backed: `admin_credentials` (single row, bcrypt hash) + `admin_sessions` (rolling 30d TTL).
+- Default seed on first boot of an empty `admin_credentials` table: **username `Ryan` / password `Ryan`**. Change via direct DB update.
+- Sessions persist across server restarts/redeploys (the bug Pass 8 fixed). Every authenticated request rolls `expires_at` forward 30 days.
+- Frontend stores token in `localStorage["tlp_admin_session"]` (renamed from `trade_levels_auth` so old orphans clear on next visit). Any 401 in the admin area clears the token and redirects to `/login`.
+- Hourly + boot-time `cleanupExpiredSessions()`.
+
 ## Environment Variables Required
 - `DATABASE_URL`: PostgreSQL connection string
-- `ADMIN_PASSWORD`: Password for admin access
-- `SESSION_SECRET`: Secret for session encryption
+- `ADMIN_PASSWORD`: (Legacy from earlier passes; no longer read. Login is DB-backed.)
+- `SESSION_SECRET`: (Reserved; not currently used.)
 - `TELEGRAM_BOT_TOKEN`: Telegram bot token from @BotFather
 - `TELEGRAM_CHAT_ID`: Target Telegram chat/channel ID
 - `ALGORITHM_INGEST_API_KEY`: Bearer token for `POST /api/levels/ingest` (Pass 6)

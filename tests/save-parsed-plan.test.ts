@@ -26,13 +26,12 @@ const TOOL_INPUT = {
 };
 
 beforeAll(async () => {
-  process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "test-admin-password";
   app = express();
   app.use(express.json());
   const httpServer = createServer(app);
   await registerRoutes(httpServer, app);
 
-  const login = await request(app).post("/api/auth/login").send({ password: process.env.ADMIN_PASSWORD });
+  const login = await request(app).post("/api/auth/login").send({ username: "Ryan", password: "Ryan" });
   token = login.body.token;
 
   setClaudeClientFactory(() => ({

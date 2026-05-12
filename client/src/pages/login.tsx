@@ -8,6 +8,7 @@ import { Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function LoginPage() {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -20,11 +21,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(password);
+      const success = await login(username, password);
       if (success) {
         setLocation("/admin");
       } else {
-        setError("Invalid password. Please try again.");
+        setError("Invalid username or password. Please try again.");
         setPassword("");
       }
     } catch {
@@ -63,6 +64,21 @@ export default function LoginPage() {
               )}
               
               <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter admin username"
+                  required
+                  autoFocus
+                  autoComplete="username"
+                  data-testid="input-username"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
@@ -71,7 +87,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter admin password"
                   required
-                  autoFocus
+                  autoComplete="current-password"
                   data-testid="input-password"
                 />
               </div>
@@ -79,7 +95,7 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isLoading || !password}
+                disabled={isLoading || !username || !password}
                 data-testid="button-login"
               >
                 {isLoading ? "Signing in..." : "Sign In"}
