@@ -1,0 +1,78 @@
+# Per-plan OG image cards
+
+Dynamically generate Open Graph preview images (1200×630 PNG) for every published trade plan so that when subscribers share a plan URL on Twitter/X, Telegram, LinkedIn, iMessage, etc., the preview card shows the actual plan summary instead of the static og-default.png.
+
+## Phase 0 — Audit (do first, no code)
+
+1. Read `client/src/pages/sample.tsx`, `pages/archive.tsx`, and `pages/archive-detail.tsx` (or whatever renders the public plan view) to understand the current plan-rendering layout.
+2. Check `index.html` and any `<Helmet>` / `<head>` usage in the public plan routes — find where `og:image` is currently set (likely static).
+3. Identify the route at which a single plan is publicly viewable. If there isn't one yet, FLAG it — I previously told you not to invent a public detail route. We need ONE public route per plan for share links to actually work. Acceptable form: `/archive/:date` or `/plans/:id`. Read-only, no auth.
+4. Report a brief plan: which package you'll use, what fields go on the card, what route you'll create for the plan detail page.
+
+Wait for my approval before writing code.
+
+## Phase 1 — Image generation
+
+Use `@vercel/og` (works on Node, uses Satori under the hood — no headless browser, no native deps, fast). Add it via the package manager.
+
+- Create `server/routes/og.ts` exporting `GET /api/og/plan/:id.png`
+- Look up plan by id (or by date+symbol — your call, just be consistent)
+- Compose a 1200×630 image with this layout (you have full creative latitude on exact spacing/sizing, but the content must match):
+  - Brand band at top: "TRADE LEVELS PRO" wordmark + small teal accent bar
+  - Big headline: `ES Trade Plan — {target_date}` (use full month name, e.g. "May 13, 2026")
+  - Bias pill: bullish/neutral/bearish with appropriate color (green/gray/red), small font, top-right
+  - Key levels block (mid-left): "Magnet {magnet}" big, "DZ {dz_low}–{dz_high}" smaller below
+  - Resistance/Support columns (right side): R1-R4 stacked, S1-S4 stacked
+  - Footer band: small "tradelevelspro.com" + tagline "Plan, don't react."
+- Colors: pull from the public site's CSS variables — `#0c1117` background, `#5EEAD4` teal accent, white primary text, white/50 muted text. Match the public site brand.
+- Font: use Inter Tight Variable for the display headline; Inter for body. Bundle the font files locally (Satori needs the raw .ttf/.otf) — put them in `server/assets/fonts/` and load them once at boot.
+- Cache: set `Cache-Control: public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400` on the response — the image content doesn't change after publish.
+- If the plan id doesn't exist or the plan isn't published: return 404 with a tiny "Plan not found" placeholder PNG (one-time generated, served statically).
+
+## Phase 2 — Wire the meta tags
+
+On the public plan detail page (the route from Phase 0):
+
+- Add `<title>` and `<meta>` tags via React Helmet or whatever SSR/client convention the codebase uses (check existing public pages first; match their pattern).
+- `<meta property="og:title" content="ES Trade Plan — {date}" />`
+- `<meta property="og:description" content="Magnet {magnet} · DZ {dz_low}–{dz_high} · Bias {bias}" />`
+- `<meta property="og:image" content="https://tradelevelspro.com/api/og/plan/{id}.png" />`
+- `<meta property="og:image:width" content="1200" />`
+- `<meta property="og:image:height" content="630" />`
+- `<meta property="og:url" content="https://tradelevelspro.com/{route}" />`
+- `<meta property="og:type" content="article" />`
+- Mirror as `<meta name="twitter:card" content="summary_large_image" />` + matching `twitter:title`, `twitter:description`, `twitter:image`
+
+Important: og:image MUST be an absolute URL. Use the full `https://tradelevelspro.com/...` form, not a relative path.
+
+## Phase 3 — Public plan detail route (if needed)
+
+If Phase 0 finds there's no public plan detail page, build a minimal one:
+- Route: `/p/:id` (short, share-friendly) or `/archive/:date` — your call, document which you picked
+- Read-only render of a single published plan, using the SAME layout as the public archive list items would render an expanded view (don't invent new UI — reuse existing plan-card components if available)
+- 404 if plan is not `status="published"` or has `source` not in `PUBLIC_PLAN_SOURCES`
+- Includes the meta tags from Phase 2
+- Linked from the public archive list (each row becomes clickable)
+
+## Phase 4 — Test the actual preview
+
+- Run typecheck + test suite
+- Manually verify by:
+  - Visit `https://tradelevelspro.com/api/og/plan/{some-published-plan-id}.png` directly in a browser — image should render correctly, look on-brand
+  - Use Twitter's card validator (https://cards-dev.twitter.com/validator) on a plan URL — should show the card preview
+  - Optional: paste a plan URL into a real Telegram chat and confirm the preview card appears
+- Add tests in `tests/og-image.test.ts`:
+  - Image generation returns 200 with `image/png` content-type for a valid published plan id
+  - Returns 404 for non-existent id
+  - Returns 404 for a draft / unpublished plan
+  - Returns 404 for a plan with non-public source (e.g. algorithm)
+
+## Out of scope
+
+- Don't generate OG images for the homepage or sample page — the existing `og-default.png` is fine for those
+- Don't add OG generation to admin or auth pages
+- Don't backfill OG images for old plans pro-actively — they generate on-demand the first time a share link is requested, then cache
+
+## Execute
+
+Phase 0 first. Wait for approval. Then build Phase 1+2+3 (they're tightly coupled). Phase 4 last.
