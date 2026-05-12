@@ -23,6 +23,7 @@ import PublicIndicatorPage from "@/pages/public-indicator";
 import PublicLearnPage from "@/pages/public-learn";
 import PublicArticlePage from "@/pages/public-article";
 import PublicArchivePage from "@/pages/public-archive";
+import PublicPlanDetailPage from "@/pages/public-plan-detail";
 import PublicAboutPage from "@/pages/public-about";
 import NotFound from "@/pages/not-found";
 import { Loader2 } from "lucide-react";
@@ -84,6 +85,7 @@ function Router() {
       <Route path="/learn/:slug" component={PublicArticlePage} />
       <Route path="/about" component={PublicAboutPage} />
       <Route path="/archive" component={PublicArchivePage} />
+      <Route path="/p/:id" component={PublicPlanDetailPage} />
       <Route path="/subscribe">{() => <Redirect to="/pricing" />}</Route>
       <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>
       <Route path="/privacy">{() => <PublicLegalPage kind="privacy" />}</Route>

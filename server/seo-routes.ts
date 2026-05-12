@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import { storage } from "./storage";
 
 const SITE_URL = "https://tradelevelspro.com";
 
@@ -13,6 +14,7 @@ const STATIC_PATHS: Array<{ path: string; changefreq: string; priority: number }
   { path: "/learn/what-is-a-magnet-level-es-futures", changefreq: "monthly", priority: 0.7 },
   { path: "/learn/prop-firm-traders-support-resistance", changefreq: "monthly", priority: 0.7 },
   { path: "/learn/building-a-daily-es-trade-plan-template", changefreq: "monthly", priority: 0.7 },
+  { path: "/archive", changefreq: "daily", priority: 0.8 },
   { path: "/terms", changefreq: "yearly", priority: 0.3 },
   { path: "/privacy", changefreq: "yearly", priority: 0.3 },
   { path: "/risk", changefreq: "yearly", priority: 0.3 },
@@ -36,12 +38,28 @@ export function registerSeoRoutes(app: Express): void {
     );
   });
 
-  app.get("/sitemap.xml", (_req, res) => {
+  app.get("/sitemap.xml", async (_req, res) => {
     const today = new Date().toISOString().slice(0, 10);
-    const urls = STATIC_PATHS.map(
+    const staticUrls = STATIC_PATHS.map(
       (entry) =>
         `  <url>\n    <loc>${SITE_URL}${entry.path}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${entry.changefreq}</changefreq>\n    <priority>${entry.priority.toFixed(1)}</priority>\n  </url>`
-    ).join("\n");
+    );
+
+    // Per-plan public detail URLs (/p/:id) — only published, public-source plans.
+    let planUrls: string[] = [];
+    try {
+      const plans = await storage.listPublicPlans(200);
+      planUrls = plans.map((p) => {
+        const lastmod = p.publishedAt
+          ? new Date(p.publishedAt).toISOString().slice(0, 10)
+          : today;
+        return `  <url>\n    <loc>${SITE_URL}/p/${p.id}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`;
+      });
+    } catch (err) {
+      console.error("sitemap: failed to list public plans:", err);
+    }
+
+    const urls = [...staticUrls, ...planUrls].join("\n");
     res
       .type("application/xml")
       .send(

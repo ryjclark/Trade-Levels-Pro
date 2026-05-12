@@ -34,6 +34,19 @@ const ingestLimiter = rateLimit({
   message: { error: "Too many ingest requests, slow down." },
 });
 
+// Per-IP limiter for the unauthenticated OG render endpoint. Lenient enough
+// for normal social-crawler traffic (Twitter, Facebook, LinkedIn, Slack,
+// Discord, iMessage, etc. each refetch only occasionally per URL) but tight
+// enough to cap CPU amplification if someone scripts it. CDN caching makes
+// repeat hits cheap; this protects the cold path.
+const ogLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many OG requests, slow down." },
+});
+
 function timingSafeEq(a: string, b: string): boolean {
   const ab = Buffer.from(a);
   const bb = Buffer.from(b);
@@ -1106,6 +1119,78 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("ingest error:", err);
       return res.status(500).json({ error: err?.message || "Ingest failed" });
+    }
+  });
+
+  // ===== Per-plan OG images + public detail data =====
+
+  // Public read-only fetch for the /p/:id detail page. Same gating as the
+  // archive list (status="published" AND source ∈ PUBLIC_PLAN_SOURCES) and
+  // returns the same level-only shape — never bias / setups / reasoning,
+  // those stay members-only inside Telegram.
+  app.get("/api/public/plans/:id", async (req, res) => {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+    const plan = await storage.getPublicPlan(id);
+    if (!plan) return res.status(404).json({ error: "Plan not found" });
+    res.json({
+      id: plan.id,
+      date: plan.date,
+      symbol: plan.symbol,
+      contract: plan.contract,
+      dynamicZoneTop: plan.dynamicZoneTop,
+      dynamicZoneBottom: plan.dynamicZoneBottom,
+      magnet: plan.magnet,
+      r1: plan.r1, r2: plan.r2, r3: plan.r3, r4: plan.r4,
+      s1: plan.s1, s2: plan.s2, s3: plan.s3, s4: plan.s4,
+      bias: plan.bias,
+      publishedAt: plan.publishedAt,
+      // Epoch ms of last admin edit. Used by the detail page to version the
+      // og:image URL (?v=…) so post-publish edits bust the social/CDN cache.
+      updatedAt: plan.updatedAt ? new Date(plan.updatedAt).getTime() : null,
+    });
+  });
+
+  // Per-plan OG card. Public, crawler-fetchable, 1200x630 PNG.
+  // Cached aggressively — the URL itself is versioned by ?v=<updatedAt>, so
+  // any plan edit produces a new URL and dodges stale cached cards.
+  app.get("/api/og/plan/:id.png", ogLimiter, async (req, res) => {
+    const id = Number.parseInt(req.params.id, 10);
+    const { renderPlanOgImage, renderNotFoundOgImage } = await import("./og");
+
+    async function send404Placeholder() {
+      try {
+        const buf = await renderNotFoundOgImage();
+        res.status(404);
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=300");
+        return res.end(buf);
+      } catch (err) {
+        console.error("og placeholder render failed:", err);
+        return res.status(404).type("text/plain").send("Plan not found");
+      }
+    }
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return send404Placeholder();
+    }
+    const plan = await storage.getPublicPlan(id);
+    if (!plan) return send404Placeholder();
+
+    try {
+      const image = await renderPlanOgImage(plan);
+      const buf = Buffer.from(await image.arrayBuffer());
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400",
+      );
+      return res.end(buf);
+    } catch (err) {
+      console.error("og render failed for plan", id, err);
+      return send404Placeholder();
     }
   });
 

@@ -59,52 +59,58 @@ export default function PublicArchivePage() {
                 className="archive-card"
                 data-testid={`archive-card-${p.id}`}
               >
-                <div className="archive-card-head">
-                  <div className="archive-card-title">
-                    <span className="archive-symbol">{p.symbol}</span>
-                    <span className="archive-date">{fmtDate(p.date)}</span>
-                    {p.contract && <span className="archive-contract">{p.contract}</span>}
+                <Link
+                  href={`/p/${p.id}`}
+                  data-testid={`archive-card-link-${p.id}`}
+                  style={{ display: "block", color: "inherit", textDecoration: "none" }}
+                >
+                  <div className="archive-card-head">
+                    <div className="archive-card-title">
+                      <span className="archive-symbol">{p.symbol}</span>
+                      <span className="archive-date">{fmtDate(p.date)}</span>
+                      {p.contract && <span className="archive-contract">{p.contract}</span>}
+                    </div>
+                    {p.hasResult && (
+                      <span
+                        className="archive-result-dot"
+                        title="Result tagged"
+                        data-testid={`archive-result-${p.id}`}
+                      >
+                        <CheckCircle2 size={12} strokeWidth={2.5} /> tagged
+                      </span>
+                    )}
                   </div>
-                  {p.hasResult && (
-                    <span
-                      className="archive-result-dot"
-                      title="Result tagged"
-                      data-testid={`archive-result-${p.id}`}
-                    >
-                      <CheckCircle2 size={12} strokeWidth={2.5} /> tagged
-                    </span>
-                  )}
-                </div>
 
-                <div className="archive-row">
-                  <span className="archive-k">Magnet</span>
-                  <span className="archive-v">{n(p.magnet)}</span>
-                </div>
-                <div className="archive-row">
-                  <span className="archive-k">Dynamic Zone</span>
-                  <span className="archive-v">{n(p.dynamicZoneBottom)} – {n(p.dynamicZoneTop)}</span>
-                </div>
+                  <div className="archive-row">
+                    <span className="archive-k">Magnet</span>
+                    <span className="archive-v">{n(p.magnet)}</span>
+                  </div>
+                  <div className="archive-row">
+                    <span className="archive-k">Dynamic Zone</span>
+                    <span className="archive-v">{n(p.dynamicZoneBottom)} – {n(p.dynamicZoneTop)}</span>
+                  </div>
 
-                <div className="archive-grid-rs">
-                  <div>
-                    <div className="archive-rs-label up">Resistance</div>
-                    <ul className="archive-rs-list">
-                      <li>R1 <b>{n(p.r1)}</b></li>
-                      <li>R2 <b>{n(p.r2)}</b></li>
-                      <li>R3 <b>{n(p.r3)}</b></li>
-                      <li>R4 <b>{n(p.r4)}</b></li>
-                    </ul>
+                  <div className="archive-grid-rs">
+                    <div>
+                      <div className="archive-rs-label up">Resistance</div>
+                      <ul className="archive-rs-list">
+                        <li>R1 <b>{n(p.r1)}</b></li>
+                        <li>R2 <b>{n(p.r2)}</b></li>
+                        <li>R3 <b>{n(p.r3)}</b></li>
+                        <li>R4 <b>{n(p.r4)}</b></li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="archive-rs-label down">Support</div>
+                      <ul className="archive-rs-list">
+                        <li>S1 <b>{n(p.s1)}</b></li>
+                        <li>S2 <b>{n(p.s2)}</b></li>
+                        <li>S3 <b>{n(p.s3)}</b></li>
+                        <li>S4 <b>{n(p.s4)}</b></li>
+                      </ul>
+                    </div>
                   </div>
-                  <div>
-                    <div className="archive-rs-label down">Support</div>
-                    <ul className="archive-rs-list">
-                      <li>S1 <b>{n(p.s1)}</b></li>
-                      <li>S2 <b>{n(p.s2)}</b></li>
-                      <li>S3 <b>{n(p.s3)}</b></li>
-                      <li>S4 <b>{n(p.s4)}</b></li>
-                    </ul>
-                  </div>
-                </div>
+                </Link>
 
                 <div className="archive-locked">
                   <div className="archive-locked-row">

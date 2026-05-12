@@ -21,6 +21,7 @@ export interface IStorage {
   listDueScheduledPlans(now: Date): Promise<Plan[]>;
   claimScheduledPlan(id: number): Promise<Plan | undefined>;
   listPublicPlans(limit?: number): Promise<Plan[]>;
+  getPublicPlan(id: number): Promise<Plan | undefined>;
   listAlgorithmPlans(limit?: number): Promise<Plan[]>;
   insertClaudeApiCall(data: InsertClaudeApiCall): Promise<ClaudeApiCall>;
   getClaudeApiCallById(id: number): Promise<ClaudeApiCall | undefined>;
@@ -269,6 +270,23 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(plans.date), plans.symbol)
       .limit(limit);
+  }
+
+  async getPublicPlan(id: number): Promise<Plan | undefined> {
+    // Same gating as listPublicPlans: must be published AND source ∈ PUBLIC_PLAN_SOURCES.
+    const { inArray } = await import("drizzle-orm");
+    const result = await db
+      .select()
+      .from(plans)
+      .where(
+        and(
+          eq(plans.id, id),
+          eq(plans.status, "published"),
+          inArray(plans.source, PUBLIC_PLAN_SOURCES as unknown as string[]),
+        ),
+      )
+      .limit(1);
+    return result[0];
   }
 
   async insertClaudeApiCall(data: InsertClaudeApiCall): Promise<ClaudeApiCall> {
