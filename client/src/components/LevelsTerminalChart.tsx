@@ -58,13 +58,19 @@ export interface TerminalLevels {
   recentLow: number | null;
 }
 
+export interface SwingLevels {
+  lows: number[];
+  highs: number[];
+}
+
 type Props = {
   bars: TerminalBar[];
   levels: TerminalLevels | null;
+  swings?: SwingLevels | null;
   height?: number;
 };
 
-export default function LevelsTerminalChart({ bars, levels, height = 520 }: Props) {
+export default function LevelsTerminalChart({ bars, levels, swings, height = 520 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -129,6 +135,13 @@ export default function LevelsTerminalChart({ bars, levels, height = 520 }: Prop
           addLine(levels.priorLow, "#4ade80", "PDL");          // prior day low
         }
 
+        // Detected swing (reaction) levels — nearest 2 each side of price, dim.
+        if (swings && bars.length) {
+          const px = bars[bars.length - 1].close;
+          swings.lows.filter((v) => v < px).slice(0, 2).forEach((v) => addLine(v, "#475569", "S", true));
+          swings.highs.filter((v) => v > px).sort((a, b) => a - b).slice(0, 2).forEach((v) => addLine(v, "#475569", "R", true));
+        }
+
         chart.timeScale().fitContent();
 
         ro = new ResizeObserver(() => {
@@ -145,7 +158,7 @@ export default function LevelsTerminalChart({ bars, levels, height = 520 }: Prop
       if (ro) ro.disconnect();
       if (chart) chart.remove();
     };
-  }, [bars, levels, height]);
+  }, [bars, levels, swings, height]);
 
   return (
     <div

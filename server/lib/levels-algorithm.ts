@@ -226,6 +226,69 @@ export function computeStructureLevels(bars: IntradayBar[], symbol: "ES" | "NQ")
   };
 }
 
+export interface SwingLevels {
+  lows: number[];  // significant reaction lows, sorted high → low
+  highs: number[]; // significant reaction highs, sorted high → low
+}
+
+/**
+ * Detect real swing (fractal) reaction points from intraday bars — the actual
+ * spots where price flushed and reversed. A bar is a swing low if its low is the
+ * lowest across ±window bars; swing high is the mirror. Each pivot is scored by
+ * "prominence" (how far price travelled away from it — i.e. how hard it bounced),
+ * then nearby pivots are clustered into shelves, keeping the strongest per shelf.
+ * These are the "significant lows" a failed-breakdown method actually watches.
+ */
+export function detectSwings(
+  bars: IntradayBar[],
+  symbol: "ES" | "NQ",
+  opts?: { window?: number; maxPerSide?: number },
+): SwingLevels {
+  const tick = TICK[symbol];
+  const rt = (v: number) => roundToTick(v, tick);
+  const k = opts?.window ?? 3;
+  const maxPerSide = opts?.maxPerSide ?? 6;
+  const n = bars.length;
+  if (n < 2 * k + 1) return { lows: [], highs: [] };
+
+  type Piv = { price: number; prom: number };
+  const rawLows: Piv[] = [];
+  const rawHighs: Piv[] = [];
+  for (let i = k; i < n - k; i++) {
+    let isLow = true, isHigh = true;
+    for (let j = i - k; j <= i + k; j++) {
+      if (j === i) continue;
+      if (bars[j].low <= bars[i].low) isLow = false;
+      if (bars[j].high >= bars[i].high) isHigh = false;
+    }
+    const fwd = Math.min(n - 1, i + 12);
+    if (isLow) {
+      let maxHi = bars[i].high;
+      for (let j = i + 1; j <= fwd; j++) maxHi = Math.max(maxHi, bars[j].high);
+      rawLows.push({ price: bars[i].low, prom: maxHi - bars[i].low });
+    }
+    if (isHigh) {
+      let minLo = bars[i].low;
+      for (let j = i + 1; j <= fwd; j++) minLo = Math.min(minLo, bars[j].low);
+      rawHighs.push({ price: bars[i].high, prom: bars[i].high - minLo });
+    }
+  }
+
+  const clusterTol = n ? bars[n - 1].close * 0.001 : tick * 4; // ~0.1% shelf tolerance
+  const cluster = (piv: Piv[]): number[] => {
+    const sorted = [...piv].sort((a, b) => b.prom - a.prom); // strongest first
+    const kept: number[] = [];
+    for (const p of sorted) {
+      if (kept.some((q) => Math.abs(q - p.price) < clusterTol)) continue;
+      kept.push(p.price);
+      if (kept.length >= maxPerSide) break;
+    }
+    return kept.map(rt).sort((a, b) => b - a);
+  };
+
+  return { lows: cluster(rawLows), highs: cluster(rawHighs) };
+}
+
 /** Human number for plan text, e.g. 7496 or 28403.25. */
 function fmtLevel(v: number): string {
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -243,33 +306,36 @@ function buildPlan(x: {
   magnet: number; dzHigh: number; dzLow: number;
   r1: number; s1: number; s2: number;
   structure: StructureLevels | null;
+  swings: SwingLevels | null;
 }): { reasoning: string; long: string; short: string } {
-  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, structure: s } = x;
+  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, structure: s, swings } = x;
 
-  // Significant lows to long the failed breakdown of (nearest/most-meaningful
-  // first); fall back to a pivot support when structure data is unavailable.
-  const lowCandidates: Array<[string, number | null | undefined]> = [
-    ["prior-day low", s?.priorLow],
-    ["overnight low", s?.overnightLow],
-    ["prior-week low", s?.priorWeekLow],
-  ];
-  const lows = lowCandidates.filter(([, v]) => v != null) as Array<[string, number]>;
-  if (!lows.length) lows.push(["support", s1]);
-  const lowsText = lows.map(([label, v]) => `${fmtLevel(v)} (${label})`).join(", ");
+  // Prefer detected swing lows below the magnet as failed-breakdown triggers
+  // (real traded reaction lows); fall back to structure/pivot supports.
+  let lowVals: number[] = swings ? swings.lows.filter((v) => v < magnet).slice(0, 3) : [];
+  if (!lowVals.length) {
+    lowVals = [s?.priorLow, s?.overnightLow, s?.priorWeekLow, s1].filter(
+      (v): v is number => v != null,
+    );
+  }
+  if (!lowVals.length) lowVals = [s1];
+  const lowsText = lowVals.map((v) => fmtLevel(v)).join(", ");
 
-  const highCandidates: Array<[string, number | null | undefined]> = [
-    ["prior-day high", s?.priorHigh],
-    ["prior-week high", s?.priorWeekHigh],
-  ];
-  const highs = highCandidates.filter(([, v]) => v != null) as Array<[string, number]>;
-  if (!highs.length) highs.push(["resistance", r1]);
-  const firstHigh = highs[0];
-  // Breakdown-short target must sit BELOW the level being lost — pick the
-  // nearest structural level under it.
-  const breakdownLow = lows[0][1];
-  const belowLevels = [s?.recentLow, s?.priorWeekLow, s?.overnightLow, s2].filter(
-    (v): v is number => v != null && v < breakdownLow,
-  );
+  // Resistance / short zones = swing highs above the magnet (nearest first).
+  let highVals: number[] = swings ? swings.highs.filter((v) => v > magnet).sort((a, b) => a - b).slice(0, 2) : [];
+  if (!highVals.length) {
+    highVals = [s?.priorHigh, s?.priorWeekHigh, r1].filter((v): v is number => v != null);
+  }
+  if (!highVals.length) highVals = [r1];
+  const firstHighVal = highVals[0];
+  const highsText = highVals.map((v) => fmtLevel(v)).join(", ");
+
+  // Breakdown-short target must sit BELOW the level being lost.
+  const breakdownLow = lowVals[0];
+  const belowLevels = [
+    ...(swings ? swings.lows : []),
+    s?.recentLow, s?.priorWeekLow, s2,
+  ].filter((v): v is number => v != null && v < breakdownLow);
   const downTarget = belowLevels.length ? Math.max(...belowLevels) : s2;
 
   let reasoning: string;
@@ -282,10 +348,10 @@ function buildPlan(x: {
   }
 
   const long =
-    `Failed-breakdown long (primary): on a sharp flush that loses a significant low — ${lowsText} — then reclaims it, long toward the ${fmtLevel(magnet)} magnet, then ${fmtLevel(firstHigh[1])} (${firstHigh[0]}). Wait for the reclaim, don't knife-catch; bank level-to-level and leave a runner.`;
+    `Failed-breakdown long (primary): on a sharp flush that loses a significant low — ${lowsText} — then reclaims it, long toward the ${fmtLevel(magnet)} magnet, then ${highsText}. Wait for the reclaim, don't knife-catch; bank level-to-level and leave a runner.`;
 
   const short =
-    `Short side (lower win-rate): fade a rejection at ${fmtLevel(firstHigh[1])} (${firstHigh[0]}) back toward the ${fmtLevel(magnet)} magnet; or a breakdown short only on a decisive loss of ${fmtLevel(lows[0][1])} (${lows[0][0]}) that holds below, targeting ${fmtLevel(downTarget)}. Breakdowns trap most of the time — size down.`;
+    `Short side (lower win-rate): fade a rejection at ${fmtLevel(firstHighVal)} back toward the ${fmtLevel(magnet)} magnet; or a breakdown short only on a decisive loss of ${fmtLevel(breakdownLow)} that holds below, targeting ${fmtLevel(downTarget)}. Breakdowns trap most of the time — size down.`;
 
   return { reasoning, long, short };
 }
@@ -307,7 +373,7 @@ function nextTradingDay(dateStr: string): string {
 }
 
 /** Pure, testable core. */
-export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: StructureLevels | null = null): ComputedLevels {
+export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: StructureLevels | null = null, swings: SwingLevels | null = null): ComputedLevels {
   const prev = bars[bars.length - 1];
   const { high: H, low: L, close: C } = prev;
   const a = atr(bars, 14);
@@ -325,7 +391,7 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
   const r4 = rt(r3 + (r3 - r2)), s4 = rt(s3 - (s2 - s3));
   const bias: ComputedLevels["bias"] = C > PP + dz ? "bullish" : C < PP - dz ? "bearish" : "neutral";
 
-  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, structure });
+  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, structure, swings });
 
   return {
     symbol, target_date: nextTradingDay(prev.date), current_price: rt(C),
@@ -358,15 +424,17 @@ export async function generateAndPublishLevels(): Promise<void> {
       // full-session daily bars if intraday data is unavailable.
       let bars: Bar[];
       let structure: StructureLevels | null = null;
+      let swings: SwingLevels | null = null;
       try {
         const intraday = await fetchIntradayBars(symbol, "1mo", "30m");
         bars = await fetchRthDailyBars(symbol);
         structure = computeStructureLevels(intraday, symbol);
+        swings = detectSwings(intraday, symbol);
       } catch (rthErr: any) {
         console.warn(`[levels] ${symbol} RTH/structure unavailable (${rthErr?.message || rthErr}); falling back to daily`);
         bars = await fetchDailyBars(symbol);
       }
-      const levels = computeLevels(bars, symbol, structure);
+      const levels = computeLevels(bars, symbol, structure, swings);
       await postToIngest(levels);
       console.log(`[levels] published ${symbol} for ${levels.target_date} (magnet ${levels.magnet}, ${levels.bias})`);
     } catch (err: any) {

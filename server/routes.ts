@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -864,6 +864,7 @@ export async function registerRoutes(
       const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
       const bars = await fetchIntradayBars(symbol, "1mo", "30m");
       const structure = computeStructureLevels(bars, symbol);
+      const swings = detectSwings(bars, symbol);
       const publicPlans = await storage.listPublicPlans(50);
       const plan = publicPlans.find((p) => p.symbol === symbol) || null;
       res.json({
@@ -878,6 +879,7 @@ export async function registerRoutes(
             }
           : null,
         structure,
+        swings,
       });
     } catch (err) {
       console.error("public terminal error:", err);

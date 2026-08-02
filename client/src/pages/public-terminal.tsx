@@ -39,6 +39,7 @@ interface TerminalData {
         recentLow: number | null;
       }
     | null;
+  swings: { lows: number[]; highs: number[] } | null;
 }
 
 function n(v: number | null | undefined) {
@@ -81,6 +82,7 @@ export default function PublicTerminalPage() {
 
   const plan = data?.plan ?? null;
   const structure = data?.structure ?? null;
+  const swings = data?.swings ?? null;
   const memberPlan = memberData?.plan ?? null;
 
   const chartLevels: TerminalLevels | null =
@@ -169,7 +171,7 @@ export default function PublicTerminalPage() {
               Chart data unavailable right now.
             </div>
           ) : (
-            <LevelsTerminalChart bars={data.bars} levels={chartLevels} height={520} />
+            <LevelsTerminalChart bars={data.bars} levels={chartLevels} swings={swings} height={520} />
           )}
           <div style={{ fontSize: 12, opacity: 0.5, marginTop: 8 }}>
             {symbol} · levels for {plan?.date ?? "the next session"} · chart data may be delayed.
@@ -222,6 +224,23 @@ export default function PublicTerminalPage() {
                 <div>Low <b>{n(structure?.recentLow)}</b></div>
               </div>
             </div>
+            {swings && (swings.lows.length > 0 || swings.highs.length > 0) && (
+              <div style={{ marginTop: 14, borderTop: "1px solid var(--border, #26262b)", paddingTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, opacity: 0.8 }}>
+                  Detected reaction levels
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.7 }}>
+                  <div>
+                    <span style={{ color: "#f87171" }}>Resistance:</span>{" "}
+                    {swings.highs.slice(0, 6).map(n).join("  ·  ") || "—"}
+                  </div>
+                  <div>
+                    <span style={{ color: "#4ade80" }}>Support:</span>{" "}
+                    {swings.lows.slice(0, 6).map(n).join("  ·  ") || "—"}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Plan card — full for members, teaser for guests */}
