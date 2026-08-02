@@ -224,34 +224,30 @@ describe("listPublicPlans source filter", () => {
     }
   });
 
-  it("excludes ai_parsed and algorithm rows by default; flipping the constant exposes them", async () => {
+  it("exposes manual + algorithm rows publicly, still excludes ai_parsed", async () => {
     const stamp = Date.now();
     const dateStr = `2099-01-${String((stamp % 28) + 1).padStart(2, "0")}`;
 
-    const a = await storage.upsertPlan({
-      date: dateStr, symbol: "TST_M", source: "manual", status: "published",
+    const mkPlan = (symbol: string, source: string, bias: string | null) => ({
+      date: dateStr, symbol, source, status: "published",
       tier: "pro", contract: null,
       dynamicZoneTop: 1, dynamicZoneBottom: 0, magnet: 0.5,
       r1: 1, r2: 2, r3: 3, r4: 4, s1: -1, s2: -2, s3: -3, s4: -4,
-      bias: null, setup1: null, setup2: null, notes: null,
+      bias, setup1: null, setup2: null, notes: null,
       publishedAt: new Date().toISOString(),
       telegramMessageId: null, telegramMessage: null, telegramMessageVariant: null,
-    } as any);
-    const b = await storage.upsertPlan({
-      date: dateStr, symbol: "TST_AI", source: "ai_parsed", status: "published",
-      tier: "pro", contract: null,
-      dynamicZoneTop: 1, dynamicZoneBottom: 0, magnet: 0.5,
-      r1: 1, r2: 2, r3: 3, r4: 4, s1: -1, s2: -2, s3: -3, s4: -4,
-      bias: "bullish", setup1: null, setup2: null, notes: null,
-      publishedAt: new Date().toISOString(),
-      telegramMessageId: null, telegramMessage: null, telegramMessageVariant: null,
-    } as any);
-    createdIds.push(a.id, b.id);
+    });
+
+    const a = await storage.upsertPlan(mkPlan("TST_M", "manual", null) as any);
+    const b = await storage.upsertPlan(mkPlan("TST_AI", "ai_parsed", "bullish") as any);
+    const c = await storage.upsertPlan(mkPlan("TST_ALGO", "algorithm", "bullish") as any);
+    createdIds.push(a.id, b.id, c.id);
 
     const publicRows = await storage.listPublicPlans(500);
     const ids = new Set(publicRows.map((p) => p.id));
-    expect(ids.has(a.id)).toBe(true);
-    expect(ids.has(b.id)).toBe(false);
-    expect(PUBLIC_PLAN_SOURCES).toEqual(["manual"]);
+    expect(ids.has(a.id)).toBe(true);   // manual — public
+    expect(ids.has(c.id)).toBe(true);   // algorithm — now public
+    expect(ids.has(b.id)).toBe(false);  // ai_parsed — still hidden
+    expect(PUBLIC_PLAN_SOURCES).toEqual(["manual", "algorithm"]);
   });
 });

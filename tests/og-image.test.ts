@@ -11,6 +11,7 @@ let app: express.Express;
 let publishedManualId: number;
 let draftId: number;
 let algorithmPublishedId: number;
+let aiParsedPublishedId: number;
 const cleanupIds: number[] = [];
 
 async function insertPlan(overrides: Partial<typeof plans.$inferInsert>): Promise<number> {
@@ -59,6 +60,14 @@ beforeAll(async () => {
     source: "algorithm",
     publishedAt: new Date().toISOString(),
   });
+  // ai_parsed is still NOT in PUBLIC_PLAN_SOURCES, so it stays hidden publicly.
+  aiParsedPublishedId = await insertPlan({
+    date: "2099-01-05",
+    symbol: "ES",
+    status: "published",
+    source: "ai_parsed",
+    publishedAt: new Date().toISOString(),
+  });
 }, 30_000);
 
 afterAll(async () => {
@@ -99,9 +108,18 @@ describe("GET /api/og/plan/:id.png", () => {
     expect(res.status).toBe(404);
   }, 30_000);
 
-  it("returns 404 for a non-public source (algorithm)", async () => {
+  it("renders a PNG for a published algorithm plan (now a public source)", async () => {
     const res = await request(app)
       .get(`/api/og/plan/${algorithmPublishedId}.png`)
+      .buffer(true);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/image\/png/);
+    expect(res.body[0]).toBe(0x89);
+  }, 30_000);
+
+  it("returns 404 for a non-public source (ai_parsed)", async () => {
+    const res = await request(app)
+      .get(`/api/og/plan/${aiParsedPublishedId}.png`)
       .buffer(true);
     expect(res.status).toBe(404);
   }, 30_000);
@@ -131,8 +149,17 @@ describe("GET /api/public/plans/:id", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 404 for an algorithm-source plan", async () => {
+  it("returns level-only fields for a published algorithm plan (now public)", async () => {
     const res = await request(app).get(`/api/public/plans/${algorithmPublishedId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(algorithmPublishedId);
+    expect(res.body.magnet).toBe(5000);
+    expect(res.body).not.toHaveProperty("biasReasoning");
+    expect(res.body).not.toHaveProperty("topLongTrade");
+  });
+
+  it("returns 404 for a non-public source (ai_parsed)", async () => {
+    const res = await request(app).get(`/api/public/plans/${aiParsedPublishedId}`);
     expect(res.status).toBe(404);
   });
 });
