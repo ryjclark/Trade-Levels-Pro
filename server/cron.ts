@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
-import { generateAndPublishLevels, fetchDailyBars } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars } from "./lib/levels-algorithm";
 
 /** Today's date as YYYY-MM-DD in America/New_York. */
 function nyToday(): string {
@@ -97,10 +97,15 @@ async function fetchAndStoreDailyResults() {
         continue;
       }
 
-      // Pull today's OHLC from the same source the algorithm uses. Prefer the
-      // bar dated today; fall back to the most recent bar if today's isn't
-      // published yet (e.g. provider lag right at the close).
-      const bars = await fetchDailyBars(symbol);
+      // Measure hits against the same regular-session (RTH) range the levels are
+      // built from; fall back to full-session daily bars if intraday is missing.
+      // Prefer the bar dated today; else the most recent (provider lag at close).
+      let bars;
+      try {
+        bars = await fetchRthDailyBars(symbol);
+      } catch {
+        bars = await fetchDailyBars(symbol);
+      }
       const bar = bars.find((b) => b.date === today) ?? bars[bars.length - 1];
       if (!bar) {
         console.log(`[cron] results: no OHLC bar for ${symbol} ${today}, skipping`);

@@ -61,6 +61,16 @@ describe("computeLevels", () => {
     }
   });
 
+  it("generates a reactive trading plan referencing the levels", () => {
+    expect(levels.bias_reasoning.length).toBeGreaterThan(0);
+    expect(levels.top_long_trade.length).toBeGreaterThan(0);
+    expect(levels.top_short_trade.length).toBeGreaterThan(0);
+    // Setups should reference the magnet number so they're tied to real levels.
+    const magnetStr = levels.magnet.toLocaleString("en-US", { maximumFractionDigits: 2 });
+    expect(levels.top_long_trade).toContain(magnetStr);
+    expect(levels.top_short_trade).toContain(magnetStr);
+  });
+
   it("targets the next trading day (skips weekends) and reports a valid bias", () => {
     // 2026-07-31 is a Friday, so the next trading day is Monday 2026-08-03.
     expect(levels.target_date).toBe("2026-08-03");

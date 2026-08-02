@@ -1128,6 +1128,9 @@ export async function registerRoutes(
         r1: d.r1 ?? null, r2: d.r2 ?? null, r3: d.r3 ?? null, r4: d.r4 ?? null,
         s1: d.s1 ?? null, s2: d.s2 ?? null, s3: d.s3 ?? null, s4: d.s4 ?? null,
         bias: d.bias ?? null,
+        biasReasoning: d.bias_reasoning ?? null,
+        topLongTrade: d.top_long_trade ?? null,
+        topShortTrade: d.top_short_trade ?? null,
         setup1: null, setup2: null, notes: null,
         status: "draft",
         publishedAt: null,
@@ -1163,9 +1166,8 @@ export async function registerRoutes(
         return res.status(200).json({ ok: true, plan, telegramSent: false, reason: "telegram-not-configured" });
       }
 
-      let body = formatTelegramPro(plan);
-      const tag = `🤖 Algorithm ${escapeMdV2(d.algorithm_version)}\n`;
-      let text = tag + body;
+      // Rich algorithm template: 🤖 tag + bias reasoning + top long/short setups.
+      let text = formatAlgorithmPlan(plan);
       if (settings.footerEnabled && settings.footerText) {
         const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
         text += "\n\n" + escapeMdV2(footer);

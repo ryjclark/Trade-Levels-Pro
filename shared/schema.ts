@@ -92,6 +92,9 @@ export const ingestLevelsSchema = z.object({
   algorithm_version: z.string().min(1).max(64),
   contract: z.string().nullable().optional(),
   bias: z.string().nullable().optional(),
+  bias_reasoning: z.string().nullable().optional(),
+  top_long_trade: z.string().nullable().optional(),
+  top_short_trade: z.string().nullable().optional(),
 });
 export type IngestLevelsPayload = z.infer<typeof ingestLevelsSchema>;
 
