@@ -46,7 +46,11 @@ type Props = {
 };
 
 export default function TradingViewChart({
-  symbol = "SP:SPX",
+  // FOREXCOM:SPXUSD is the S&P 500 CFD — it tracks the index nearly 24h and
+  // loads in the free TradingView embed. The index symbol SP:SPX requires a
+  // paid TradingView data plan and triggers the "only available on
+  // TradingView" popup in the free widget.
+  symbol = "FOREXCOM:SPXUSD",
   interval = "60",
   height = 500,
   theme = "dark",

@@ -7,6 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
+import { generateAndPublishLevels } from "./lib/levels-algorithm";
 import { PARSE_NEWSLETTER_PROMPT_VERSION } from "./lib/prompts/parse-newsletter";
 import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@shared/schema";
 import { z } from "zod";
@@ -782,6 +783,60 @@ export async function registerRoutes(
     }
   });
 
+  // Public, read-only track record: aggregate hit rates from plan_results.
+  // Powers the public "proof" page. Buckets overall + per-symbol so we can show
+  // magnet hit rate, R1/S1 tag rates, and sessions counted.
+  app.get("/api/public/track-record", async (_req, res) => {
+    try {
+      const rows = await storage.listAllPlanResults(1000);
+
+      const emptyBucket = () => ({
+        sessions: 0,
+        hitMagnet: 0,
+        hitR1: 0,
+        hitR2: 0,
+        hitS1: 0,
+        hitS2: 0,
+      });
+      type Bucket = ReturnType<typeof emptyBucket>;
+      const buckets: Record<string, Bucket> = { ALL: emptyBucket() };
+
+      for (const r of rows) {
+        const sym = r.symbol || "?";
+        if (!buckets[sym]) buckets[sym] = emptyBucket();
+        for (const b of [buckets.ALL, buckets[sym]]) {
+          b.sessions += 1;
+          b.hitMagnet += r.hitMagnet ?? 0;
+          b.hitR1 += r.hitR1 ?? 0;
+          b.hitR2 += r.hitR2 ?? 0;
+          b.hitS1 += r.hitS1 ?? 0;
+          b.hitS2 += r.hitS2 ?? 0;
+        }
+      }
+
+      const rate = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
+      const summarize = (b: Bucket) => ({
+        sessions: b.sessions,
+        magnetHitRate: rate(b.hitMagnet, b.sessions),
+        r1TagRate: rate(b.hitR1, b.sessions),
+        r2TagRate: rate(b.hitR2, b.sessions),
+        s1TagRate: rate(b.hitS1, b.sessions),
+        s2TagRate: rate(b.hitS2, b.sessions),
+      });
+
+      const bySymbol: Record<string, ReturnType<typeof summarize>> = {};
+      for (const [sym, b] of Object.entries(buckets)) {
+        if (sym === "ALL") continue;
+        bySymbol[sym] = summarize(b);
+      }
+
+      res.json({ overall: summarize(buckets.ALL), bySymbol });
+    } catch (err) {
+      console.error("public track-record error:", err);
+      res.status(500).json({ error: "Failed to load track record" });
+    }
+  });
+
   // ===== Newsletter Parser (Pass 7) =====
 
   app.post("/api/admin/parse-newsletter", requireAdmin, parseRateLimit, async (req, res) => {
@@ -992,6 +1047,19 @@ export async function registerRoutes(
     } catch (err) {
       console.error("listAlgorithmPlans error:", err);
       res.status(500).json({ error: "Failed to load algorithm plans" });
+    }
+  });
+
+  // Admin-only manual trigger: run the self-generating levels pipeline now
+  // (fetch OHLC -> compute -> POST /api/levels/ingest -> Telegram), instead of
+  // waiting for the 5:15pm ET cron. Handy for verifying the whole flow.
+  app.post("/api/admin/generate-levels", requireAdmin, async (_req, res) => {
+    try {
+      await generateAndPublishLevels();
+      res.json({ ok: true });
+    } catch (err: any) {
+      console.error("generate-levels error:", err);
+      res.status(500).json({ error: err?.message || "Failed to generate levels" });
     }
   });
 

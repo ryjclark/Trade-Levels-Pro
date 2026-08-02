@@ -28,6 +28,7 @@ export interface IStorage {
   getClaudeUsageSince(since: Date): Promise<{ totalCalls: number; successCalls: number; totalCostUsd: number }>;
   insertPlanResult(data: InsertPlanResult): Promise<PlanResult>;
   listResultsForPlanIds(planIds: number[]): Promise<PlanResult[]>;
+  listAllPlanResults(limit?: number): Promise<PlanResult[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -332,6 +333,14 @@ export class DatabaseStorage implements IStorage {
     if (planIds.length === 0) return [];
     const { inArray } = await import("drizzle-orm");
     return db.select().from(planResults).where(inArray(planResults.planId, planIds));
+  }
+
+  async listAllPlanResults(limit: number = 1000): Promise<PlanResult[]> {
+    return db
+      .select()
+      .from(planResults)
+      .orderBy(desc(planResults.date), planResults.symbol)
+      .limit(limit);
   }
 
   async updateSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {

@@ -2,6 +2,17 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
+import { generateAndPublishLevels, fetchDailyBars } from "./lib/levels-algorithm";
+
+/** Today's date as YYYY-MM-DD in America/New_York. */
+function nyToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -65,12 +76,68 @@ async function processScheduledPlans() {
 }
 
 async function fetchAndStoreDailyResults() {
-  // TODO: Fetch OHLC data for today's published ES/NQ plans and store in plan_results.
-  // Suggested provider: Polygon.io / TradingView / IBKR — use intraday RTH bars to derive
-  // open/high/low/close and which R/S/Magnet levels were tagged. For now this is a
-  // placeholder that simply logs that the daily settlement window has elapsed so the
-  // archive page's "result tag" feature can be wired up later.
-  console.log("[cron] Daily results stub — would fetch OHLC and write plan_results here");
+  // After the cash close, record how each of today's published ES/NQ plans
+  // performed. This fills `plan_results`, which powers the public track-record
+  // page (the proof that converts subscribers). One symbol failing must not
+  // block the other, so each is wrapped in its own try/catch.
+  const today = nyToday();
+
+  for (const symbol of ["ES", "NQ"] as const) {
+    try {
+      const plan = await storage.getPlanByDateSymbol(today, symbol);
+      if (!plan) {
+        console.log(`[cron] results: no plan for ${symbol} ${today}, skipping`);
+        continue;
+      }
+
+      // Idempotency: never double-record a session.
+      const existing = await storage.listResultsForPlanIds([plan.id]);
+      if (existing.length > 0) {
+        console.log(`[cron] results: ${symbol} ${today} already recorded, skipping`);
+        continue;
+      }
+
+      // Pull today's OHLC from the same source the algorithm uses. Prefer the
+      // bar dated today; fall back to the most recent bar if today's isn't
+      // published yet (e.g. provider lag right at the close).
+      const bars = await fetchDailyBars(symbol);
+      const bar = bars.find((b) => b.date === today) ?? bars[bars.length - 1];
+      if (!bar) {
+        console.log(`[cron] results: no OHLC bar for ${symbol} ${today}, skipping`);
+        continue;
+      }
+      const { open, high, low, close } = bar;
+
+      const b01 = (v: boolean) => (v ? 1 : 0);
+      const hitMagnet = b01(plan.magnet != null && low <= plan.magnet && plan.magnet <= high);
+      const hitR1 = b01(plan.r1 != null && high >= plan.r1);
+      const hitR2 = b01(plan.r2 != null && high >= plan.r2);
+      const hitS1 = b01(plan.s1 != null && low <= plan.s1);
+      const hitS2 = b01(plan.s2 != null && low <= plan.s2);
+
+      await storage.insertPlanResult({
+        planId: plan.id,
+        date: today,
+        symbol,
+        open,
+        high,
+        low,
+        close,
+        hitR1,
+        hitR2,
+        hitS1,
+        hitS2,
+        hitMagnet,
+        notes: null,
+      });
+      console.log(
+        `[cron] results: recorded ${symbol} ${today} ` +
+          `(O ${open} H ${high} L ${low} C ${close}; magnet ${hitMagnet}, R1 ${hitR1}, S1 ${hitS1})`,
+      );
+    } catch (err: any) {
+      console.error(`[cron] results: ${symbol} failed:`, err?.message || err);
+    }
+  }
 }
 
 export function registerCronJobs() {
@@ -79,7 +146,7 @@ export function registerCronJobs() {
     processScheduledPlans().catch((e) => console.error("[cron] scheduled publish error:", e));
   });
 
-  // 5:00 PM America/New_York — daily results fetch stub.
+  // 5:00 PM America/New_York — record how today's plans performed.
   cron.schedule(
     "0 17 * * 1-5",
     () => {
@@ -90,5 +157,18 @@ export function registerCronJobs() {
     { timezone: "America/New_York" } as any,
   );
 
-  console.log("[cron] Registered scheduled-publish (every minute) + daily-results (5pm ET)");
+  // 5:15 PM America/New_York, weekdays — self-generating levels for the next session.
+  cron.schedule(
+    "15 17 * * 1-5",
+    () => {
+      generateAndPublishLevels().catch((e) =>
+        console.error("[cron] levels generation error:", e),
+      );
+    },
+    { timezone: "America/New_York" } as any,
+  );
+
+  console.log(
+    "[cron] Registered scheduled-publish (every minute) + daily-results (5pm ET) + self-generating levels (5:15pm ET)",
+  );
 }
