@@ -1225,7 +1225,7 @@ export async function registerRoutes(
   // Cached aggressively — the URL itself is versioned by ?v=<updatedAt>, so
   // any plan edit produces a new URL and dodges stale cached cards.
   app.get("/api/og/plan/:id.png", ogLimiter, async (req, res) => {
-    const id = Number.parseInt(req.params.id, 10);
+    const id = Number.parseInt(String(req.params.id), 10);
     const { renderPlanOgImage, renderNotFoundOgImage } = await import("./og");
 
     async function send404Placeholder() {
