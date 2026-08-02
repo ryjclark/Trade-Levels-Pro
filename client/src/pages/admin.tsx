@@ -15,6 +15,7 @@ import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubsta
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import AlgorithmLevelsPanel from "@/components/AlgorithmLevelsPanel";
+import AdminMembersPanel from "@/components/AdminMembersPanel";
 import { 
   LogOut, 
   Save, 
@@ -412,6 +413,9 @@ export default function AdminPage() {
       <main className="container mx-auto px-4 py-6 max-w-6xl">
         <div className="mb-6">
           <AlgorithmLevelsPanel />
+        </div>
+        <div className="mb-6">
+          <AdminMembersPanel />
         </div>
         {latestPublished && (
           <div

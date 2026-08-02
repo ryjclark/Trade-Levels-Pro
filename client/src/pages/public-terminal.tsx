@@ -43,8 +43,16 @@ export default function PublicTerminalPage() {
       if (!res.ok) throw new Error("Failed to load terminal");
       return res.json();
     },
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000,
   });
+
+  const bars = data?.bars ?? [];
+  const lastBar = bars.length ? bars[bars.length - 1] : null;
+  const prevBar = bars.length > 1 ? bars[bars.length - 2] : null;
+  const lastPrice = lastBar?.close ?? null;
+  const change = lastBar && prevBar ? lastBar.close - prevBar.close : null;
+  const changePct = change != null && prevBar ? (change / prevBar.close) * 100 : null;
+  const up = (change ?? 0) >= 0;
 
   const { data: memberData } = useQuery<{ plan: MemberPlan | null }>({
     queryKey: ["/api/member/plan", symbol, memberToken],
@@ -95,6 +103,19 @@ export default function PublicTerminalPage() {
               {s}
             </button>
           ))}
+
+          {/* Live-ish price readout (delayed) */}
+          {lastPrice != null && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginLeft: 4 }} data-testid="terminal-price">
+              <span style={{ fontSize: 22, fontWeight: 700 }}>{n(lastPrice)}</span>
+              {change != null && (
+                <span style={{ fontSize: 14, fontWeight: 600, color: up ? "#4ade80" : "#f87171" }}>
+                  {up ? "▲" : "▼"} {n(Math.abs(change))} ({changePct != null ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%` : "—"})
+                </span>
+              )}
+              <span style={{ fontSize: 11, opacity: 0.45 }}>delayed</span>
+            </div>
+          )}
         </div>
 
         {/* Chart */}

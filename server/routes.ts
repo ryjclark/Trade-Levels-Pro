@@ -884,6 +884,38 @@ export async function registerRoutes(
     }
   });
 
+  // ===== Admin: member management (comp/test members) =====
+
+  app.get("/api/admin/members", requireAdmin, async (_req, res) => {
+    try {
+      const list = await storage.listMembers(200);
+      res.json(list);
+    } catch (err) {
+      console.error("list members error:", err);
+      res.status(500).json({ error: "Failed to load members" });
+    }
+  });
+
+  // Add or re-activate a member by email (manual/comp — no Stripe required).
+  app.post("/api/admin/members", requireAdmin, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return res.status(400).json({ error: "Enter a valid email." });
+      }
+      const member = await storage.upsertMember({
+        email,
+        status: "active",
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+      } as any);
+      res.json({ ok: true, member });
+    } catch (err) {
+      console.error("add member error:", err);
+      res.status(500).json({ error: "Failed to add member" });
+    }
+  });
+
   // ===== Member auth (Phase 2): passwordless magic-link login =====
 
   // Request a login link. Always returns ok (never reveals whether the email is

@@ -18,6 +18,7 @@ export interface IStorage {
   upsertMember(data: InsertMember): Promise<Member>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
   markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
+  listMembers(limit?: number): Promise<Member[]>;
   listDueScheduledPlans(now: Date): Promise<Plan[]>;
   claimScheduledPlan(id: number): Promise<Plan | undefined>;
   listPublicPlans(limit?: number): Promise<Plan[]>;
@@ -224,6 +225,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(members.email, email))
       .limit(1);
     return result[0];
+  }
+
+  async listMembers(limit: number = 200): Promise<Member[]> {
+    return db.select().from(members).orderBy(desc(members.createdAt)).limit(limit);
   }
 
   async markMemberInactiveBySubscription(subscriptionId: string): Promise<void> {
