@@ -62,9 +62,9 @@ export default function PublicTerminalPage() {
               style={{
                 padding: "8px 18px",
                 borderRadius: 8,
-                border: "1px solid var(--border, #26262b)",
-                background: symbol === s ? "var(--accent, #14b8a6)" : "transparent",
-                color: symbol === s ? "#0a0a0a" : "inherit",
+                border: "1px solid var(--border-teal-strong, rgba(94,234,212,0.4))",
+                background: symbol === s ? "var(--teal, #5EEAD4)" : "transparent",
+                color: symbol === s ? "#050810" : "inherit",
                 fontWeight: 600,
                 cursor: "pointer",
               }}
@@ -161,17 +161,7 @@ export default function PublicTerminalPage() {
               href="/pricing"
               className="btn-primary"
               data-testid="terminal-unlock-cta"
-              style={{
-                display: "inline-block",
-                textAlign: "center",
-                padding: "10px 16px",
-                borderRadius: 8,
-                background: "var(--accent, #14b8a6)",
-                color: "#0a0a0a",
-                fontWeight: 700,
-                textDecoration: "none",
-                marginTop: 12,
-              }}
+              style={{ marginTop: 12, justifyContent: "center" }}
             >
               Unlock full plan →
             </Link>
