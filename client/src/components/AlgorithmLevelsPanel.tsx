@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Bot, Send, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Bot, Send, Loader2, AlertCircle, CheckCircle2, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,28 @@ export default function AlgorithmLevelsPanel() {
     refetchInterval: 30_000,
   });
 
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/generate-levels", {});
+      return res;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Levels generated",
+        description: "Fresh ES/NQ levels created, sent to Telegram, and published to the site.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/algorithm-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/plans"] });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Generation failed",
+        description: err?.message || "Could not generate levels.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resendMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("POST", `/api/plans/${id}/republish`, { variant: "pro" });
@@ -71,12 +93,29 @@ export default function AlgorithmLevelsPanel() {
   return (
     <Card data-testid="card-algorithm-levels">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Bot className="w-4 h-4" /> Algorithm Levels
-        </CardTitle>
-        <CardDescription>
-          Levels pushed by your external algorithm via <code>POST /api/levels/ingest</code>. Hidden from the public archive while validating.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Bot className="w-4 h-4" /> Algorithm Levels
+            </CardTitle>
+            <CardDescription>
+              Self-generated ES/NQ levels. Auto-runs weekdays at 5:15pm ET; also shown on the public archive. Use “Generate now” to run on demand.
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            data-testid="button-generate-levels"
+          >
+            {generateMutation.isPending ? (
+              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+            ) : (
+              <Zap className="w-3 h-3 mr-1" />
+            )}
+            Generate now
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
