@@ -120,6 +120,29 @@ export const adminSessions = pgTable("admin_sessions", {
   lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
 });
 
+// ===== Member auth (Phase 2): passwordless email magic-link login =====
+// One-time tokens emailed to active subscribers; exchanged for a member session.
+export const memberLoginTokens = pgTable("member_login_tokens", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+});
+
+export const memberSessions = pgTable("member_sessions", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+});
+
+export type MemberLoginToken = typeof memberLoginTokens.$inferSelect;
+export type MemberSession = typeof memberSessions.$inferSelect;
+
 export type AdminCredential = typeof adminCredentials.$inferSelect;
 export type AdminSession = typeof adminSessions.$inferSelect;
 

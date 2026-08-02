@@ -8,6 +8,15 @@ import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
 import { generateAndPublishLevels, fetchIntradayBars } from "./lib/levels-algorithm";
+import {
+  requireMember,
+  createLoginToken,
+  consumeLoginToken,
+  createMemberSession,
+  deleteMemberSessionByToken,
+  type MemberAuthRequest,
+} from "./member-auth";
+import { sendMemberLoginLink } from "./email";
 import { PARSE_NEWSLETTER_PROMPT_VERSION } from "./lib/prompts/parse-newsletter";
 import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@shared/schema";
 import { z } from "zod";
@@ -46,6 +55,15 @@ const ogLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many OG requests, slow down." },
+});
+
+// Per-IP limiter for member login-link requests (anti-abuse on the email send).
+const memberLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, try again later." },
 });
 
 function timingSafeEq(a: string, b: string): boolean {
@@ -863,6 +881,94 @@ export async function registerRoutes(
     } catch (err) {
       console.error("public terminal error:", err);
       res.status(500).json({ error: "Failed to load terminal data" });
+    }
+  });
+
+  // ===== Member auth (Phase 2): passwordless magic-link login =====
+
+  // Request a login link. Always returns ok (never reveals whether the email is
+  // an active member) — the email only actually sends for active subscribers.
+  app.post("/api/member/request-login", memberLoginLimiter, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return res.status(400).json({ error: "Enter a valid email." });
+      }
+      const member = await storage.getMemberByEmail(email);
+      if (member && member.status === "active") {
+        const token = await createLoginToken(email);
+        const base = `${req.protocol}://${req.get("host")}`;
+        const loginUrl = `${base}/member-auth?token=${encodeURIComponent(token)}`;
+        try {
+          await sendMemberLoginLink(email, loginUrl);
+        } catch (mailErr) {
+          console.error("member login email failed:", mailErr);
+        }
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("request-login error:", err);
+      res.status(500).json({ error: "Could not process login request." });
+    }
+  });
+
+  // Exchange a one-time login token for a member session token.
+  app.post("/api/member/verify", async (req, res) => {
+    try {
+      const token = String(req.body?.token || "").trim();
+      if (!token) return res.status(400).json({ error: "Missing token." });
+      const email = await consumeLoginToken(token);
+      if (!email) return res.status(400).json({ error: "This link is invalid or expired." });
+      const member = await storage.getMemberByEmail(email);
+      if (!member || member.status !== "active") {
+        return res.status(403).json({ error: "Membership is not active." });
+      }
+      const session = await createMemberSession(email);
+      res.json({ token: session.token, email });
+    } catch (err) {
+      console.error("member verify error:", err);
+      res.status(500).json({ error: "Could not verify login." });
+    }
+  });
+
+  app.get("/api/member/me", requireMember, (req: MemberAuthRequest, res) => {
+    res.json({ email: req.memberEmail });
+  });
+
+  app.post("/api/member/logout", async (req, res) => {
+    const auth = req.headers.authorization || "";
+    if (auth.startsWith("Bearer ")) {
+      await deleteMemberSessionByToken(auth.substring(7)).catch(() => {});
+    }
+    res.json({ ok: true });
+  });
+
+  // Full plan for members: levels PLUS bias reasoning + top long/short setups.
+  app.get("/api/member/plan", requireMember, async (req: MemberAuthRequest, res) => {
+    try {
+      const symParam = String(req.query.symbol || "ES").toUpperCase();
+      const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
+      const plans = await storage.listPublicPlans(50);
+      const plan = plans.find((p) => p.symbol === symbol) || null;
+      if (!plan) return res.json({ symbol, plan: null });
+      res.json({
+        symbol,
+        plan: {
+          date: plan.date,
+          bias: plan.bias,
+          biasReasoning: plan.biasReasoning,
+          topLongTrade: plan.topLongTrade,
+          topShortTrade: plan.topShortTrade,
+          magnet: plan.magnet,
+          dynamicZoneTop: plan.dynamicZoneTop,
+          dynamicZoneBottom: plan.dynamicZoneBottom,
+          r1: plan.r1, r2: plan.r2, r3: plan.r3, r4: plan.r4,
+          s1: plan.s1, s2: plan.s2, s3: plan.s3, s4: plan.s4,
+        },
+      });
+    } catch (err) {
+      console.error("member plan error:", err);
+      res.status(500).json({ error: "Failed to load plan." });
     }
   });
 

@@ -9,7 +9,16 @@ import LevelsTerminalChart, {
   type TerminalBar,
   type TerminalLevels,
 } from "@/components/LevelsTerminalChart";
+import { useMemberAuth } from "@/hooks/use-member-auth";
 import "./public.css";
+
+interface MemberPlan {
+  date: string;
+  bias: string | null;
+  biasReasoning: string | null;
+  topLongTrade: string | null;
+  topShortTrade: string | null;
+}
 
 interface TerminalData {
   symbol: string;
@@ -25,6 +34,7 @@ function n(v: number | null | undefined) {
 
 export default function PublicTerminalPage() {
   const [symbol, setSymbol] = useState<"ES" | "NQ">("ES");
+  const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
 
   const { data, isLoading } = useQuery<TerminalData>({
     queryKey: ["/api/public/terminal", symbol],
@@ -36,7 +46,20 @@ export default function PublicTerminalPage() {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  const { data: memberData } = useQuery<{ plan: MemberPlan | null }>({
+    queryKey: ["/api/member/plan", symbol, memberToken],
+    enabled: isMember && !!memberToken,
+    queryFn: async () => {
+      const res = await fetch(`/api/member/plan?symbol=${symbol}`, {
+        headers: { authorization: `Bearer ${memberToken}` },
+      });
+      if (!res.ok) throw new Error("Failed to load member plan");
+      return res.json();
+    },
+  });
+
   const plan = data?.plan ?? null;
+  const memberPlan = memberData?.plan ?? null;
 
   return (
     <div className="public-page">
@@ -139,7 +162,7 @@ export default function PublicTerminalPage() {
             </div>
           </div>
 
-          {/* Members-only teaser */}
+          {/* Plan card — full for members, teaser for guests */}
           <div
             style={{
               border: "1px solid var(--border, #26262b)",
@@ -150,23 +173,71 @@ export default function PublicTerminalPage() {
               flexDirection: "column",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
-              <Lock size={14} /> Bias & setups — members only
-            </div>
-            <p style={{ opacity: 0.7, fontSize: 14, flex: 1 }}>
-              The daily bias call and the exact long/short setups around these levels are
-              part of the membership, delivered here and to Telegram.
-            </p>
-            <Link
-              href="/pricing"
-              className="btn-primary"
-              data-testid="terminal-unlock-cta"
-              style={{ marginTop: 12, justifyContent: "center" }}
-            >
-              Unlock full plan →
-            </Link>
+            {isMember && memberPlan ? (
+              <div data-testid="terminal-member-plan">
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
+                  Trade Plan {memberPlan.date ? `· ${memberPlan.date}` : ""}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ opacity: 0.7 }}>Bias: </span>
+                  <b style={{ textTransform: "capitalize" }}>{memberPlan.bias || "—"}</b>
+                  {memberPlan.biasReasoning && (
+                    <div style={{ fontSize: 14, opacity: 0.85, marginTop: 4 }}>{memberPlan.biasReasoning}</div>
+                  )}
+                </div>
+                {memberPlan.topLongTrade && (
+                  <div style={{ fontSize: 14, marginBottom: 8 }}>
+                    <span style={{ color: "#4ade80", fontWeight: 700 }}>🟢 Top Long:</span> {memberPlan.topLongTrade}
+                  </div>
+                )}
+                {memberPlan.topShortTrade && (
+                  <div style={{ fontSize: 14 }}>
+                    <span style={{ color: "#f87171", fontWeight: 700 }}>🔴 Top Short:</span> {memberPlan.topShortTrade}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
+                  <Lock size={14} /> Bias & setups — members only
+                </div>
+                <p style={{ opacity: 0.7, fontSize: 14, flex: 1 }}>
+                  The daily bias call and the exact long/short setups around these levels are
+                  part of the membership, shown here and delivered to Telegram.
+                </p>
+                <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                  <Link
+                    href="/pricing"
+                    className="btn-primary"
+                    data-testid="terminal-unlock-cta"
+                    style={{ justifyContent: "center" }}
+                  >
+                    Get access →
+                  </Link>
+                  <Link
+                    href="/member-login"
+                    data-testid="terminal-member-login"
+                    style={{ alignSelf: "center", color: "var(--teal, #5EEAD4)", fontSize: 14 }}
+                  >
+                    Already a member? Log in
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </div>
+
+        {isMember && (
+          <div style={{ fontSize: 12, opacity: 0.55, marginTop: 16 }} data-testid="terminal-member-status">
+            Signed in{memberEmail ? ` as ${memberEmail}` : ""} ·{" "}
+            <button
+              onClick={() => logout()}
+              style={{ background: "none", border: "none", color: "var(--teal, #5EEAD4)", cursor: "pointer", padding: 0, fontSize: 12 }}
+            >
+              Log out
+            </button>
+          </div>
+        )}
       </main>
       <PublicFooter />
       <StickyCta />

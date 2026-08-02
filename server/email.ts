@@ -33,6 +33,21 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
   if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
 }
 
+export async function sendMemberLoginLink(email: string, loginUrl: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: "Your Trade Levels Pro login link",
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
+        <h1 style="color:#0c1117;">Log in to Trade Levels Pro</h1>
+        <p>Click the button below to sign in. This link expires in 20 minutes and can be used once.</p>
+        <p><a href="${loginUrl}" style="display:inline-block;background:#2dd4bf;color:#0c1117;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Log in →</a></p>
+        <p style="color:#666;font-size:13px;">If you didn't request this, you can ignore this email.</p>
+      </div>`,
+    text: `Log in to Trade Levels Pro: ${loginUrl}\n(Expires in 20 minutes, single use.)`,
+  });
+}
+
 export async function sendWelcomeEmail(
   member: Member,
   telegramInviteUrl: string | null
