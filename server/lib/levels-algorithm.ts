@@ -139,12 +139,26 @@ export interface StructureLevels {
   priorClose: number;
   overnightHigh: number | null;
   overnightLow: number | null;
+  // Higher-timeframe (swing) layer:
+  priorWeekHigh: number | null;
+  priorWeekLow: number | null;
+  recentHigh: number | null; // ~last month range high
+  recentLow: number | null;  // ~last month range low
 }
 
 function prevCalendarDate(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
+}
+
+/** Monday-aligned week index for a YYYY-MM-DD date (for prior-week grouping). */
+function weekIndex(dateStr: string): number {
+  const d = new Date(dateStr + "T00:00:00Z");
+  const dow = d.getUTCDay(); // 0 Sun .. 6 Sat
+  const toMonday = dow === 0 ? -6 : 1 - dow;
+  d.setUTCDate(d.getUTCDate() + toMonday);
+  return Math.floor(d.getTime() / (7 * 24 * 3600 * 1000));
 }
 
 /**
@@ -178,6 +192,17 @@ export function computeStructureLevels(bars: IntradayBar[], symbol: "ES" | "NQ")
   const day = days.get(D)!;
   const dPrev = prevCalendarDate(D);
 
+  const complete = completeDates.map((dt) => ({ date: dt, ...days.get(dt)! }));
+  // Recent (~1 month) range = highest high / lowest low of the last 20 RTH days.
+  const recent = complete.slice(-20);
+  const recentHigh = recent.length ? rt(Math.max(...recent.map((x) => x.high))) : null;
+  const recentLow = recent.length ? rt(Math.min(...recent.map((x) => x.low))) : null;
+  // Prior completed week's high/low.
+  const priorWeek = weekIndex(D) - 1;
+  const pw = complete.filter((x) => weekIndex(x.date) === priorWeek);
+  const priorWeekHigh = pw.length ? rt(Math.max(...pw.map((x) => x.high))) : null;
+  const priorWeekLow = pw.length ? rt(Math.min(...pw.map((x) => x.low))) : null;
+
   // Overnight into D's open: evening of the prior calendar day (≥18:00 ET) + early D (<09:30 ET).
   let onH = -Infinity, onL = Infinity;
   for (const b of bars) {
@@ -194,6 +219,10 @@ export function computeStructureLevels(bars: IntradayBar[], symbol: "ES" | "NQ")
     priorClose: rt(day.close),
     overnightHigh: onH === -Infinity ? null : rt(onH),
     overnightLow: onL === Infinity ? null : rt(onL),
+    priorWeekHigh,
+    priorWeekLow,
+    recentHigh,
+    recentLow,
   };
 }
 

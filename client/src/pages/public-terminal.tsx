@@ -33,6 +33,10 @@ interface TerminalData {
         priorClose: number | null;
         overnightHigh: number | null;
         overnightLow: number | null;
+        priorWeekHigh: number | null;
+        priorWeekLow: number | null;
+        recentHigh: number | null;
+        recentLow: number | null;
       }
     | null;
 }
@@ -90,6 +94,10 @@ export default function PublicTerminalPage() {
           priorClose: structure?.priorClose ?? null,
           overnightHigh: structure?.overnightHigh ?? null,
           overnightLow: structure?.overnightLow ?? null,
+          priorWeekHigh: structure?.priorWeekHigh ?? null,
+          priorWeekLow: structure?.priorWeekLow ?? null,
+          recentHigh: structure?.recentHigh ?? null,
+          recentLow: structure?.recentLow ?? null,
         }
       : null;
 
@@ -200,6 +208,18 @@ export default function PublicTerminalPage() {
                 <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Overnight</div>
                 <div style={{ color: "#fb923c" }}>High <b>{n(structure?.overnightHigh)}</b></div>
                 <div style={{ color: "#22d3ee" }}>Low <b>{n(structure?.overnightLow)}</b></div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12, opacity: 0.85 }}>
+              <div>
+                <div style={{ color: "#a78bfa", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Prior week</div>
+                <div>High <b>{n(structure?.priorWeekHigh)}</b></div>
+                <div>Low <b>{n(structure?.priorWeekLow)}</b></div>
+              </div>
+              <div>
+                <div style={{ color: "#64748b", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>~1-month range</div>
+                <div>High <b>{n(structure?.recentHigh)}</b></div>
+                <div>Low <b>{n(structure?.recentLow)}</b></div>
               </div>
             </div>
           </div>

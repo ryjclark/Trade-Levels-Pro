@@ -51,6 +51,11 @@ export interface TerminalLevels {
   priorClose: number | null;
   overnightHigh: number | null;
   overnightLow: number | null;
+  // Higher-timeframe (swing) layer — drawn dimmer/dotted.
+  priorWeekHigh: number | null;
+  priorWeekLow: number | null;
+  recentHigh: number | null;
+  recentLow: number | null;
 }
 
 type Props = {
@@ -107,6 +112,13 @@ export default function LevelsTerminalChart({ bars, levels, height = 520 }: Prop
         };
 
         if (levels) {
+          // Higher-timeframe (swing) layer — dim, dotted, drawn first (underneath).
+          addLine(levels.recentHigh, "#64748b", "1M H", true);   // ~1-month range high
+          addLine(levels.priorWeekHigh, "#a78bfa", "PWH", true); // prior week high
+          addLine(levels.priorWeekLow, "#a78bfa", "PWL", true);
+          addLine(levels.recentLow, "#64748b", "1M L", true);    // ~1-month range low
+
+          // Near-term layer — bright, solid.
           addLine(levels.priorHigh, "#f87171", "PDH");        // prior day high
           addLine(levels.overnightHigh, "#fb923c", "ONH", true); // overnight high
           addLine(levels.dynamicZoneTop, "#94a3b8", "DZ↑", true);
