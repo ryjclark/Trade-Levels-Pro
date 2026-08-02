@@ -86,63 +86,94 @@ export default function LevelsTerminalChart({ bars, levels, swings, height = 520
         chart = window.LightweightCharts.createChart(el, {
           width: el.clientWidth,
           height,
-          layout: { background: { color: "transparent" }, textColor: "#cbd5e1" },
-          grid: {
-            vertLines: { color: "rgba(255,255,255,0.05)" },
-            horzLines: { color: "rgba(255,255,255,0.05)" },
+          layout: {
+            background: { type: "solid", color: "#0a0e17" },
+            textColor: "#9fb0c3",
+            fontFamily: "Inter, system-ui, sans-serif",
+            fontSize: 11,
           },
-          rightPriceScale: { borderColor: "rgba(255,255,255,0.12)" },
-          timeScale: { borderColor: "rgba(255,255,255,0.12)", timeVisible: true, secondsVisible: false },
-          crosshair: { mode: 0 },
+          grid: {
+            vertLines: { color: "rgba(148,163,184,0.06)" },
+            horzLines: { color: "rgba(148,163,184,0.06)" },
+          },
+          rightPriceScale: {
+            borderColor: "rgba(148,163,184,0.15)",
+            scaleMargins: { top: 0.12, bottom: 0.12 },
+          },
+          timeScale: {
+            borderColor: "rgba(148,163,184,0.15)",
+            timeVisible: true,
+            secondsVisible: false,
+            rightOffset: 5,
+            barSpacing: 9,
+          },
+          crosshair: { mode: 1 }, // magnet crosshair
         });
 
         const series = chart.addCandlestickSeries({
-          upColor: "#22c55e",
-          downColor: "#ef4444",
+          upColor: "#26a69a",
+          downColor: "#ef5350",
           borderVisible: false,
-          wickUpColor: "#22c55e",
-          wickDownColor: "#ef4444",
+          wickUpColor: "#26a69a",
+          wickDownColor: "#ef5350",
         });
         series.setData(bars);
 
-        const addLine = (price: number | null, color: string, title: string, dashed = false) => {
-          if (price == null) return;
+        const addLine = (price: number, color: string, title: string, dashed = false, width = 1) => {
           series.createPriceLine({
             price,
             color,
-            lineWidth: 1,
-            lineStyle: dashed ? 2 : 0, // 0 = solid, 2 = dashed
+            lineWidth: width,
+            lineStyle: dashed ? 2 : 0,
             axisLabelVisible: true,
             title,
           });
         };
 
+        // Curate a clean set: Magnet + Zone, plus only the NEAREST few supports /
+        // resistances (merged from structure + swings), clustered so labels never
+        // overlap. Far levels stay in the list below the chart, off the chart.
         if (levels) {
-          // Higher-timeframe (swing) layer — dim, dotted, drawn first (underneath).
-          addLine(levels.recentHigh, "#64748b", "1M H", true);   // ~1-month range high
-          addLine(levels.priorWeekHigh, "#a78bfa", "PWH", true); // prior week high
-          addLine(levels.priorWeekLow, "#a78bfa", "PWL", true);
-          addLine(levels.recentLow, "#64748b", "1M L", true);    // ~1-month range low
-
-          // Near-term layer — bright, solid.
-          addLine(levels.priorHigh, "#f87171", "PDH");        // prior day high
-          addLine(levels.overnightHigh, "#fb923c", "ONH", true); // overnight high
-          addLine(levels.dynamicZoneTop, "#94a3b8", "DZ↑", true);
-          addLine(levels.magnet, "#eab308", "Magnet");
-          addLine(levels.priorClose, "#60a5fa", "PDC");        // prior close
-          addLine(levels.dynamicZoneBottom, "#94a3b8", "DZ↓", true);
-          addLine(levels.overnightLow, "#22d3ee", "ONL", true); // overnight low
-          addLine(levels.priorLow, "#4ade80", "PDL");          // prior day low
-        }
-
-        // Detected swing (reaction) levels — nearest 2 each side of price, dim.
-        if (swings && bars.length) {
           const px = bars[bars.length - 1].close;
-          swings.lows.filter((v) => v < px).slice(0, 2).forEach((v) => addLine(v, "#475569", "S", true));
-          swings.highs.filter((v) => v > px).sort((a, b) => a - b).slice(0, 2).forEach((v) => addLine(v, "#475569", "R", true));
+          const tol = px * 0.0012; // ~0.12% cluster tolerance
+          const pick = (cands: Array<number | null | undefined>, side: "below" | "above") => {
+            const vals = cands.filter((v): v is number => v != null && (side === "below" ? v < px : v > px));
+            vals.sort((a, b) => (side === "below" ? b - a : a - b)); // nearest to price first
+            const kept: number[] = [];
+            for (const v of vals) {
+              if (kept.some((k) => Math.abs(k - v) < tol)) continue;
+              kept.push(v);
+              if (kept.length >= 3) break;
+            }
+            return kept;
+          };
+
+          const supports = pick(
+            [levels.priorLow, levels.overnightLow, levels.priorWeekLow, ...(swings?.lows ?? [])],
+            "below",
+          );
+          const resistances = pick(
+            [levels.priorHigh, levels.overnightHigh, levels.priorWeekHigh, ...(swings?.highs ?? [])],
+            "above",
+          );
+
+          // Dynamic Zone — faint dashed band around the magnet.
+          if (levels.dynamicZoneTop != null) addLine(levels.dynamicZoneTop, "rgba(148,163,184,0.5)", "", true);
+          if (levels.dynamicZoneBottom != null) addLine(levels.dynamicZoneBottom, "rgba(148,163,184,0.5)", "", true);
+          // Magnet — the one bright anchor.
+          if (levels.magnet != null) addLine(levels.magnet, "#eab308", "Magnet", false, 2);
+          // Nearest supports / resistances only.
+          resistances.forEach((v) => addLine(v, "#ef5350", "R"));
+          supports.forEach((v) => addLine(v, "#26a69a", "S"));
         }
 
-        chart.timeScale().fitContent();
+        // Zoom to the last ~110 bars so candles are readable (not 900 crammed in).
+        const n = bars.length;
+        try {
+          chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 110), to: n + 5 });
+        } catch {
+          chart.timeScale().fitContent();
+        }
 
         ro = new ResizeObserver(() => {
           if (chart && el) chart.applyOptions({ width: el.clientWidth });
