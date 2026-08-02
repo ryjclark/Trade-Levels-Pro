@@ -338,20 +338,29 @@ function buildPlan(x: {
   ].filter((v): v is number => v != null && v < breakdownLow);
   const downTarget = belowLevels.length ? Math.max(...belowLevels) : s2;
 
+  void lowsText; void highsText; // superseded by the ranked format below
+
   let reasoning: string;
   if (bias === "bullish") {
-    reasoning = `Prior close held above the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}). Primary edge is the failed-breakdown long while price holds the ${fmtLevel(magnet)} magnet.`;
+    reasoning = `Bullish — buyers have the edge while price holds the ${fmtLevel(magnet)} magnet. Trade the failed breakdown; manage level-to-level (bank the first target, trail a runner).`;
   } else if (bias === "bearish") {
-    reasoning = `Prior close broke the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}). Still favor failed-breakdown longs on reclaims, but a rejection short is in play under the ${fmtLevel(magnet)} magnet.`;
+    reasoning = `Bearish tilt — under the ${fmtLevel(magnet)} magnet a rejection short is in play, but the failed-breakdown long is still the A+ setup on any reclaim. Manage level-to-level.`;
   } else {
-    reasoning = `Prior close settled inside the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}). Wait for a flush-and-reclaim rather than forcing a side around the ${fmtLevel(magnet)} magnet.`;
+    reasoning = `Neutral — balanced around the ${fmtLevel(magnet)} magnet. No edge until price flushes a low and reclaims it (failed breakdown). Manage level-to-level.`;
   }
 
-  const long =
-    `Failed-breakdown long (primary): on a sharp flush that loses a significant low — ${lowsText} — then reclaims it, long toward the ${fmtLevel(magnet)} magnet, then ${highsText}. Wait for the reclaim, don't knife-catch; bank level-to-level and leave a runner.`;
+  // Ranked failed-breakdown longs (best/nearest first) with a target on each.
+  const medals = ["🥇", "🥈", "🥉"];
+  const target = highVals[0] != null ? fmtLevel(highVals[0]) : fmtLevel(magnet);
+  const longParts = lowVals.slice(0, 3).map((v, i) => {
+    if (i === 0) return `${medals[0]} ${fmtLevel(v)}: flush + reclaim → long toward ${fmtLevel(magnet)}, then ${target}`;
+    if (i === 1) return `${medals[1]} ${fmtLevel(v)}: deeper backup if the first fails`;
+    return `${medals[2]} ${fmtLevel(v)}: lower, higher-quality`;
+  });
+  const long = `Failed-breakdown longs (best first) — ${longParts.join("  ·  ")}. Wait for the reclaim; never knife-catch.`;
 
   const short =
-    `Short side (lower win-rate): fade a rejection at ${fmtLevel(firstHighVal)} back toward the ${fmtLevel(magnet)} magnet; or a breakdown short only on a decisive loss of ${fmtLevel(breakdownLow)} that holds below, targeting ${fmtLevel(downTarget)}. Breakdowns trap most of the time — size down.`;
+    `Shorts (secondary, lower win-rate) — rejection at ${fmtLevel(firstHighVal)} → short toward ${fmtLevel(magnet)}; or a breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}. Size down — most breakdowns trap.`;
 
   return { reasoning, long, short };
 }

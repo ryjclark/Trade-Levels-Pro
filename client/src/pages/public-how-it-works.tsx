@@ -96,6 +96,60 @@ export default function PublicHowItWorksPage() {
         <Reveal>
           <section className="public-section">
             <div className="public-section-header">
+              <span className="public-section-eyebrow">The Edge</span>
+              <h2 className="public-section-title">The Failed Breakdown</h2>
+              <p className="public-section-subtitle">
+                Our primary setup — the reversal that starts most ES rallies.
+              </p>
+            </div>
+            <div className="public-info-box">
+              <p>
+                Price rarely moves in a straight line. The cleanest long entries come
+                after ES flushes below a key support, fails to follow through, and
+                reclaims the level — trapping the sellers who chased the breakdown.
+                That reclaim is the trigger. We call it a <b>Failed Breakdown</b>, and
+                it anchors every daily plan.
+              </p>
+            </div>
+            <div className="public-steps">
+              <div className="public-step">
+                <div className="public-step-num">1</div>
+                <p>
+                  Price drops below a significant low — a prior-day low, the overnight
+                  low, or a detected reaction level on the chart.
+                </p>
+              </div>
+              <div className="public-step">
+                <div className="public-step-num">2</div>
+                <p>
+                  It fails to keep falling and <b>reclaims</b> the level. Wait for the
+                  reclaim — never catch the falling knife.
+                </p>
+              </div>
+              <div className="public-step">
+                <div className="public-step-num">3</div>
+                <p>
+                  Go long toward the Magnet, then the next level up. Bank profits
+                  level-to-level and leave a runner for the bigger move.
+                </p>
+              </div>
+            </div>
+            <div className="public-info-box">
+              <p>
+                Shorts are included for traders who take them, but they're a secondary,
+                lower-win-rate play — a rejection at resistance, or a confirmed
+                breakdown that holds below support. Most breakdowns trap, which is
+                exactly why the failed breakdown is the edge.
+              </p>
+            </div>
+          </section>
+        </Reveal>
+
+        <SectionDivider />
+
+        <Reveal>
+          <section className="public-section">
+            <div className="public-section-header">
               <span className="public-section-eyebrow">Workflow</span>
               <h2 className="public-section-title">Your Daily Workflow</h2>
             </div>
