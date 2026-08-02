@@ -16,6 +16,7 @@ import PublicHomePage from "@/pages/public-home";
 import PublicPricingPage from "@/pages/public-pricing";
 import PublicSamplePage from "@/pages/public-sample";
 import PublicTrackRecordPage from "@/pages/public-trackrecord";
+import PublicTerminalPage from "@/pages/public-terminal";
 import PublicHowItWorksPage from "@/pages/public-how-it-works";
 import PublicLegalPage from "@/pages/public-legal";
 import PublicWelcomePage from "@/pages/public-welcome";
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/about" component={PublicAboutPage} />
       <Route path="/archive" component={PublicArchivePage} />
       <Route path="/track-record" component={PublicTrackRecordPage} />
+      <Route path="/terminal" component={PublicTerminalPage} />
       <Route path="/p/:id" component={PublicPlanDetailPage} />
       <Route path="/subscribe">{() => <Redirect to="/pricing" />}</Route>
       <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>

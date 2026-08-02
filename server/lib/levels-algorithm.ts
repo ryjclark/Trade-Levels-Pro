@@ -46,6 +46,35 @@ export async function fetchDailyBars(symbol: "ES" | "NQ"): Promise<Bar[]> {
   return bars;
 }
 
+export interface IntradayBar { time: number; open: number; high: number; low: number; close: number; }
+
+/**
+ * Intraday OHLC bars for the public terminal chart. `time` is a UNIX timestamp
+ * in seconds (what TradingView Lightweight Charts expects), oldest -> newest.
+ */
+export async function fetchIntradayBars(
+  symbol: "ES" | "NQ",
+  range = "1mo",
+  interval = "1h",
+): Promise<IntradayBar[]> {
+  const y = YAHOO_SYMBOL[symbol];
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=${range}&interval=${interval}`;
+  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  if (!res.ok) throw new Error(`Yahoo intraday fetch failed for ${y}: ${res.status}`);
+  const json: any = await res.json();
+  const r = json?.chart?.result?.[0];
+  if (!r) throw new Error(`No chart result for ${y}`);
+  const ts: number[] = r.timestamp || [];
+  const q = r.indicators?.quote?.[0] || {};
+  const bars: IntradayBar[] = [];
+  for (let i = 0; i < ts.length; i++) {
+    const o = q.open?.[i], h = q.high?.[i], l = q.low?.[i], c = q.close?.[i];
+    if (o == null || h == null || l == null || c == null) continue;
+    bars.push({ time: ts[i], open: o, high: h, low: l, close: c });
+  }
+  return bars;
+}
+
 function atr(bars: Bar[], n = 14): number {
   const trs: number[] = [];
   for (let i = 1; i < bars.length; i++) {
