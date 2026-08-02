@@ -44,10 +44,13 @@ export interface TerminalBar {
 
 export interface TerminalLevels {
   magnet: number | null;
-  r1: number | null; r2: number | null; r3: number | null; r4: number | null;
-  s1: number | null; s2: number | null; s3: number | null; s4: number | null;
   dynamicZoneTop: number | null;
   dynamicZoneBottom: number | null;
+  priorHigh: number | null;
+  priorLow: number | null;
+  priorClose: number | null;
+  overnightHigh: number | null;
+  overnightLow: number | null;
 }
 
 type Props = {
@@ -104,17 +107,14 @@ export default function LevelsTerminalChart({ bars, levels, height = 520 }: Prop
         };
 
         if (levels) {
-          addLine(levels.r4, "#f87171", "R4");
-          addLine(levels.r3, "#f87171", "R3");
-          addLine(levels.r2, "#f87171", "R2");
-          addLine(levels.r1, "#f87171", "R1");
+          addLine(levels.priorHigh, "#f87171", "PDH");        // prior day high
+          addLine(levels.overnightHigh, "#fb923c", "ONH", true); // overnight high
           addLine(levels.dynamicZoneTop, "#94a3b8", "DZ↑", true);
           addLine(levels.magnet, "#eab308", "Magnet");
+          addLine(levels.priorClose, "#60a5fa", "PDC");        // prior close
           addLine(levels.dynamicZoneBottom, "#94a3b8", "DZ↓", true);
-          addLine(levels.s1, "#4ade80", "S1");
-          addLine(levels.s2, "#4ade80", "S2");
-          addLine(levels.s3, "#4ade80", "S3");
-          addLine(levels.s4, "#4ade80", "S4");
+          addLine(levels.overnightLow, "#22d3ee", "ONL", true); // overnight low
+          addLine(levels.priorLow, "#4ade80", "PDL");          // prior day low
         }
 
         chart.timeScale().fitContent();

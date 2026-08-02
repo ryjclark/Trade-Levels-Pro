@@ -24,7 +24,16 @@ interface TerminalData {
   symbol: string;
   bars: TerminalBar[];
   plan:
-    | (TerminalLevels & { date: string })
+    | { date: string; magnet: number | null; dynamicZoneTop: number | null; dynamicZoneBottom: number | null }
+    | null;
+  structure:
+    | {
+        priorHigh: number | null;
+        priorLow: number | null;
+        priorClose: number | null;
+        overnightHigh: number | null;
+        overnightLow: number | null;
+      }
     | null;
 }
 
@@ -67,7 +76,22 @@ export default function PublicTerminalPage() {
   });
 
   const plan = data?.plan ?? null;
+  const structure = data?.structure ?? null;
   const memberPlan = memberData?.plan ?? null;
+
+  const chartLevels: TerminalLevels | null =
+    plan || structure
+      ? {
+          magnet: plan?.magnet ?? null,
+          dynamicZoneTop: plan?.dynamicZoneTop ?? null,
+          dynamicZoneBottom: plan?.dynamicZoneBottom ?? null,
+          priorHigh: structure?.priorHigh ?? null,
+          priorLow: structure?.priorLow ?? null,
+          priorClose: structure?.priorClose ?? null,
+          overnightHigh: structure?.overnightHigh ?? null,
+          overnightLow: structure?.overnightLow ?? null,
+        }
+      : null;
 
   return (
     <div className="public-page">
@@ -78,8 +102,8 @@ export default function PublicTerminalPage() {
             Terminal
           </h1>
           <p className="public-hero-subtitle" style={{ maxWidth: 640 }}>
-            Today's Magnet, Dynamic Zone, and S/R ladder drawn straight on the chart.
-            Bias and setups unlock for members.
+            Magnet, Dynamic Zone, and the key structure levels — prior-day high/low/close
+            and overnight range — drawn straight on the chart. Bias and setups unlock for members.
           </p>
         </header>
 
@@ -137,7 +161,7 @@ export default function PublicTerminalPage() {
               Chart data unavailable right now.
             </div>
           ) : (
-            <LevelsTerminalChart bars={data.bars} levels={plan} height={520} />
+            <LevelsTerminalChart bars={data.bars} levels={chartLevels} height={520} />
           )}
           <div style={{ fontSize: 12, opacity: 0.5, marginTop: 8 }}>
             {symbol} · levels for {plan?.date ?? "the next session"} · chart data may be delayed.
@@ -167,18 +191,15 @@ export default function PublicTerminalPage() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <div>
-                <div style={{ color: "#f87171", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Resistance</div>
-                <div>R1 <b>{n(plan?.r1)}</b></div>
-                <div>R2 <b>{n(plan?.r2)}</b></div>
-                <div>R3 <b>{n(plan?.r3)}</b></div>
-                <div>R4 <b>{n(plan?.r4)}</b></div>
+                <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Prior day</div>
+                <div style={{ color: "#f87171" }}>High <b>{n(structure?.priorHigh)}</b></div>
+                <div style={{ color: "#60a5fa" }}>Close <b>{n(structure?.priorClose)}</b></div>
+                <div style={{ color: "#4ade80" }}>Low <b>{n(structure?.priorLow)}</b></div>
               </div>
               <div>
-                <div style={{ color: "#4ade80", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Support</div>
-                <div>S1 <b>{n(plan?.s1)}</b></div>
-                <div>S2 <b>{n(plan?.s2)}</b></div>
-                <div>S3 <b>{n(plan?.s3)}</b></div>
-                <div>S4 <b>{n(plan?.s4)}</b></div>
+                <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Overnight</div>
+                <div style={{ color: "#fb923c" }}>High <b>{n(structure?.overnightHigh)}</b></div>
+                <div style={{ color: "#22d3ee" }}>Low <b>{n(structure?.overnightLow)}</b></div>
               </div>
             </div>
           </div>

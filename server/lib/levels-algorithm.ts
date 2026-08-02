@@ -133,6 +133,70 @@ export async function fetchRthDailyBars(symbol: "ES" | "NQ"): Promise<Bar[]> {
   return bars;
 }
 
+export interface StructureLevels {
+  priorHigh: number;
+  priorLow: number;
+  priorClose: number;
+  overnightHigh: number | null;
+  overnightLow: number | null;
+}
+
+function prevCalendarDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Real price-structure levels from 30-min intraday bars: prior RTH day
+ * High/Low/Close, plus the overnight (evening ≥18:00 ET → next 09:30 ET) range
+ * preceding that day's open. Needs 30-min bars so the 09:30/15:30 ET session
+ * edges line up. Returns null if no complete RTH session is present.
+ */
+export function computeStructureLevels(bars: IntradayBar[], symbol: "ES" | "NQ"): StructureLevels | null {
+  if (!bars.length) return null;
+  const tick = TICK[symbol];
+  const rt = (v: number) => roundToTick(v, tick);
+
+  type Day = { high: number; low: number; close: number; hasClose: boolean };
+  const days = new Map<string, Day>();
+  for (const b of bars) {
+    const { date, minutes } = etHM(b.time);
+    if (minutes < RTH_OPEN || minutes > RTH_LAST_BAR) continue;
+    const d = days.get(date);
+    if (!d) {
+      days.set(date, { high: b.high, low: b.low, close: b.close, hasClose: minutes === RTH_LAST_BAR });
+    } else {
+      d.high = Math.max(d.high, b.high);
+      d.low = Math.min(d.low, b.low);
+      if (minutes === RTH_LAST_BAR) { d.close = b.close; d.hasClose = true; }
+    }
+  }
+  const completeDates = Array.from(days.keys()).filter((k) => days.get(k)!.hasClose).sort();
+  if (!completeDates.length) return null;
+  const D = completeDates[completeDates.length - 1];
+  const day = days.get(D)!;
+  const dPrev = prevCalendarDate(D);
+
+  // Overnight into D's open: evening of the prior calendar day (≥18:00 ET) + early D (<09:30 ET).
+  let onH = -Infinity, onL = Infinity;
+  for (const b of bars) {
+    const { date, minutes } = etHM(b.time);
+    const inOvernight = (date === dPrev && minutes >= 18 * 60) || (date === D && minutes < RTH_OPEN);
+    if (!inOvernight) continue;
+    onH = Math.max(onH, b.high);
+    onL = Math.min(onL, b.low);
+  }
+
+  return {
+    priorHigh: rt(day.high),
+    priorLow: rt(day.low),
+    priorClose: rt(day.close),
+    overnightHigh: onH === -Infinity ? null : rt(onH),
+    overnightLow: onL === Infinity ? null : rt(onL),
+  };
+}
+
 /** Human number for plan text, e.g. 7496 or 28403.25. */
 function fmtLevel(v: number): string {
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });

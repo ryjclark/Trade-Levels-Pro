@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -855,13 +855,15 @@ export async function registerRoutes(
     }
   });
 
-  // Public terminal data: intraday candles + the latest published levels for a
-  // symbol. Levels only (magnet/R/S/DZ) — bias & setups stay members-only.
+  // Public terminal data: 30-min candles, the plan's Magnet + Dynamic Zone, and
+  // live-computed structure levels (prior-day H/L/C + overnight H/L). Levels
+  // only — bias & setups stay members-only.
   app.get("/api/public/terminal", async (req, res) => {
     try {
       const symParam = String(req.query.symbol || "ES").toUpperCase();
       const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
-      const bars = await fetchIntradayBars(symbol);
+      const bars = await fetchIntradayBars(symbol, "1mo", "30m");
+      const structure = computeStructureLevels(bars, symbol);
       const publicPlans = await storage.listPublicPlans(50);
       const plan = publicPlans.find((p) => p.symbol === symbol) || null;
       res.json({
@@ -871,12 +873,11 @@ export async function registerRoutes(
           ? {
               date: plan.date,
               magnet: plan.magnet,
-              r1: plan.r1, r2: plan.r2, r3: plan.r3, r4: plan.r4,
-              s1: plan.s1, s2: plan.s2, s3: plan.s3, s4: plan.s4,
               dynamicZoneTop: plan.dynamicZoneTop,
               dynamicZoneBottom: plan.dynamicZoneBottom,
             }
           : null,
+        structure,
       });
     } catch (err) {
       console.error("public terminal error:", err);
