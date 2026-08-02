@@ -232,27 +232,61 @@ function fmtLevel(v: number): string {
 }
 
 /**
- * Rule-based, reactive trading plan (bias reasoning + top long/short) built from
- * the computed levels. Reactive by design — "React to Price. No Predictions."
+ * Reactive trading plan built around the Failed-Breakdown edge: wait for a flush
+ * that loses a significant low and reclaims it (long), manage level-to-level and
+ * leave runners. Shorts (rejection at resistance / breakdown of support) are
+ * included but flagged lower-win-rate. Uses real structure levels when present,
+ * falling back to pivots. "React to Price. No Predictions."
  */
 function buildPlan(x: {
   bias: "bullish" | "neutral" | "bearish";
   magnet: number; dzHigh: number; dzLow: number;
-  r1: number; r2: number; s1: number; s2: number;
+  r1: number; s1: number; s2: number;
+  structure: StructureLevels | null;
 }): { reasoning: string; long: string; short: string } {
-  const { bias, magnet, dzHigh, dzLow, r1, r2, s1, s2 } = x;
+  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, structure: s } = x;
+
+  // Significant lows to long the failed breakdown of (nearest/most-meaningful
+  // first); fall back to a pivot support when structure data is unavailable.
+  const lowCandidates: Array<[string, number | null | undefined]> = [
+    ["prior-day low", s?.priorLow],
+    ["overnight low", s?.overnightLow],
+    ["prior-week low", s?.priorWeekLow],
+  ];
+  const lows = lowCandidates.filter(([, v]) => v != null) as Array<[string, number]>;
+  if (!lows.length) lows.push(["support", s1]);
+  const lowsText = lows.map(([label, v]) => `${fmtLevel(v)} (${label})`).join(", ");
+
+  const highCandidates: Array<[string, number | null | undefined]> = [
+    ["prior-day high", s?.priorHigh],
+    ["prior-week high", s?.priorWeekHigh],
+  ];
+  const highs = highCandidates.filter(([, v]) => v != null) as Array<[string, number]>;
+  if (!highs.length) highs.push(["resistance", r1]);
+  const firstHigh = highs[0];
+  // Breakdown-short target must sit BELOW the level being lost — pick the
+  // nearest structural level under it.
+  const breakdownLow = lows[0][1];
+  const belowLevels = [s?.recentLow, s?.priorWeekLow, s?.overnightLow, s2].filter(
+    (v): v is number => v != null && v < breakdownLow,
+  );
+  const downTarget = belowLevels.length ? Math.max(...belowLevels) : s2;
+
   let reasoning: string;
   if (bias === "bullish") {
-    reasoning = `Prior close held above the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}); buyers have the edge while price stays above the ${fmtLevel(magnet)} Magnet.`;
+    reasoning = `Prior close held above the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}). Primary edge is the failed-breakdown long while price holds the ${fmtLevel(magnet)} magnet.`;
   } else if (bias === "bearish") {
-    reasoning = `Prior close broke below the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}); sellers have the edge while price stays below the ${fmtLevel(magnet)} Magnet.`;
+    reasoning = `Prior close broke the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}). Still favor failed-breakdown longs on reclaims, but a rejection short is in play under the ${fmtLevel(magnet)} magnet.`;
   } else {
-    reasoning = `Prior close settled inside the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}); no edge either way until price leaves the zone around the ${fmtLevel(magnet)} Magnet.`;
+    reasoning = `Prior close settled inside the Dynamic Zone (${fmtLevel(dzLow)}–${fmtLevel(dzHigh)}). Wait for a flush-and-reclaim rather than forcing a side around the ${fmtLevel(magnet)} magnet.`;
   }
+
   const long =
-    `React to a reclaim/hold of the Dynamic Zone low ${fmtLevel(dzLow)} or S1 ${fmtLevel(s1)} — long toward the Magnet ${fmtLevel(magnet)}, then R1 ${fmtLevel(r1)}. Idea fails on an accepted break below S2 ${fmtLevel(s2)}.`;
+    `Failed-breakdown long (primary): on a sharp flush that loses a significant low — ${lowsText} — then reclaims it, long toward the ${fmtLevel(magnet)} magnet, then ${fmtLevel(firstHigh[1])} (${firstHigh[0]}). Wait for the reclaim, don't knife-catch; bank level-to-level and leave a runner.`;
+
   const short =
-    `React to a rejection at the Dynamic Zone high ${fmtLevel(dzHigh)} or R1 ${fmtLevel(r1)} — short toward the Magnet ${fmtLevel(magnet)}, then S1 ${fmtLevel(s1)}. Idea fails on an accepted break above R2 ${fmtLevel(r2)}.`;
+    `Short side (lower win-rate): fade a rejection at ${fmtLevel(firstHigh[1])} (${firstHigh[0]}) back toward the ${fmtLevel(magnet)} magnet; or a breakdown short only on a decisive loss of ${fmtLevel(lows[0][1])} (${lows[0][0]}) that holds below, targeting ${fmtLevel(downTarget)}. Breakdowns trap most of the time — size down.`;
+
   return { reasoning, long, short };
 }
 
@@ -273,7 +307,7 @@ function nextTradingDay(dateStr: string): string {
 }
 
 /** Pure, testable core. */
-export function computeLevels(bars: Bar[], symbol: "ES" | "NQ"): ComputedLevels {
+export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: StructureLevels | null = null): ComputedLevels {
   const prev = bars[bars.length - 1];
   const { high: H, low: L, close: C } = prev;
   const a = atr(bars, 14);
@@ -291,7 +325,7 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ"): ComputedLevels 
   const r4 = rt(r3 + (r3 - r2)), s4 = rt(s3 - (s2 - s3));
   const bias: ComputedLevels["bias"] = C > PP + dz ? "bullish" : C < PP - dz ? "bearish" : "neutral";
 
-  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, r2, s1, s2 });
+  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, structure });
 
   return {
     symbol, target_date: nextTradingDay(prev.date), current_price: rt(C),
@@ -323,13 +357,16 @@ export async function generateAndPublishLevels(): Promise<void> {
       // Prefer the tighter regular-session (RTH) range; fall back to Yahoo's
       // full-session daily bars if intraday data is unavailable.
       let bars: Bar[];
+      let structure: StructureLevels | null = null;
       try {
+        const intraday = await fetchIntradayBars(symbol, "1mo", "30m");
         bars = await fetchRthDailyBars(symbol);
+        structure = computeStructureLevels(intraday, symbol);
       } catch (rthErr: any) {
-        console.warn(`[levels] ${symbol} RTH bars unavailable (${rthErr?.message || rthErr}); falling back to daily`);
+        console.warn(`[levels] ${symbol} RTH/structure unavailable (${rthErr?.message || rthErr}); falling back to daily`);
         bars = await fetchDailyBars(symbol);
       }
-      const levels = computeLevels(bars, symbol);
+      const levels = computeLevels(bars, symbol, structure);
       await postToIngest(levels);
       console.log(`[levels] published ${symbol} for ${levels.target_date} (magnet ${levels.magnet}, ${levels.bias})`);
     } catch (err: any) {
