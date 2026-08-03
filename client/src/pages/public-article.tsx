@@ -14,8 +14,10 @@ import { ArticlePropFirm } from "@/articles/prop-firm-sr";
 import { ArticleDailyTemplate } from "@/articles/daily-template";
 import { ArticleFailedBreakdown } from "@/articles/the-failed-breakdown-setup";
 import { ArticleAcceptance } from "@/articles/acceptance-and-level-to-level";
+import { ArticleHowToTradeThePlan } from "@/articles/how-to-trade-the-plan";
 
 const BODY_MAP: Record<string, () => JSX.Element> = {
+  "how-to-trade-the-daily-plan": ArticleHowToTradeThePlan,
   "the-failed-breakdown-setup": ArticleFailedBreakdown,
   "acceptance-and-level-to-level": ArticleAcceptance,
   "what-is-a-magnet-level-es-futures": ArticleMagnet,

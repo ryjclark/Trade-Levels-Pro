@@ -10,6 +10,17 @@ export interface ArticleMeta {
 
 export const ARTICLES: ArticleMeta[] = [
   {
+    slug: "how-to-trade-the-daily-plan",
+    title: "How to Trade the Daily Plan (Start Here)",
+    excerpt:
+      "New here? Read this first. Exactly what each part of the daily ES and NQ plan means (Magnet, Dynamic Zone, failed-breakdown longs, rejection shorts) and how to act on it.",
+    description:
+      "New here? Read this first. Exactly what each part of the daily ES and NQ plan means and how to trade it: the Magnet, Dynamic Zone, failed-breakdown longs, rejection shorts, acceptance, and level-to-level management.",
+    date: "August 4, 2026",
+    dateISO: "2026-08-04",
+    readMinutes: 6,
+  },
+  {
     slug: "the-failed-breakdown-setup",
     title: "The Failed Breakdown: The Setup Our Daily Plans Are Built Around",
     excerpt:
