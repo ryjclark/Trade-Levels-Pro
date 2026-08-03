@@ -243,9 +243,24 @@ export function computeStructureLevels(bars: IntradayBar[], symbol: "ES" | "NQ")
   };
 }
 
+export type SwingTier = "major" | "minor" | "micro";
+
+/** A ranked reaction level: price plus how hard price bounced (prominence) and a
+ *  quality tier derived from that prominence. `major` = a significant low/high the
+ *  failed-breakdown method actually leans on; `micro` = a weak shelf to de-emphasize. */
+export interface SwingPoint {
+  price: number;
+  prominence: number;
+  tier: SwingTier;
+}
+
 export interface SwingLevels {
   lows: number[];  // significant reaction lows, sorted high → low
   highs: number[]; // significant reaction highs, sorted high → low
+  // Same levels as lows/highs (same order) but ranked with a quality tier so the
+  // plan can lead with the strongest levels and flag micro ones.
+  lowPoints: SwingPoint[];
+  highPoints: SwingPoint[];
 }
 
 /**
@@ -266,7 +281,7 @@ export function detectSwings(
   const k = opts?.window ?? 3;
   const maxPerSide = opts?.maxPerSide ?? 6;
   const n = bars.length;
-  if (n < 2 * k + 1) return { lows: [], highs: [] };
+  if (n < 2 * k + 1) return { lows: [], highs: [], lowPoints: [], highPoints: [] };
 
   type Piv = { price: number; prom: number };
   const rawLows: Piv[] = [];
@@ -292,18 +307,45 @@ export function detectSwings(
   }
 
   const clusterTol = n ? bars[n - 1].close * 0.001 : tick * 4; // ~0.1% shelf tolerance
-  const cluster = (piv: Piv[]): number[] => {
+  // Cluster nearby pivots into shelves, keeping the strongest (highest-prominence)
+  // per shelf. Preserve each kept level's prominence so we can rank it later.
+  const cluster = (piv: Piv[]): { price: number; prom: number }[] => {
     const sorted = [...piv].sort((a, b) => b.prom - a.prom); // strongest first
-    const kept: number[] = [];
+    const kept: { price: number; prom: number }[] = [];
     for (const p of sorted) {
-      if (kept.some((q) => Math.abs(q - p.price) < clusterTol)) continue;
-      kept.push(p.price);
+      if (kept.some((q) => Math.abs(q.price - p.price) < clusterTol)) continue;
+      kept.push({ price: rt(p.price), prom: p.prom });
       if (kept.length >= maxPerSide) break;
     }
-    return kept.map(rt).sort((a, b) => b - a);
+    return kept.sort((a, b) => b.price - a.price); // high → low
   };
 
-  return { lows: cluster(rawLows), highs: cluster(rawHighs) };
+  const keptLows = cluster(rawLows);
+  const keptHighs = cluster(rawHighs);
+
+  // Quality tier by prominence relative to the strongest level across BOTH sides,
+  // so "major" means major overall (a support and a resistance are comparable).
+  const maxProm = Math.max(
+    0,
+    ...keptLows.map((p) => p.prom),
+    ...keptHighs.map((p) => p.prom),
+  );
+  const tierOf = (prom: number): SwingTier => {
+    if (maxProm <= 0) return "micro";
+    const ratio = prom / maxProm;
+    if (ratio >= 0.5) return "major";
+    if (ratio >= 0.25) return "minor";
+    return "micro";
+  };
+  const toPoints = (kept: { price: number; prom: number }[]): SwingPoint[] =>
+    kept.map((p) => ({ price: p.price, prominence: Math.round(p.prom * 100) / 100, tier: tierOf(p.prom) }));
+
+  return {
+    lows: keptLows.map((p) => p.price),
+    highs: keptHighs.map((p) => p.price),
+    lowPoints: toPoints(keptLows),
+    highPoints: toPoints(keptHighs),
+  };
 }
 
 /** Human number for plan text, e.g. 7496 or 28403.25. */
@@ -327,25 +369,52 @@ function buildPlan(x: {
 }): { reasoning: string; long: string; short: string } {
   const { bias, magnet, dzHigh, dzLow, r1, s1, s2, structure: s, swings } = x;
 
-  // Prefer detected swing lows below the magnet as failed-breakdown triggers
-  // (real traded reaction lows); fall back to structure/pivot supports.
-  let lowVals: number[] = swings ? swings.lows.filter((v) => v < magnet).slice(0, 3) : [];
+  // Rank detected swing lows below the magnet as failed-breakdown triggers by
+  // QUALITY first (major reaction lows > micro shelves), then proximity to the
+  // magnet — so the plan leads with the significant low, not just the nearest
+  // line. Drop micro shelves unless they're all we have. Fall back to structure.
+  const tierRank: Record<SwingTier, number> = { major: 0, minor: 1, micro: 2 };
+  const tierWord: Record<SwingTier, string> = {
+    major: "significant low",
+    minor: "decent low",
+    micro: "micro shelf — lower quality",
+  };
+  let longPts: SwingPoint[] = [];
+  if (swings) {
+    const below = swings.lowPoints.filter((p) => p.price < magnet);
+    below.sort(
+      (a, b) => tierRank[a.tier] - tierRank[b.tier] || (magnet - a.price) - (magnet - b.price),
+    );
+    const strong = below.filter((p) => p.tier !== "micro");
+    longPts = (strong.length ? strong : below).slice(0, 3);
+  }
+  let lowVals: number[] = longPts.map((p) => p.price);
   if (!lowVals.length) {
     lowVals = [s?.priorLow, s?.overnightLow, s?.priorWeekLow, s1].filter(
       (v): v is number => v != null,
     );
   }
   if (!lowVals.length) lowVals = [s1];
-  const lowsText = lowVals.map((v) => fmtLevel(v)).join(", ");
 
-  // Resistance / short zones = swing highs above the magnet (nearest first).
-  let highVals: number[] = swings ? swings.highs.filter((v) => v > magnet).sort((a, b) => a - b).slice(0, 2) : [];
-  if (!highVals.length) {
-    highVals = [s?.priorHigh, s?.priorWeekHigh, r1].filter((v): v is number => v != null);
+  // Nearest resistances above the magnet — used as upside targets for longs.
+  let targetHighs: number[] = swings
+    ? swings.highs.filter((v) => v > magnet).sort((a, b) => a - b).slice(0, 2)
+    : [];
+  if (!targetHighs.length) {
+    targetHighs = [s?.priorHigh, s?.priorWeekHigh, r1].filter((v): v is number => v != null);
   }
-  if (!highVals.length) highVals = [r1];
-  const firstHighVal = highVals[0];
-  const highsText = highVals.map((v) => fmtLevel(v)).join(", ");
+  if (!targetHighs.length) targetHighs = [r1];
+
+  // Primary short = best-QUALITY resistance above the magnet (not just nearest).
+  let shortPt: SwingPoint | null = null;
+  if (swings) {
+    const above = swings.highPoints.filter((p) => p.price > magnet);
+    above.sort(
+      (a, b) => tierRank[a.tier] - tierRank[b.tier] || (a.price - magnet) - (b.price - magnet),
+    );
+    shortPt = above.find((p) => p.tier !== "micro") ?? above[0] ?? null;
+  }
+  const firstHighVal = shortPt ? shortPt.price : targetHighs[0];
 
   // Breakdown-short target must sit BELOW the level being lost.
   const breakdownLow = lowVals[0];
@@ -354,8 +423,6 @@ function buildPlan(x: {
     s?.recentLow, s?.priorWeekLow, s2,
   ].filter((v): v is number => v != null && v < breakdownLow);
   const downTarget = belowLevels.length ? Math.max(...belowLevels) : s2;
-
-  void lowsText; void highsText; // superseded by the ranked format below
 
   let reasoning: string;
   if (bias === "bullish") {
@@ -366,21 +433,31 @@ function buildPlan(x: {
     reasoning = `Neutral — balanced around the ${fmtLevel(magnet)} magnet. No edge until price flushes a low and reclaims it (failed breakdown). Manage level-to-level.`;
   }
 
-  // Ranked failed-breakdown longs (best/nearest first) with a target on each.
+  // Ranked failed-breakdown longs (best QUALITY first) with a target on each and
+  // an explicit quality tag so micro shelves are visibly de-emphasized.
   const medals = ["🥇", "🥈", "🥉"];
-  const target = highVals[0] != null ? fmtLevel(highVals[0]) : fmtLevel(magnet);
-  const longParts = lowVals.slice(0, 3).map((v, i) => {
-    if (i === 0) return `${medals[0]} ${fmtLevel(v)}: flush + reclaim → long toward ${fmtLevel(magnet)}, then ${target}`;
-    if (i === 1) return `${medals[1]} ${fmtLevel(v)}: deeper backup if the first fails`;
-    return `${medals[2]} ${fmtLevel(v)}: lower, higher-quality`;
-  });
+  const target = targetHighs[0] != null ? fmtLevel(targetHighs[0]) : fmtLevel(magnet);
+  const longParts = longPts.length
+    ? longPts.map((p, i) => {
+        const tag = tierWord[p.tier];
+        if (i === 0)
+          return `${medals[0]} ${fmtLevel(p.price)} (${tag}): flush + reclaim → long toward ${fmtLevel(magnet)}, then ${target}`;
+        if (i === 1) return `${medals[1]} ${fmtLevel(p.price)} (${tag}): deeper backup if the first fails`;
+        return `${medals[2]} ${fmtLevel(p.price)} (${tag}): deeper, take it if it reaches`;
+      })
+    : lowVals.slice(0, 3).map((v, i) => {
+        if (i === 0) return `${medals[0]} ${fmtLevel(v)}: flush + reclaim → long toward ${fmtLevel(magnet)}, then ${target}`;
+        if (i === 1) return `${medals[1]} ${fmtLevel(v)}: deeper backup if the first fails`;
+        return `${medals[2]} ${fmtLevel(v)}: lower, higher-quality`;
+      });
   const long =
     `Failed-breakdown longs (best first):\n${longParts.join("\n")}\n` +
     `Entry rule: wait for acceptance — price holds back above the level, or reclaims by ~5 pts and holds a couple minutes (don't knife-catch). Then manage level-to-level and leave a runner.`;
 
+  const shortTag = shortPt ? ` (${tierWord[shortPt.tier]})` : "";
   const short =
     `Shorts (secondary, lower win-rate):\n` +
-    `• Rejection at ${fmtLevel(firstHighVal)} → short toward ${fmtLevel(magnet)}\n` +
+    `• Rejection at ${fmtLevel(firstHighVal)}${shortTag} → short toward ${fmtLevel(magnet)}\n` +
     `• Breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}\n` +
     `Size down — most breakdowns trap.`;
 

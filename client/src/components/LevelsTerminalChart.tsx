@@ -58,9 +58,17 @@ export interface TerminalLevels {
   recentLow: number | null;
 }
 
+export type SwingTier = "major" | "minor" | "micro";
+export interface SwingPoint {
+  price: number;
+  prominence: number;
+  tier: SwingTier;
+}
 export interface SwingLevels {
   lows: number[];
   highs: number[];
+  lowPoints?: SwingPoint[];
+  highPoints?: SwingPoint[];
 }
 
 type Props = {
@@ -148,12 +156,26 @@ export default function LevelsTerminalChart({ bars, levels, swings, height = 520
             return kept;
           };
 
+          // Quality ranking: draw major/minor swing levels only (drop micro shelves
+          // as noise) and weight majors with a thicker line. Structure levels have
+          // no tier, so they're always kept at normal weight.
+          const tierMap = new Map<number, SwingTier>();
+          (swings?.lowPoints ?? []).forEach((p) => tierMap.set(p.price, p.tier));
+          (swings?.highPoints ?? []).forEach((p) => tierMap.set(p.price, p.tier));
+          const swingLows = swings?.lowPoints
+            ? swings.lowPoints.filter((p) => p.tier !== "micro").map((p) => p.price)
+            : swings?.lows ?? [];
+          const swingHighs = swings?.highPoints
+            ? swings.highPoints.filter((p) => p.tier !== "micro").map((p) => p.price)
+            : swings?.highs ?? [];
+          const widthFor = (v: number) => (tierMap.get(v) === "major" ? 2 : 1);
+
           const supports = pick(
-            [levels.priorLow, levels.overnightLow, levels.priorWeekLow, ...(swings?.lows ?? [])],
+            [levels.priorLow, levels.overnightLow, levels.priorWeekLow, ...swingLows],
             "below",
           );
           const resistances = pick(
-            [levels.priorHigh, levels.overnightHigh, levels.priorWeekHigh, ...(swings?.highs ?? [])],
+            [levels.priorHigh, levels.overnightHigh, levels.priorWeekHigh, ...swingHighs],
             "above",
           );
 
@@ -162,9 +184,9 @@ export default function LevelsTerminalChart({ bars, levels, swings, height = 520
           if (levels.dynamicZoneBottom != null) addLine(levels.dynamicZoneBottom, "rgba(148,163,184,0.5)", "", true);
           // Magnet — the one bright anchor.
           if (levels.magnet != null) addLine(levels.magnet, "#eab308", "Magnet", false, 2);
-          // Nearest supports / resistances only.
-          resistances.forEach((v) => addLine(v, "#ef5350", "R"));
-          supports.forEach((v) => addLine(v, "#26a69a", "S"));
+          // Nearest supports / resistances only; majors drawn thicker.
+          resistances.forEach((v) => addLine(v, "#ef5350", "R", false, widthFor(v)));
+          supports.forEach((v) => addLine(v, "#26a69a", "S", false, widthFor(v)));
         }
 
         // Zoom to the last ~110 bars so candles are readable (not 900 crammed in).

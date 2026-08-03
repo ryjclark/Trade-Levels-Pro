@@ -39,11 +39,42 @@ interface TerminalData {
         recentLow: number | null;
       }
     | null;
-  swings: { lows: number[]; highs: number[] } | null;
+  swings: {
+    lows: number[];
+    highs: number[];
+    lowPoints?: SwingPt[];
+    highPoints?: SwingPt[];
+  } | null;
 }
+
+type SwingPt = { price: number; prominence: number; tier: "major" | "minor" | "micro" };
 
 function n(v: number | null | undefined) {
   return v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+// Render a row of detected levels, ranked by quality: majors bold + ★, micro dimmed.
+// Falls back to plain numbers if the ranked points aren't present in the payload.
+function renderSwingRow(points: SwingPt[] | undefined, fallback: number[]) {
+  const list: SwingPt[] = points && points.length
+    ? points
+    : fallback.map((price) => ({ price, prominence: 0, tier: "minor" as const }));
+  const shown = list.slice(0, 6);
+  if (!shown.length) return "—";
+  return shown.map((p, i) => (
+    <span key={p.price}>
+      <span
+        style={{
+          opacity: p.tier === "micro" ? 0.5 : 1,
+          fontWeight: p.tier === "major" ? 700 : 400,
+        }}
+      >
+        {n(p.price)}
+        {p.tier === "major" ? "★" : ""}
+      </span>
+      {i < shown.length - 1 ? "  ·  " : ""}
+    </span>
+  ));
 }
 
 export default function PublicTerminalPage() {
@@ -232,12 +263,15 @@ export default function PublicTerminalPage() {
                 <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                   <div>
                     <span style={{ color: "#f87171" }}>Resistance:</span>{" "}
-                    {swings.highs.slice(0, 6).map(n).join("  ·  ") || "—"}
+                    {renderSwingRow(swings.highPoints, swings.highs)}
                   </div>
                   <div>
                     <span style={{ color: "#4ade80" }}>Support:</span>{" "}
-                    {swings.lows.slice(0, 6).map(n).join("  ·  ") || "—"}
+                    {renderSwingRow(swings.lowPoints, swings.lows)}
                   </div>
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
+                  ★ = major (strongest reactions); dimmed = micro shelf (lower quality)
                 </div>
               </div>
             )}

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeLevels, type Bar } from "../server/lib/levels-algorithm";
+import {
+  computeLevels,
+  detectSwings,
+  type Bar,
+  type IntradayBar,
+} from "../server/lib/levels-algorithm";
 
 /** Build a realistic ~50pt-range daily series ending on a known last bar. */
 function makeBars(): Bar[] {
@@ -75,5 +80,58 @@ describe("computeLevels", () => {
     // 2026-07-31 is a Friday, so the next trading day is Monday 2026-08-03.
     expect(levels.target_date).toBe("2026-08-03");
     expect(["bullish", "neutral", "bearish"]).toContain(levels.bias);
+  });
+});
+
+/**
+ * Intraday series with a DEEP reaction low (~6900, big bounce → major) and a
+ * SHALLOW dip (~6950, tiny bounce → micro), so quality ranking has something to
+ * separate.
+ */
+function makeSwingBars(): IntradayBar[] {
+  const lows =  [6990,6980,6970,6960,6950,6930,6900,6930,6955,6975,6980,6978,6976,6974,6972,6968,6962,6958,6955,6952,6950,6953,6956,6958,6959,6960];
+  const highs = [6995,6985,6975,6965,6955,6935,6905,6960,6980,7000,6995,6990,6988,6986,6984,6980,6974,6968,6962,6958,6955,6960,6962,6963,6964,6965];
+  return lows.map((low, i) => ({
+    time: 1_780_000_000 + i * 1800,
+    open: low + 2,
+    high: highs[i],
+    low,
+    close: low + 3,
+  }));
+}
+
+describe("detectSwings — quality ranking", () => {
+  const swings = detectSwings(makeSwingBars(), "ES");
+
+  it("ranks a deep reaction low as major and a shallow dip as micro", () => {
+    const major = swings.lowPoints.find((p) => Math.abs(p.price - 6900) <= 1);
+    const micro = swings.lowPoints.find((p) => Math.abs(p.price - 6950) <= 1);
+    expect(major?.tier).toBe("major");
+    expect(micro?.tier).toBe("micro");
+    // Higher-prominence level really is stronger.
+    expect(major!.prominence).toBeGreaterThan(micro!.prominence);
+  });
+
+  it("keeps lowPoints aligned with lows and sorted high → low by price", () => {
+    expect(swings.lowPoints.map((p) => p.price)).toEqual(swings.lows);
+    for (let i = 1; i < swings.lows.length; i++) {
+      expect(swings.lows[i - 1]).toBeGreaterThan(swings.lows[i]);
+    }
+  });
+
+  it("leads the plan with the major low and drops the micro shelf", () => {
+    // Daily series whose LAST floor pivot (magnet) sits above both swing lows so
+    // they qualify as failed-breakdown longs: PP = (6990+6930+6960)/3 = 6960.
+    // Padded so ATR (14) is well-defined.
+    const daily: Bar[] = [];
+    for (let i = 0; i < 14; i++) {
+      daily.push({ date: `2026-07-${String(i + 1).padStart(2, "0")}`, open: 6960, high: 6985, low: 6935, close: 6960 });
+    }
+    daily.push({ date: "2026-07-31", open: 6960, high: 6990, low: 6930, close: 6960 });
+    const plan = computeLevels(daily, "ES", null, swings);
+    expect(plan.top_long_trade).toContain("6,900");
+    expect(plan.top_long_trade).toContain("significant low");
+    // The micro shelf must NOT be offered as a failed-breakdown long.
+    expect(plan.top_long_trade).not.toContain("6,950");
   });
 });
