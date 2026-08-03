@@ -140,3 +140,32 @@ describe("detectSwings — quality ranking", () => {
     expect(plan.top_short_trade).not.toContain("significant low");
   });
 });
+
+describe("computeLevels — breakout enrichment", () => {
+  // Price at new highs with no swings above: plan must still produce near-price
+  // supports and real upside targets (round numbers, prior high, extension).
+  const daily: Bar[] = [];
+  for (let i = 0; i < 14; i++) daily.push({ date: `2026-07-${String(i + 1).padStart(2, "0")}`, open: 7600, high: 7620, low: 7560, close: 7600 });
+  daily.push({ date: "2026-08-03", open: 7560, high: 7637.75, low: 7542.75, close: 7628.25 }); // PP ~ 7603
+  const structure: any = { priorHigh: 7637.75, priorLow: 7542.75, priorClose: 7628.25, overnightHigh: 7567.75, overnightLow: 7543.5, priorWeekHigh: 7541, priorWeekLow: 7345.75, recentHigh: 7637.75, recentLow: 7345.75 };
+  const swings: any = {
+    lows: [7542.75, 7427.5, 7399], highs: [7561.5, 7526],
+    lowPoints: [{ price: 7542.75, prominence: 95, tier: "major" }, { price: 7427.5, prominence: 113, tier: "major" }, { price: 7399, prominence: 99, tier: "major" }],
+    highPoints: [{ price: 7561.5, prominence: 93, tier: "major" }, { price: 7526, prominence: 108, tier: "major" }],
+  };
+  const r = computeLevels(daily, "ES", structure, swings);
+
+  it("produces multiple upside targets above the magnet even with no swings above", () => {
+    expect(r.levels.swingResistances.filter((v) => v > r.magnet).length).toBeGreaterThan(2);
+    expect(r.top_short_trade).toContain("7,637"); // prior-day high as a target
+  });
+
+  it("leads longs with near-price supports, not just the deep detected lows", () => {
+    // 7,567.75 (his 'first support') or 7,600 should appear before the deep 7,427.
+    expect(r.top_long_trade).toMatch(/7,600|7,567/);
+  });
+
+  it("gives longs a real upside target above the magnet", () => {
+    expect(r.top_long_trade).toMatch(/7,62[0-9]|7,63[0-9]/);
+  });
+});

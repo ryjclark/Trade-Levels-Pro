@@ -8,16 +8,13 @@ export function formatManualPlan(plan: Plan): string {
   return formatTelegramPro(plan);
 }
 
-const TIER_RANK: Record<string, number> = { major: 0, minor: 1, micro: 2 };
 
 /** Rank swing points on one side by quality then proximity to the magnet,
  *  dropping micro shelves unless they are all that's available. */
 function rankSide(points: SwingPointData[], magnet: number, side: "below" | "above"): SwingPointData[] {
   const filtered = points.filter((p) => (side === "below" ? p.price < magnet : p.price > magnet));
-  filtered.sort(
-    (a, b) =>
-      TIER_RANK[a.tier] - TIER_RANK[b.tier] ||
-      (side === "below" ? magnet - a.price - (magnet - b.price) : a.price - magnet - (b.price - magnet)),
+  filtered.sort((a, b) =>
+    side === "below" ? magnet - a.price - (magnet - b.price) : a.price - magnet - (b.price - magnet),
   );
   const strong = filtered.filter((p) => p.tier !== "micro");
   return (strong.length ? strong : filtered).slice(0, 3);

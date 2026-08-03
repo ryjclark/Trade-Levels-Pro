@@ -371,11 +371,9 @@ function buildPlan(x: {
 }): { reasoning: string; long: string; short: string } {
   const { bias, magnet, dzHigh, dzLow, r1, s1, s2, structure: s, swings } = x;
 
-  // Rank detected swing lows below the magnet as failed-breakdown triggers by
-  // QUALITY first (major reaction lows > micro shelves), then proximity to the
-  // magnet — so the plan leads with the significant low, not just the nearest
-  // line. Drop micro shelves unless they're all we have. Fall back to structure.
-  const tierRank: Record<SwingTier, number> = { major: 0, minor: 1, micro: 2 };
+  // Rank failed-breakdown longs NEAREST-first (below the magnet), the way a
+  // trader actually works down through supports, dropping only micro shelves so
+  // the list stays actionable. Quality shows as a tag on each level.
   const tierWordLow: Record<SwingTier, string> = {
     major: "significant low",
     minor: "decent low",
@@ -389,9 +387,7 @@ function buildPlan(x: {
   let longPts: SwingPoint[] = [];
   if (swings) {
     const below = swings.lowPoints.filter((p) => p.price < magnet);
-    below.sort(
-      (a, b) => tierRank[a.tier] - tierRank[b.tier] || (magnet - a.price) - (magnet - b.price),
-    );
+    below.sort((a, b) => (magnet - a.price) - (magnet - b.price)); // nearest below the magnet first
     const strong = below.filter((p) => p.tier !== "micro");
     longPts = (strong.length ? strong : below).slice(0, 3);
   }
@@ -418,9 +414,7 @@ function buildPlan(x: {
   let shortPts: SwingPoint[] = [];
   if (swings) {
     const above = swings.highPoints.filter((p) => p.price > magnet);
-    above.sort(
-      (a, b) => tierRank[a.tier] - tierRank[b.tier] || (a.price - magnet) - (b.price - magnet),
-    );
+    above.sort((a, b) => (a.price - magnet) - (b.price - magnet)); // nearest above the magnet first
     const strong = above.filter((p) => p.tier !== "micro");
     shortPts = (strong.length ? strong : above).slice(0, 3);
   }
@@ -505,6 +499,73 @@ function nextTradingDay(dateStr: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+const ROUND_STEP: Record<"ES" | "NQ", number> = { ES: 25, NQ: 100 };
+const AUGMENT_BAND: Record<"ES" | "NQ", number> = { ES: 125, NQ: 500 };
+
+/**
+ * Enrich the detected swings with structural anchors (prior-day high/low/close,
+ * overnight high/low), round numbers within a band of price, and a range-based
+ * extension. Everything is bucketed relative to the magnet: above = resistance,
+ * below = support. This guarantees the plan always has near-price levels AND
+ * beyond-price targets on both sides, even on breakout days when price is at new
+ * highs and there are no detected swings above it. Detected swings keep their
+ * quality tier; added reference levels are tagged "minor".
+ */
+export function augmentSwings(
+  swings: SwingLevels | null,
+  structure: StructureLevels | null,
+  magnet: number,
+  price: number,
+  symbol: "ES" | "NQ",
+): SwingLevels {
+  const tick = TICK[symbol];
+  const rt = (v: number) => roundToTick(v, tick);
+  const clusterTol = price * 0.0012;
+  const highs: SwingPoint[] = [...(swings?.highPoints ?? [])];
+  const lows: SwingPoint[] = [...(swings?.lowPoints ?? [])];
+
+  const addLevel = (raw: number | null | undefined, tier: SwingTier) => {
+    if (raw == null || !Number.isFinite(raw)) return;
+    const p = rt(raw);
+    const arr = p > magnet ? highs : p < magnet ? lows : null;
+    if (!arr) return; // sitting exactly on the magnet
+    if (arr.some((q) => Math.abs(q.price - p) < clusterTol)) return;
+    arr.push({ price: p, prominence: 0, tier });
+  };
+
+  addLevel(structure?.priorHigh, "major");
+  addLevel(structure?.priorLow, "major");
+  addLevel(structure?.priorClose, "minor");
+  addLevel(structure?.overnightHigh, "minor");
+  addLevel(structure?.overnightLow, "minor");
+
+  // Round numbers within a band above and below price (near-price levels +
+  // clean upside/downside targets).
+  const step = ROUND_STEP[symbol];
+  const band = AUGMENT_BAND[symbol];
+  for (let r = Math.ceil((price - band) / step) * step; r <= price + band; r += step) {
+    addLevel(r, "minor");
+  }
+
+  // Measured extension off the prior-day range (a projected target each way).
+  if (structure?.priorHigh != null && structure?.priorLow != null) {
+    const range = structure.priorHigh - structure.priorLow;
+    if (range > 0) {
+      addLevel(structure.priorHigh + range * 0.5, "minor");
+      addLevel(structure.priorLow - range * 0.5, "minor");
+    }
+  }
+
+  highs.sort((a, b) => b.price - a.price);
+  lows.sort((a, b) => b.price - a.price);
+  return {
+    lows: lows.map((p) => p.price),
+    highs: highs.map((p) => p.price),
+    lowPoints: lows,
+    highPoints: highs,
+  };
+}
+
 /** Pure, testable core. */
 export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: StructureLevels | null = null, swings: SwingLevels | null = null): ComputedLevels {
   const prev = bars[bars.length - 1];
@@ -524,7 +585,11 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
   const r4 = rt(r3 + (r3 - r2)), s4 = rt(s3 - (s2 - s3));
   const bias: ComputedLevels["bias"] = C > PP + dz ? "bullish" : C < PP - dz ? "bearish" : "neutral";
 
-  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, structure, swings });
+  // Enrich the detected swings with structure, round numbers, and extensions so
+  // the plan always has near-price levels and beyond-price targets on both sides.
+  const enriched = augmentSwings(swings, structure, magnet, rt(C), symbol);
+
+  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, structure, swings: enriched });
 
   return {
     symbol, target_date: nextTradingDay(prev.date), current_price: rt(C),
@@ -548,10 +613,10 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
       priorWeekLow: structure?.priorWeekLow ?? null,
       recentHigh: structure?.recentHigh ?? null,
       recentLow: structure?.recentLow ?? null,
-      swingSupports: swings?.lows ?? [],
-      swingResistances: swings?.highs ?? [],
-      swingSupportPoints: swings?.lowPoints ?? [],
-      swingResistancePoints: swings?.highPoints ?? [],
+      swingSupports: enriched.lows,
+      swingResistances: enriched.highs,
+      swingSupportPoints: enriched.lowPoints,
+      swingResistancePoints: enriched.highPoints,
     },
   };
 }
