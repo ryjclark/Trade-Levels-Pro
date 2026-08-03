@@ -169,3 +169,34 @@ describe("computeLevels — breakout enrichment", () => {
     expect(r.top_long_trade).toMatch(/7,62[0-9]|7,63[0-9]/);
   });
 });
+
+describe("mergeSwings", () => {
+  it("adds fresh fine shelves as minor and dedupes overlaps", async () => {
+    const { mergeSwings } = await import("../server/lib/levels-algorithm");
+    const coarse: any = {
+      lows: [7542.75], highs: [7561.5],
+      lowPoints: [{ price: 7542.75, prominence: 95, tier: "major" }],
+      highPoints: [{ price: 7561.5, prominence: 93, tier: "major" }],
+    };
+    const fine: any = {
+      lows: [7611, 7594, 7567, 7543], highs: [],
+      lowPoints: [
+        { price: 7611, prominence: 20, tier: "major" },
+        { price: 7594, prominence: 15, tier: "minor" },
+        { price: 7567, prominence: 12, tier: "minor" },
+        { price: 7543, prominence: 5, tier: "micro" }, // near coarse 7542.75, and micro
+      ],
+      highPoints: [],
+    };
+    const merged = mergeSwings(coarse, fine, 7600);
+    const prices = merged.lowPoints.map((p: any) => p.price);
+    expect(prices).toContain(7611);
+    expect(prices).toContain(7594);
+    expect(prices).toContain(7567);
+    // 7543 fine is micro AND overlaps coarse 7542.75 -> not double-added
+    expect(prices.filter((p: number) => Math.abs(p - 7543) < 2).length).toBe(1);
+    // fresh shelves are tagged minor, coarse stays major
+    expect(merged.lowPoints.find((p: any) => p.price === 7594).tier).toBe("minor");
+    expect(merged.lowPoints.find((p: any) => p.price === 7542.75).tier).toBe("major");
+  });
+});

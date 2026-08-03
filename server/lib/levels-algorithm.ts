@@ -499,6 +499,35 @@ function nextTradingDay(dateStr: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Merge coarse (monthly) swings with a finer recent pass so the plan also picks
+ * up FRESH intraday shelves near price (the ones a same-day breakout creates).
+ * Coarse points keep their tier. A fine point that isn't already covered by a
+ * coarse level is added as a near-price reference ("minor"); fine micro noise is
+ * dropped.
+ */
+export function mergeSwings(coarse: SwingLevels, fine: SwingLevels, refPrice: number): SwingLevels {
+  const tol = refPrice * 0.001;
+  const mergeSide = (c: SwingPoint[], f: SwingPoint[]): SwingPoint[] => {
+    const out = [...c];
+    for (const p of f) {
+      if (p.tier === "micro") continue;
+      if (out.some((q) => Math.abs(q.price - p.price) < tol)) continue;
+      out.push({ price: p.price, prominence: p.prominence, tier: "minor" });
+    }
+    out.sort((a, b) => b.price - a.price);
+    return out;
+  };
+  const lowPoints = mergeSide(coarse.lowPoints, fine.lowPoints);
+  const highPoints = mergeSide(coarse.highPoints, fine.highPoints);
+  return {
+    lows: lowPoints.map((p) => p.price),
+    highs: highPoints.map((p) => p.price),
+    lowPoints,
+    highPoints,
+  };
+}
+
 const ROUND_STEP: Record<"ES" | "NQ", number> = { ES: 25, NQ: 100 };
 const AUGMENT_BAND: Record<"ES" | "NQ", number> = { ES: 125, NQ: 500 };
 
@@ -645,7 +674,17 @@ export async function generateAndPublishLevels(): Promise<void> {
         const intraday = await fetchIntradayBars(symbol, "1mo", "30m");
         bars = await fetchRthDailyBars(symbol);
         structure = computeStructureLevels(intraday, symbol);
-        swings = detectSwings(intraday, symbol);
+        const coarseSwings = detectSwings(intraday, symbol);
+        // Add a finer recent pass (last ~5 days at 15m) to catch fresh shelves
+        // near price. Non-fatal: fall back to the coarse pass if it fails.
+        swings = coarseSwings;
+        try {
+          const fine = await fetchIntradayBars(symbol, "5d", "15m");
+          const refPrice = intraday.length ? intraday[intraday.length - 1].close : (bars[bars.length - 1]?.close ?? 0);
+          if (refPrice > 0) swings = mergeSwings(coarseSwings, detectSwings(fine, symbol), refPrice);
+        } catch (fineErr: any) {
+          console.warn(`[levels] ${symbol} fine swing pass unavailable (${fineErr?.message || fineErr})`);
+        }
       } catch (rthErr: any) {
         console.warn(`[levels] ${symbol} RTH/structure unavailable (${rthErr?.message || rthErr}); falling back to daily`);
         bars = await fetchDailyBars(symbol);
