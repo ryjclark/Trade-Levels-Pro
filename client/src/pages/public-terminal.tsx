@@ -267,13 +267,13 @@ export default function PublicTerminalPage() {
                   )}
                 </div>
                 {memberPlan.topLongTrade && (
-                  <div style={{ fontSize: 14, marginBottom: 8 }}>
-                    <span style={{ color: "#4ade80", fontWeight: 700 }}>🟢 Top Long:</span> {memberPlan.topLongTrade}
+                  <div style={{ fontSize: 14, marginBottom: 10, whiteSpace: "pre-line" }}>
+                    <span style={{ color: "#4ade80", fontWeight: 700 }}>🟢 Top Long{"\n"}</span>{memberPlan.topLongTrade}
                   </div>
                 )}
                 {memberPlan.topShortTrade && (
-                  <div style={{ fontSize: 14 }}>
-                    <span style={{ color: "#f87171", fontWeight: 700 }}>🔴 Top Short:</span> {memberPlan.topShortTrade}
+                  <div style={{ fontSize: 14, whiteSpace: "pre-line" }}>
+                    <span style={{ color: "#f87171", fontWeight: 700 }}>🔴 Top Short{"\n"}</span>{memberPlan.topShortTrade}
                   </div>
                 )}
               </div>
