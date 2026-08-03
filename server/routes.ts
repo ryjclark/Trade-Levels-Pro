@@ -804,6 +804,16 @@ export async function registerRoutes(
   // Public, read-only track record: aggregate hit rates from plan_results.
   // Powers the public "proof" page. Buckets overall + per-symbol so we can show
   // magnet hit rate, R1/S1 tag rates, and sessions counted.
+  app.get("/api/public/daily-brief", async (_req, res) => {
+    try {
+      const { buildDailyBrief } = await import("./lib/daily-brief");
+      res.json(await buildDailyBrief());
+    } catch (err) {
+      console.error("public daily-brief error:", err);
+      res.status(500).json({ error: "Failed to load daily brief" });
+    }
+  });
+
   app.get("/api/public/track-record", async (_req, res) => {
     try {
       const rows = await storage.listAllPlanResults(1000);

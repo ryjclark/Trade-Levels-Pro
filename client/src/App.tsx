@@ -16,6 +16,7 @@ import PublicHomePage from "@/pages/public-home";
 import PublicPricingPage from "@/pages/public-pricing";
 import PublicSamplePage from "@/pages/public-sample";
 import PublicTrackRecordPage from "@/pages/public-trackrecord";
+import PublicBriefPage from "@/pages/public-brief";
 import PublicTerminalPage from "@/pages/public-terminal";
 import MemberLoginPage from "@/pages/member-login";
 import MemberAuthPage from "@/pages/member-auth";
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/about" component={PublicAboutPage} />
       <Route path="/archive" component={PublicArchivePage} />
       <Route path="/track-record" component={PublicTrackRecordPage} />
+      <Route path="/brief" component={PublicBriefPage} />
       <Route path="/terminal" component={PublicTerminalPage} />
       <Route path="/member-login" component={MemberLoginPage} />
       <Route path="/member-auth" component={MemberAuthPage} />
