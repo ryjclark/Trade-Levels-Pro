@@ -24,26 +24,58 @@ export function formatTitle(plan: Plan): string {
   return `${plan.symbol} Daily Trade Plan — ${datePart}${contract}`;
 }
 
+function num2(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '-';
+  const n = Number(value);
+  return Number.isNaN(n) ? '-' : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function plainDateShort(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return Number.isNaN(d.getTime())
+    ? dateStr
+    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Matches the compact PLAIN-TEXT message the server actually sends to Telegram:
+// leads with failed-breakdown longs (supports below the magnet) and rejection
+// shorts (resistances above the magnet); no R1-R4/S1-S4 ladder, no markdown.
 export function formatTelegramPro(plan: Plan): string {
-  const title = formatTitle(plan);
-  const lines = [
-    title,
-    '',
-    `Magnet: ${formatNumber(plan.magnet)}`,
-    `Dynamic Zone: ${formatNumber(plan.dynamicZoneBottom)} – ${formatNumber(plan.dynamicZoneTop)}`,
-    `Resistance: R1 ${formatNumber(plan.r1)} | R2 ${formatNumber(plan.r2)} | R3 ${formatNumber(plan.r3)} | R4 ${formatNumber(plan.r4)}`,
-    `Support: S1 ${formatNumber(plan.s1)} | S2 ${formatNumber(plan.s2)} | S3 ${formatNumber(plan.s3)} | S4 ${formatNumber(plan.s4)}`,
-    `Bias: ${plan.bias || ''}`,
-    'Best Setups:',
-    `- ${plan.setup1 || ''}`,
-    `- ${plan.setup2 || ''}`
-  ];
+  const magnet = plan.magnet ?? null;
+  const supports = [plan.s1, plan.s2, plan.s3, plan.s4].filter((v): v is number => v != null);
+  const resistances = [plan.r1, plan.r2, plan.r3, plan.r4].filter((v): v is number => v != null);
+  const longs = magnet != null ? supports.filter((v) => v < magnet) : supports;
+  const shorts = magnet != null ? resistances.filter((v) => v > magnet) : resistances;
+  const medals = ['🥇', '🥈', '🥉'];
+
+  const lines: string[] = [];
+  lines.push(`🤖 ${plan.symbol} Trade Plan · ${plainDateShort(plan.date)}`);
+  lines.push('');
+  if (plan.bias) lines.push(`Bias: ${plan.bias}`);
+  lines.push(`Magnet: ${num2(magnet)}`);
+  lines.push(`Dynamic Zone: ${num2(plan.dynamicZoneBottom)} – ${num2(plan.dynamicZoneTop)}`);
+
+  if (longs.length) {
+    lines.push('');
+    lines.push('🟢 Failed-breakdown longs (best first)');
+    longs.slice(0, 3).forEach((v, i) =>
+      lines.push(i === 0 ? `${medals[0]} ${num2(v)} → flush and reclaim, long toward the magnet` : `${medals[i]} ${num2(v)}`),
+    );
+  }
+  if (shorts.length) {
+    lines.push('');
+    lines.push('🔴 Rejection shorts (secondary)');
+    shorts.slice(0, 3).forEach((v, i) =>
+      lines.push(i === 0 ? `${medals[0]} ${num2(v)} → reject and fail, short toward the magnet` : `${medals[i]} ${num2(v)}`),
+    );
+  }
 
   if (plan.notes) {
     lines.push('', `Notes: ${plan.notes}`);
   }
-
-  lines.push('', 'Trade Smarter. React to Price. No Predictions.');
+  lines.push('');
+  lines.push('Rule: wait for acceptance, then manage level to level.');
+  lines.push('Educational only. Not investment advice.');
   return lines.join('\n');
 }
 

@@ -44,10 +44,23 @@ function plainDate(dateStr: string): string {
 export function formatAlgorithmPlan(plan: Plan): string {
   const lv = (plan as any).levels as PlanLevels | null;
   const magnet = plan.magnet ?? lv?.magnet ?? null;
-  const longPts = lv?.swingSupportPoints && magnet != null ? rankSide(lv.swingSupportPoints, magnet, "below") : [];
-  const shortPts = lv?.swingResistancePoints && magnet != null ? rankSide(lv.swingResistancePoints, magnet, "above") : [];
 
-  if (magnet == null || (longPts.length === 0 && shortPts.length === 0)) {
+  // Failed-breakdown longs = supports below the magnet, rejection shorts =
+  // resistances above it. Prefer the ranked swing points; if a plan has none,
+  // fall back to the S1-S4 / R1-R4 levels so we ALWAYS emit the clean compact
+  // plan and never the old pivot dump.
+  let longVals: number[] = [];
+  let shortVals: number[] = [];
+  if (lv?.swingSupportPoints && magnet != null) longVals = rankSide(lv.swingSupportPoints, magnet, "below").map((p) => p.price);
+  if (lv?.swingResistancePoints && magnet != null) shortVals = rankSide(lv.swingResistancePoints, magnet, "above").map((p) => p.price);
+  if (!longVals.length && magnet != null) {
+    longVals = [plan.s1, plan.s2, plan.s3, plan.s4].filter((v): v is number => v != null && v < magnet).slice(0, 3);
+  }
+  if (!shortVals.length && magnet != null) {
+    shortVals = [plan.r1, plan.r2, plan.r3, plan.r4].filter((v): v is number => v != null && v > magnet).slice(0, 3);
+  }
+
+  if (magnet == null || (longVals.length === 0 && shortVals.length === 0)) {
     return `🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}\nLevels on the terminal: tradelevelspro.com/terminal`;
   }
 
@@ -59,20 +72,20 @@ export function formatAlgorithmPlan(plan: Plan): string {
   L.push(`Magnet: ${num(magnet)}`);
   L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
 
-  if (longPts.length) {
+  if (longVals.length) {
     L.push("");
     L.push("🟢 Failed-breakdown longs (best first)");
-    longPts.forEach((p, i) => {
-      if (i === 0) L.push(`${medals[0]} ${num(p.price)} → flush and reclaim, long toward the magnet ${num(magnet)}`);
-      else L.push(`${medals[i]} ${num(p.price)} ${i === 1 ? "(backup)" : "(deeper)"}`);
+    longVals.forEach((v, i) => {
+      if (i === 0) L.push(`${medals[0]} ${num(v)} → flush and reclaim, long toward the magnet ${num(magnet)}`);
+      else L.push(`${medals[i]} ${num(v)} ${i === 1 ? "(backup)" : "(deeper)"}`);
     });
   }
-  if (shortPts.length) {
+  if (shortVals.length) {
     L.push("");
     L.push("🔴 Rejection shorts (secondary)");
-    shortPts.forEach((p, i) => {
-      if (i === 0) L.push(`${medals[0]} ${num(p.price)} → reject and fail, short toward the magnet`);
-      else L.push(`${medals[i]} ${num(p.price)}`);
+    shortVals.forEach((v, i) => {
+      if (i === 0) L.push(`${medals[0]} ${num(v)} → reject and fail, short toward the magnet`);
+      else L.push(`${medals[i]} ${num(v)}`);
     });
   }
 
