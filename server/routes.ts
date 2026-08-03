@@ -815,6 +815,14 @@ export async function registerRoutes(
         hitR2: 0,
         hitS1: 0,
         hitS2: 0,
+        // level-hit aggregates (from levelHits jsonb)
+        named: {} as Record<string, { tagged: number; total: number }>,
+        supFlushed: 0,
+        supReclaimed: 0,
+        supTagged: 0,
+        supTotal: 0,
+        resTagged: 0,
+        resTotal: 0,
       });
       type Bucket = ReturnType<typeof emptyBucket>;
       const buckets: Record<string, Bucket> = { ALL: emptyBucket() };
@@ -829,6 +837,20 @@ export async function registerRoutes(
           b.hitR2 += r.hitR2 ?? 0;
           b.hitS1 += r.hitS1 ?? 0;
           b.hitS2 += r.hitS2 ?? 0;
+          const lh = (r as any).levelHits as import("@shared/schema").LevelHits | null;
+          if (lh) {
+            for (const [k, v] of Object.entries(lh.named || {})) {
+              if (!b.named[k]) b.named[k] = { tagged: 0, total: 0 };
+              b.named[k].tagged += v ? 1 : 0;
+              b.named[k].total += 1;
+            }
+            b.supFlushed += lh.supports?.flushed ?? 0;
+            b.supReclaimed += lh.supports?.reclaimed ?? 0;
+            b.supTagged += lh.supports?.tagged ?? 0;
+            b.supTotal += lh.supports?.total ?? 0;
+            b.resTagged += lh.resistances?.tagged ?? 0;
+            b.resTotal += lh.resistances?.total ?? 0;
+          }
         }
       }
 
@@ -840,6 +862,14 @@ export async function registerRoutes(
         r2TagRate: rate(b.hitR2, b.sessions),
         s1TagRate: rate(b.hitS1, b.sessions),
         s2TagRate: rate(b.hitS2, b.sessions),
+        // structure/swing level performance
+        namedTagRates: Object.fromEntries(
+          Object.entries(b.named).map(([k, v]) => [k, rate(v.tagged, v.total)]),
+        ),
+        supportTagRate: rate(b.supTagged, b.supTotal),
+        resistanceTagRate: rate(b.resTagged, b.resTotal),
+        failedBreakdownWinRate: rate(b.supReclaimed, b.supFlushed),
+        failedBreakdownSamples: b.supFlushed,
       });
 
       const bySymbol: Record<string, ReturnType<typeof summarize>> = {};
@@ -1282,6 +1312,7 @@ export async function registerRoutes(
         algorithmVersion: d.algorithm_version,
         generatedAt: new Date(),
         currentPrice: d.current_price ?? null,
+        levels: d.levels ?? null,
       } as any);
 
       const settings = await storage.getSettings();

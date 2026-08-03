@@ -3,6 +3,33 @@ import { pgTable, text, varchar, real, timestamp, integer, serial, jsonb, numeri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Full curated level set stored with each plan so the track record scores the
+// exact levels that were published (not levels recomputed later from newer data).
+export interface PlanLevels {
+  magnet: number | null;
+  dynamicZoneTop: number | null;
+  dynamicZoneBottom: number | null;
+  priorHigh: number | null;
+  priorLow: number | null;
+  priorClose: number | null;
+  overnightHigh: number | null;
+  overnightLow: number | null;
+  priorWeekHigh: number | null;
+  priorWeekLow: number | null;
+  recentHigh: number | null;
+  recentLow: number | null;
+  swingSupports: number[];
+  swingResistances: number[];
+}
+
+// Per-session scoring of those levels (which were tagged, and failed-breakdown success).
+export interface LevelHits {
+  magnet: 0 | 1;
+  named: Record<string, 0 | 1>; // priorHigh, priorLow, overnightHigh, ...
+  supports: { total: number; tagged: number; flushed: number; reclaimed: number };
+  resistances: { total: number; tagged: number };
+}
+
 export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
@@ -34,6 +61,7 @@ export const plans = pgTable("plans", {
   algorithmVersion: text("algorithm_version"),
   generatedAt: timestamp("generated_at"),
   currentPrice: real("current_price"),
+  levels: jsonb("levels").$type<PlanLevels | null>(),
   biasReasoning: text("bias_reasoning"),
   topLongTrade: text("top_long_trade"),
   topShortTrade: text("top_short_trade"),
@@ -95,6 +123,26 @@ export const ingestLevelsSchema = z.object({
   bias_reasoning: z.string().nullable().optional(),
   top_long_trade: z.string().nullable().optional(),
   top_short_trade: z.string().nullable().optional(),
+  // Full curated level set for the track record to score later.
+  levels: z
+    .object({
+      magnet: z.number().nullable(),
+      dynamicZoneTop: z.number().nullable(),
+      dynamicZoneBottom: z.number().nullable(),
+      priorHigh: z.number().nullable(),
+      priorLow: z.number().nullable(),
+      priorClose: z.number().nullable(),
+      overnightHigh: z.number().nullable(),
+      overnightLow: z.number().nullable(),
+      priorWeekHigh: z.number().nullable(),
+      priorWeekLow: z.number().nullable(),
+      recentHigh: z.number().nullable(),
+      recentLow: z.number().nullable(),
+      swingSupports: z.array(z.number()),
+      swingResistances: z.array(z.number()),
+    })
+    .nullable()
+    .optional(),
 });
 export type IngestLevelsPayload = z.infer<typeof ingestLevelsSchema>;
 
@@ -184,6 +232,7 @@ export const planResults = pgTable("plan_results", {
   hitS1: integer("hit_s1"),
   hitS2: integer("hit_s2"),
   hitMagnet: integer("hit_magnet"),
+  levelHits: jsonb("level_hits").$type<LevelHits | null>(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

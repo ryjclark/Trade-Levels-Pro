@@ -11,7 +11,24 @@ interface Summary {
   r2TagRate: number | null;
   s1TagRate: number | null;
   s2TagRate: number | null;
+  namedTagRates?: Record<string, number | null>;
+  supportTagRate?: number | null;
+  resistanceTagRate?: number | null;
+  failedBreakdownWinRate?: number | null;
+  failedBreakdownSamples?: number;
 }
+
+const NAMED_LABELS: Record<string, string> = {
+  priorHigh: "Prior-day high",
+  priorLow: "Prior-day low",
+  priorClose: "Prior-day close",
+  overnightHigh: "Overnight high",
+  overnightLow: "Overnight low",
+  priorWeekHigh: "Prior-week high",
+  priorWeekLow: "Prior-week low",
+  recentHigh: "~1mo high",
+  recentLow: "~1mo low",
+};
 
 interface TrackRecord {
   overall: Summary;
@@ -79,14 +96,62 @@ export default function PublicTrackRecordPage() {
               }}
               data-testid="track-record-overall"
             >
+              <StatTile
+                label="Failed-breakdown win rate"
+                value={pct(overall.failedBreakdownWinRate ?? null)}
+                sub={
+                  overall.failedBreakdownSamples
+                    ? `${overall.failedBreakdownSamples} flushes reclaimed`
+                    : "of levels that flushed, % that reclaimed"
+                }
+              />
               <StatTile label="Magnet hit rate" value={pct(overall.magnetHitRate)} />
-              <StatTile label="R1 tagged" value={pct(overall.r1TagRate)} />
-              <StatTile label="S1 tagged" value={pct(overall.s1TagRate)} />
+              <StatTile
+                label="Support tag rate"
+                value={pct(overall.supportTagRate ?? null)}
+                sub="all support levels"
+              />
+              <StatTile
+                label="Resistance tag rate"
+                value={pct(overall.resistanceTagRate ?? null)}
+                sub="all resistance levels"
+              />
               <StatTile
                 label="Sessions counted"
                 value={overall.sessions.toLocaleString()}
               />
             </section>
+
+            {overall.namedTagRates &&
+              Object.keys(overall.namedTagRates).length > 0 && (
+                <section style={{ marginBottom: 40 }}>
+                  <h2
+                    className="public-h1"
+                    style={{ fontSize: 22, marginBottom: 14 }}
+                  >
+                    Structure levels — how often each gets tagged
+                  </h2>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(150px, 1fr))",
+                      gap: 12,
+                    }}
+                    data-testid="track-record-named"
+                  >
+                    {Object.entries(overall.namedTagRates)
+                      .sort((a, b) => (b[1] ?? -1) - (a[1] ?? -1))
+                      .map(([key, val]) => (
+                        <StatTile
+                          key={key}
+                          label={NAMED_LABELS[key] ?? key}
+                          value={pct(val)}
+                        />
+                      ))}
+                  </div>
+                </section>
+              )}
 
             {symbols.length > 0 && (
               <section>
@@ -136,8 +201,11 @@ export default function PublicTrackRecordPage() {
 
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 32, maxWidth: 640 }}>
               A "tag" means price traded to or through that level during the
-              session. Magnet hit means the session's range contained the magnet.
-              Past performance is not indicative of future results.
+              regular session. Magnet hit means the session's range contained the
+              magnet. Failed-breakdown win rate = of the support levels that
+              flushed below (traded under the line), the share that closed back
+              above it — the core setup we trade. Past performance is not
+              indicative of future results.
             </p>
           </>
         )}

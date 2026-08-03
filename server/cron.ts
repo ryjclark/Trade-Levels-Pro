@@ -120,6 +120,42 @@ async function fetchAndStoreDailyResults() {
       const hitS1 = b01(plan.s1 != null && low <= plan.s1);
       const hitS2 = b01(plan.s2 != null && low <= plan.s2);
 
+      // Score EVERY stored level (structure + swing) for the track record.
+      // Resistance tagged = high >= level; support tagged = low <= level;
+      // magnet tagged = range contains it. Failed-breakdown "worked" = a support
+      // flushed (low < level) AND closed back above it (close > level).
+      const lv = (plan as any).levels as import("@shared/schema").PlanLevels | null;
+      let levelHits: import("@shared/schema").LevelHits | null = null;
+      if (lv) {
+        const named: Record<string, 0 | 1> = {};
+        const namedResist: Array<[string, number | null]> = [
+          ["priorHigh", lv.priorHigh], ["overnightHigh", lv.overnightHigh],
+          ["priorWeekHigh", lv.priorWeekHigh], ["recentHigh", lv.recentHigh],
+        ];
+        const namedSupport: Array<[string, number | null]> = [
+          ["priorLow", lv.priorLow], ["priorClose", lv.priorClose], ["overnightLow", lv.overnightLow],
+          ["priorWeekLow", lv.priorWeekLow], ["recentLow", lv.recentLow],
+        ];
+        for (const [k, v] of namedResist) if (v != null) named[k] = b01(high >= v);
+        for (const [k, v] of namedSupport) if (v != null) named[k] = b01(low <= v);
+
+        const sups = lv.swingSupports ?? [];
+        const res = lv.swingResistances ?? [];
+        let flushed = 0, reclaimed = 0, supTagged = 0;
+        for (const s of sups) {
+          if (low <= s) supTagged++;
+          if (low < s) { flushed++; if (close > s) reclaimed++; }
+        }
+        const resTagged = res.filter((r) => high >= r).length;
+
+        levelHits = {
+          magnet: hitMagnet as 0 | 1,
+          named,
+          supports: { total: sups.length, tagged: supTagged, flushed, reclaimed },
+          resistances: { total: res.length, tagged: resTagged },
+        };
+      }
+
       await storage.insertPlanResult({
         planId: plan.id,
         date: today,
@@ -133,6 +169,7 @@ async function fetchAndStoreDailyResults() {
         hitS1,
         hitS2,
         hitMagnet,
+        levelHits: levelHits as any,
         notes: null,
       });
       console.log(

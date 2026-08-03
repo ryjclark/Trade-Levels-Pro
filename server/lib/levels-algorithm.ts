@@ -22,6 +22,23 @@ export interface ComputedLevels {
   top_long_trade: string;
   top_short_trade: string;
   algorithm_version: string;
+  // Full curated level set, stored with the plan so the track record can score it.
+  levels: {
+    magnet: number | null;
+    dynamicZoneTop: number | null;
+    dynamicZoneBottom: number | null;
+    priorHigh: number | null;
+    priorLow: number | null;
+    priorClose: number | null;
+    overnightHigh: number | null;
+    overnightLow: number | null;
+    priorWeekHigh: number | null;
+    priorWeekLow: number | null;
+    recentHigh: number | null;
+    recentLow: number | null;
+    swingSupports: number[];
+    swingResistances: number[];
+  };
 }
 
 const YAHOO_SYMBOL: Record<"ES" | "NQ", string> = { ES: "ES=F", NQ: "NQ=F" };
@@ -416,6 +433,22 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
     top_long_trade: plan.long,
     top_short_trade: plan.short,
     algorithm_version: ALGORITHM_VERSION,
+    levels: {
+      magnet,
+      dynamicZoneTop: dynamic_zone_high,
+      dynamicZoneBottom: dynamic_zone_low,
+      priorHigh: structure?.priorHigh ?? null,
+      priorLow: structure?.priorLow ?? null,
+      priorClose: structure?.priorClose ?? null,
+      overnightHigh: structure?.overnightHigh ?? null,
+      overnightLow: structure?.overnightLow ?? null,
+      priorWeekHigh: structure?.priorWeekHigh ?? null,
+      priorWeekLow: structure?.priorWeekLow ?? null,
+      recentHigh: structure?.recentHigh ?? null,
+      recentLow: structure?.recentLow ?? null,
+      swingSupports: swings?.lows ?? [],
+      swingResistances: swings?.highs ?? [],
+    },
   };
 }
 
