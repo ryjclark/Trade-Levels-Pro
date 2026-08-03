@@ -221,7 +221,7 @@ async function postDailyBriefToTelegram() {
     const brief = await buildDailyBrief();
     const text = formatBriefTelegram(brief);
     if (!text) return; // nothing scored yet, don't post an empty brief
-    await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN, chatId: TELEGRAM_CHAT_ID, text });
+    await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN, chatId: TELEGRAM_CHAT_ID, text, parseMode: "none" });
     console.log("[cron] posted daily brief to Telegram");
   } catch (err: any) {
     console.error("[cron] daily brief post failed:", err?.message || err);

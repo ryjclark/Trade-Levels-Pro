@@ -23,63 +23,63 @@ function rankSide(points: SwingPointData[], magnet: number, side: "below" | "abo
   return (strong.length ? strong : filtered).slice(0, 3);
 }
 
-// Algorithm-sourced plans: a compact, mobile-friendly message that LEADS with the
-// failed-breakdown setups (the real plan) built from the ranked level data, and
-// drops the R1-R4/S1-S4 pivot ladder. Falls back to the pro template for older
-// plans that carry no ranked level points.
+function num(v: number | null | undefined): string {
+  if (v === null || v === undefined) return "-";
+  const n = Number(v);
+  return Number.isNaN(n) ? "-" : n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function plainDate(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return Number.isNaN(d.getTime())
+    ? dateStr
+    : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Algorithm-sourced plans: a compact, PLAIN-TEXT message (sent with no parse mode
+// so it can never render broken) that LEADS with the failed-breakdown setups from
+// the ranked level data and drops the R1-R4/S1-S4 ladder. Longs target the magnet;
+// shorts fade the first resistance back to the magnet, so no level is shown as both
+// a long target and a short at once. Falls back to a minimal line for older plans.
 export function formatAlgorithmPlan(plan: Plan): string {
-  const version = plan.algorithmVersion ? escapeMdV2(plan.algorithmVersion) : "unknown";
   const lv = (plan as any).levels as PlanLevels | null;
   const magnet = plan.magnet ?? lv?.magnet ?? null;
   const longPts = lv?.swingSupportPoints && magnet != null ? rankSide(lv.swingSupportPoints, magnet, "below") : [];
   const shortPts = lv?.swingResistancePoints && magnet != null ? rankSide(lv.swingResistancePoints, magnet, "above") : [];
 
-  // Older plans without ranked points: keep the previous behaviour.
   if (magnet == null || (longPts.length === 0 && shortPts.length === 0)) {
-    return `🤖 Algorithm ${version}\n` + formatTelegramPro(plan);
+    return `🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}\nLevels on the terminal: tradelevelspro.com/terminal`;
   }
 
-  const e = escapeMdV2;
-  const symbol = e(plan.symbol);
-  const datePart = formatDateLine(plan.date);
-  const arrow = "→"; // → (not reserved)
-  const target = shortPts[0] ? shortPts[0].price : magnet; // nearest resistance = first upside target
-
-  const lines: string[] = [];
-  lines.push(`🤖 *${symbol} Trade Plan ${e("·")} ${datePart}*`);
-  if (plan.bias) lines.push(`*Bias:* ${e(plan.bias)}`);
-  lines.push("");
-  lines.push(`*Magnet:* ${tick(magnet)}`);
-  lines.push(`*Dynamic Zone:* ${tick(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${tick(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
-
   const medals = ["🥇", "🥈", "🥉"];
+  const L: string[] = [];
+  L.push(`🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}`);
+  L.push("");
+  if (plan.bias) L.push(`Bias: ${plan.bias}`);
+  L.push(`Magnet: ${num(magnet)}`);
+  L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
+
   if (longPts.length) {
-    lines.push("");
-    lines.push(`🟢 *${e("Failed-breakdown longs (best first)")}*`);
+    L.push("");
+    L.push("🟢 Failed-breakdown longs (best first)");
     longPts.forEach((p, i) => {
-      if (i === 0) {
-        lines.push(`${medals[0]} ${tick(p.price)} ${arrow} long toward ${tick(magnet)}, then ${tick(target)}`);
-      } else {
-        lines.push(`${medals[i]} ${tick(p.price)} ${e(i === 1 ? "backup" : "deeper")}`);
-      }
+      if (i === 0) L.push(`${medals[0]} ${num(p.price)} → flush and reclaim, long toward the magnet ${num(magnet)}`);
+      else L.push(`${medals[i]} ${num(p.price)} ${i === 1 ? "(backup)" : "(deeper)"}`);
     });
   }
   if (shortPts.length) {
-    lines.push("");
-    lines.push(`🔴 *${e("Rejection shorts (secondary)")}*`);
+    L.push("");
+    L.push("🔴 Rejection shorts (secondary)");
     shortPts.forEach((p, i) => {
-      if (i === 0) {
-        lines.push(`${medals[0]} ${tick(p.price)} ${arrow} short toward the magnet`);
-      } else {
-        lines.push(`${medals[i]} ${tick(p.price)} ${e("next level up")}`);
-      }
+      if (i === 0) L.push(`${medals[0]} ${num(p.price)} → reject and fail, short toward the magnet`);
+      else L.push(`${medals[i]} ${num(p.price)}`);
     });
   }
 
-  lines.push("");
-  lines.push(e("Rule: wait for acceptance, then manage level to level."));
-  lines.push(`_${e("Educational only. Not investment advice.")}_`);
-  return lines.join("\n");
+  L.push("");
+  L.push("Rule: wait for acceptance, then manage level to level.");
+  L.push("Educational only. Not investment advice.");
+  return L.join("\n");
 }
 
 function tick(value: number | null | undefined): string {

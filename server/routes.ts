@@ -1383,11 +1383,12 @@ export async function registerRoutes(
         return res.status(200).json({ ok: true, plan, telegramSent: false, reason: "telegram-not-configured" });
       }
 
-      // Rich algorithm template: 🤖 tag + bias reasoning + top long/short setups.
+      // Compact PLAIN-TEXT algorithm plan (sent with no parse mode so it can
+      // never render broken). Footer appended raw for the same reason.
       let text = formatAlgorithmPlan(plan);
       if (settings.footerEnabled && settings.footerText) {
         const footer = settings.footerText.replace("{JOIN_URL}", settings.joinUrl || "");
-        text += "\n\n" + escapeMdV2(footer);
+        text += "\n\n" + footer;
       }
 
       try {
@@ -1395,6 +1396,7 @@ export async function registerRoutes(
           token: TELEGRAM_BOT_TOKEN,
           chatId: TELEGRAM_CHAT_ID,
           text,
+          parseMode: "none",
         });
         const messageId = resp.result?.message_id?.toString() || "";
         plan = await storage.upsertPlan({
