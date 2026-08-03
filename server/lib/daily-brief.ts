@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import type { Plan, PlanResult, PlanLevels, LevelHits } from "@shared/schema";
+import { escapeMdV2 } from "../formatter";
 
 // The Daily Brief is the automated "voice" layer: a plain-English recap of how
 // the prior session's plan resolved (proof), plus today's setup at a glance
@@ -132,4 +133,25 @@ export async function buildDailyBrief(): Promise<DailyBrief> {
   const note =
     "Reactive plan. Wait for acceptance, then manage level to level. Educational only, not financial advice.";
   return { generatedForDate, today, recap, note };
+}
+
+/**
+ * Short, recap-focused Telegram post (the "newsletter voice"): how yesterday's
+ * plan played out. Returns null when there's nothing scored yet, so we never
+ * post an empty brief. Deliberately does NOT repeat today's setup (the plan
+ * message already covers that).
+ */
+export function formatBriefTelegram(brief: DailyBrief): string | null {
+  if (!brief.recap.length) return null;
+  const e = escapeMdV2;
+  const lines: string[] = [];
+  lines.push(`📋 *${e("Daily Brief: how yesterday's plan played out")}*`);
+  lines.push("");
+  for (const r of brief.recap) {
+    lines.push(`*${e(r.symbol)}:* ${e(r.line.replace(new RegExp("^" + r.symbol + ":\\s*"), ""))}`);
+  }
+  lines.push("");
+  lines.push(e("Track record: tradelevelspro.com/track-record"));
+  lines.push(`_${e("Educational only. Not investment advice.")}_`);
+  return lines.join("\n");
 }

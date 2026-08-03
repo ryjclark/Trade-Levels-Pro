@@ -3,6 +3,9 @@ import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
 import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars } from "./lib/levels-algorithm";
+import { postToX } from "./lib/twitter";
+import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
+import type { PlanLevels } from "@shared/schema";
 
 /** Today's date as YYYY-MM-DD in America/New_York. */
 function nyToday(): string {
@@ -176,9 +179,52 @@ async function fetchAndStoreDailyResults() {
         `[cron] results: recorded ${symbol} ${today} ` +
           `(O ${open} H ${high} L ${low} C ${close}; magnet ${hitMagnet}, R1 ${hitR1}, S1 ${hitS1})`,
       );
+
+      // Auto-post to X when the plan's discussed levels actually reacted: the
+      // failed breakdown worked (flushed and reclaimed) or the magnet was tagged.
+      // This is proof/marketing; no-op in dev-mode until X credentials are set.
+      try {
+        const worked = levelHits ? levelHits.supports.reclaimed > 0 || hitMagnet === 1 : false;
+        if (worked) {
+          const lv = (plan as any).levels as PlanLevels | null;
+          let keyLevel: number | null = null;
+          if (lv && plan.magnet != null) {
+            const below = (lv.swingSupportPoints ?? []).filter((p) => p.price < plan.magnet!);
+            const major = below.find((p) => p.tier === "major") ?? below[0];
+            keyLevel = major ? major.price : null;
+          }
+          const parts: string[] = [`$${symbol} nightly plan update.`];
+          if (levelHits && levelHits.supports.reclaimed > 0) {
+            parts.push(
+              keyLevel != null
+                ? `Price flushed below ${keyLevel} and reclaimed it, the failed-breakdown long we flagged the night before.`
+                : `A failed breakdown we flagged flushed and reclaimed.`,
+            );
+          } else if (hitMagnet === 1) {
+            parts.push(`Price tagged the ${plan.magnet} magnet from the plan.`);
+          }
+          parts.push(`Free nightly ES & NQ levels: tradelevelspro.com`);
+          await postToX(parts.join(" "));
+        }
+      } catch (xErr: any) {
+        console.error(`[cron] X auto-post ${symbol} failed:`, xErr?.message || xErr);
+      }
     } catch (err: any) {
       console.error(`[cron] results: ${symbol} failed:`, err?.message || err);
     }
+  }
+}
+
+async function postDailyBriefToTelegram() {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  try {
+    const brief = await buildDailyBrief();
+    const text = formatBriefTelegram(brief);
+    if (!text) return; // nothing scored yet, don't post an empty brief
+    await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN, chatId: TELEGRAM_CHAT_ID, text });
+    console.log("[cron] posted daily brief to Telegram");
+  } catch (err: any) {
+    console.error("[cron] daily brief post failed:", err?.message || err);
   }
 }
 
@@ -203,9 +249,9 @@ export function registerCronJobs() {
   cron.schedule(
     "15 17 * * 1-5",
     () => {
-      generateAndPublishLevels().catch((e) =>
-        console.error("[cron] levels generation error:", e),
-      );
+      generateAndPublishLevels()
+        .then(() => postDailyBriefToTelegram())
+        .catch((e) => console.error("[cron] levels generation error:", e));
     },
     { timezone: "America/New_York" } as any,
   );
