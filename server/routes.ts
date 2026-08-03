@@ -893,10 +893,45 @@ export async function registerRoutes(
       const symParam = String(req.query.symbol || "ES").toUpperCase();
       const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
       const bars = await fetchIntradayBars(symbol, "1mo", "30m");
-      const structure = computeStructureLevels(bars, symbol);
-      const swings = detectSwings(bars, symbol);
       const publicPlans = await storage.listPublicPlans(50);
       const plan = publicPlans.find((p) => p.symbol === symbol) || null;
+
+      // Show the levels the plan was actually built from (stored with the plan),
+      // so the terminal and the trade plan can never drift apart. Only recompute
+      // live when there's no published plan to anchor to.
+      const stored = (plan as any)?.levels as import("@shared/schema").PlanLevels | null | undefined;
+      let structure: {
+        priorHigh: number | null; priorLow: number | null; priorClose: number | null;
+        overnightHigh: number | null; overnightLow: number | null;
+        priorWeekHigh: number | null; priorWeekLow: number | null;
+        recentHigh: number | null; recentLow: number | null;
+      } | null;
+      let swings: {
+        lows: number[]; highs: number[];
+        lowPoints: import("@shared/schema").SwingPointData[];
+        highPoints: import("@shared/schema").SwingPointData[];
+      };
+      if (stored) {
+        structure = {
+          priorHigh: stored.priorHigh, priorLow: stored.priorLow, priorClose: stored.priorClose,
+          overnightHigh: stored.overnightHigh, overnightLow: stored.overnightLow,
+          priorWeekHigh: stored.priorWeekHigh, priorWeekLow: stored.priorWeekLow,
+          recentHigh: stored.recentHigh, recentLow: stored.recentLow,
+        };
+        // Fall back to the bare number arrays (tier "minor") for plans generated
+        // before ranked points were stored.
+        const toPts = (nums: number[]) =>
+          nums.map((price) => ({ price, prominence: 0, tier: "minor" as const }));
+        swings = {
+          lows: stored.swingSupports ?? [],
+          highs: stored.swingResistances ?? [],
+          lowPoints: stored.swingSupportPoints ?? toPts(stored.swingSupports ?? []),
+          highPoints: stored.swingResistancePoints ?? toPts(stored.swingResistances ?? []),
+        };
+      } else {
+        structure = computeStructureLevels(bars, symbol);
+        swings = detectSwings(bars, symbol);
+      }
       res.json({
         symbol,
         bars,

@@ -13,16 +13,16 @@ import {
 } from "@/lib/constants";
 
 const FAQ = [
-  { q: "Is this ES only?", a: "Yes — ES only for now. NQ is on the roadmap." },
+  { q: "Which markets does this cover?", a: "Both ES and NQ E-mini futures, with ES as the primary focus. You get a plan and levels for each." },
   { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions." },
-  { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES session." },
-  { q: "What do I get each day?", a: "Dynamic Zone, Magnet, R1–R4 / S1–S4, daily bias, and 1–2 setups based on those levels." },
+  { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ session." },
+  { q: "What do I get each day?", a: "Dynamic Zone, Magnet, R1–R4 / S1–S4, daily bias, and 1–2 setups based on those levels, for both ES and NQ." },
   { q: "When are plans posted?", a: "After market close, for the next trading session." },
-  { q: "Can I cancel anytime?", a: "Yes. No contracts, no long-term commitment." },
+  { q: "Can I cancel anytime?", a: "Yes. Email support to cancel and we'll stop future billing. There are no contracts and no long-term commitment." },
 ];
 
 const FEATURES = [
-  "Daily ES support & resistance levels",
+  "Daily ES & NQ support & resistance levels",
   "Dynamic Zone + Magnet",
   "Daily bias + 1–2 high-quality setups",
   "Delivered via Telegram after the close",
@@ -34,7 +34,7 @@ export default function PublicPricingPage() {
 
   useSeo({
     title: `Pricing — Founding Members | ${SITE_NAME}`,
-    description: "Founding Members pricing for Trade Levels Pro: $25/month or $250/year for daily ES futures trade plans delivered to a private Telegram channel.",
+    description: "Founding Members pricing for Trade Levels Pro: $25/month or $250/year for daily ES and NQ futures trade plans delivered to a private Telegram channel.",
     path: "/pricing",
     jsonLd: {
       "@context": "https://schema.org",
@@ -67,8 +67,8 @@ export default function PublicPricingPage() {
               Founding Members <span className="accent">Pricing</span>
             </h1>
             <p className="public-hero-subtitle">
-              One simple plan. Daily ES levels, bias, and setups delivered to a
-              private Telegram channel.
+              One simple plan. Daily ES and NQ levels, bias, and setups
+              delivered to a private Telegram channel.
             </p>
           </div>
         </section>
@@ -113,7 +113,12 @@ export default function PublicPricingPage() {
                 <a href={ctaHref} className="subscribe-button" data-testid="button-cta-pricing">
                   {CTA_TEXT} →
                 </a>
-                <p className="subscribe-secure-text">No contracts · Cancel in one click</p>
+                <p className="subscribe-onboard-text">
+                  Founding-member access. Email to subscribe and we'll send your
+                  payment link and Telegram invite (usually within 24 hours).
+                </p>
+                <p className="subscribe-secure-text">No contracts. Cancel anytime.</p>
+                <p className="subscribe-secure-text">Cancel anytime to stop future billing.</p>
               </div>
             </div>
           </section>

@@ -286,8 +286,8 @@ export function ArticlePropFirm() {
       </ul>
       <p>
         Twenty days of this and you'll see your own patterns clearly. Most
-        traders are shocked to find that 70%+ of their losing days come from
-        off-plan trades. The journal is the diagnostic — it tells you exactly
+        traders are shocked to find that a large share of their losing days come
+        from off-plan trades. The journal is the diagnostic: it tells you exactly
         which behavior is killing the account.
       </p>
 

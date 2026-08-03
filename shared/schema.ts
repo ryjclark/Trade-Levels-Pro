@@ -20,6 +20,17 @@ export interface PlanLevels {
   recentLow: number | null;
   swingSupports: number[];
   swingResistances: number[];
+  // Ranked variants (with prominence + quality tier) so the terminal can render
+  // the SAME levels the plan was built from, tiered. Optional: older stored plans
+  // predate these and fall back to the bare number arrays above.
+  swingSupportPoints?: SwingPointData[];
+  swingResistancePoints?: SwingPointData[];
+}
+
+export interface SwingPointData {
+  price: number;
+  prominence: number;
+  tier: "major" | "minor" | "micro";
 }
 
 // Per-session scoring of those levels (which were tagged, and failed-breakdown success).
@@ -49,6 +60,24 @@ export const planLevelsSchema = z.object({
   recentLow: z.number().nullable(),
   swingSupports: z.array(z.number()),
   swingResistances: z.array(z.number()),
+  swingSupportPoints: z
+    .array(
+      z.object({
+        price: z.number(),
+        prominence: z.number(),
+        tier: z.enum(["major", "minor", "micro"]),
+      }),
+    )
+    .optional(),
+  swingResistancePoints: z
+    .array(
+      z.object({
+        price: z.number(),
+        prominence: z.number(),
+        tier: z.enum(["major", "minor", "micro"]),
+      }),
+    )
+    .optional(),
 });
 
 export const levelHitsSchema = z.object({

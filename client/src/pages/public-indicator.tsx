@@ -1,22 +1,24 @@
-import { Check, LineChart } from "lucide-react";
+import { Check } from "lucide-react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
 import { useSeo } from "@/hooks/use-seo";
-import { CTA_INDICATOR_MAILTO, INDICATOR_PRICE, SITE_NAME } from "@/lib/constants";
+import { CONTACT_EMAIL, INDICATOR_PRICE, SITE_NAME } from "@/lib/constants";
+
+const WAITLIST_MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Indicator waitlist")}`;
 
 const FEATURES = [
   "Pine Script for TradingView (Pro+ tier required)",
-  "Auto-calculates Magnet, Dynamic Zone, R1–R4, and S1–S4 in real-time",
+  "Plots the Magnet, Dynamic Zone, and R1–R4 / S1–S4 ladder on your chart",
   "Customizable colors, line styles, and labels",
-  "Lifetime updates",
+  "Lifetime updates once released",
 ];
 
 export default function PublicIndicatorPage() {
   useSeo({
-    title: `Trade Levels Pro Indicator for TradingView | ${SITE_NAME}`,
-    description: "The Pine Script indicator that auto-calculates the Magnet, Dynamic Zone, and full S/R ladder on your TradingView chart. One-time purchase, lifetime updates.",
+    title: `Trade Levels Pro Indicator (Waitlist) | ${SITE_NAME}`,
+    description: "The Pine Script indicator that plots the Magnet, Dynamic Zone, and full S/R ladder on your TradingView chart is in development. Join the waitlist to be notified when it launches.",
     path: "/indicator",
   });
 
@@ -31,34 +33,29 @@ export default function PublicIndicatorPage() {
           </div>
           <div className="hero-noise" aria-hidden="true" />
           <div className="public-hero-content public-hero-centered">
-            <span className="public-section-eyebrow">Product</span>
+            <span className="public-section-eyebrow">In development</span>
             <h1>
               Trade Levels Pro <span className="accent">Indicator</span>
             </h1>
             <p className="public-hero-subtitle">
-              The Pine Script that auto-calculates the Magnet, Dynamic Zone,
-              and S/R ladder. Get the tool, not just the daily plan.
+              A Pine Script indicator that plots the Magnet, Dynamic Zone, and
+              S/R ladder directly on your TradingView chart is on the way. It is
+              not available for purchase yet. Join the waitlist and we will email
+              you the moment it is ready.
             </p>
           </div>
         </section>
 
         <Reveal>
-          <section className="public-section" style={{ paddingTop: 24 }}>
-            <div className="indicator-preview" data-testid="card-indicator-preview">
-              <div className="indicator-preview-icon"><LineChart size={28} /></div>
-              <div className="indicator-preview-text">Indicator preview coming soon</div>
-            </div>
-          </section>
-        </Reveal>
-
-        <Reveal>
           <section className="public-section" style={{ paddingTop: 0 }}>
             <div className="pricing-plan-wrap">
               <div className="pricing-plan" data-testid="card-indicator-plan">
-                <div className="pricing-badge">ONE-TIME</div>
+                <div className="pricing-badge">COMING SOON</div>
                 <div className="pricing-plan-name">TradingView Indicator</div>
-                <div className="pricing-plan-price">{INDICATOR_PRICE}</div>
-                <div className="pricing-plan-period">one-time · lifetime updates</div>
+                <div className="pricing-plan-price">Waitlist</div>
+                <div className="pricing-plan-period">
+                  planned one-time price around {INDICATOR_PRICE} (not yet for sale)
+                </div>
                 <div className="pricing-features">
                   {FEATURES.map((f, i) => (
                     <div className="pricing-feature" key={i}>
@@ -68,14 +65,15 @@ export default function PublicIndicatorPage() {
                   ))}
                 </div>
                 <a
-                  href={CTA_INDICATOR_MAILTO}
+                  href={WAITLIST_MAILTO}
                   className="subscribe-button"
                   data-testid="button-cta-indicator"
                 >
-                  Get the Indicator →
+                  Join the waitlist →
                 </a>
                 <p className="subscribe-secure-text">
-                  Email checkout for now — Stripe coming soon.
+                  No payment now. We will email you when the indicator is
+                  available.
                 </p>
               </div>
             </div>

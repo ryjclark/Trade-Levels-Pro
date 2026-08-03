@@ -311,8 +311,8 @@ export function ArticleMagnet() {
       <p>
         Sometimes the Magnet you identified the night before just doesn't
         work. Price ignores it, blows through it without reaction, and never
-        looks back. This will happen 15–20% of the time. The discipline is
-        not to fight it — and not to look for a "new Magnet" mid-session to
+        looks back. This happens on a minority of sessions. The discipline is
+        not to fight it, and not to look for a "new Magnet" mid-session to
         justify a trade you already wanted to take.
       </p>
       <p>

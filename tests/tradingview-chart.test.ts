@@ -8,7 +8,7 @@ describe("TradingViewChart", () => {
     const html = renderToStaticMarkup(createElement(TradingViewChart));
     expect(html).toContain('data-testid="tv-chart-FOREXCOM:SPXUSD"');
     expect(html).toContain('data-testid="tv-chart-container"');
-    expect(html).toContain("Live S&amp;P 500 index chart powered by TradingView");
+    expect(html).toContain("S&amp;P 500 reference chart (TradingView)");
   });
 
   it("symbol prop overrides the default", () => {

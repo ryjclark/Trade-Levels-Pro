@@ -16,8 +16,8 @@ export const ARTICLES: ArticleMeta[] = [
       "A Magnet level is the price ES tends to gravitate toward intraday. Here's how it's identified, why it works, and how to trade it without getting trapped.",
     description:
       "A Magnet level is the price ES tends to gravitate toward intraday. Here's how it's identified, why it works, and how to trade it without getting trapped.",
-    date: "May 8, 2026",
-    dateISO: "2026-05-08",
+    date: "July 24, 2026",
+    dateISO: "2026-07-24",
     readMinutes: 10,
   },
   {
@@ -27,8 +27,8 @@ export const ARTICLES: ArticleMeta[] = [
       "Prop firm evaluations punish over-trading and drawdown. Here's the level-based playbook serious evaluators use to survive and pass.",
     description:
       "Prop firm evaluations punish over-trading and drawdown. Here's the level-based playbook serious evaluators use to survive and pass.",
-    date: "May 5, 2026",
-    dateISO: "2026-05-05",
+    date: "July 17, 2026",
+    dateISO: "2026-07-17",
     readMinutes: 11,
   },
   {
@@ -38,8 +38,8 @@ export const ARTICLES: ArticleMeta[] = [
       "The template I use every evening to build the next day's ES plan: Magnet, Dynamic Zone, S/R ladder, bias, and 1–2 setups. Steal it.",
     description:
       "The template I use every evening to build the next day's ES plan: Magnet, Dynamic Zone, S/R ladder, bias, and 1–2 setups. Steal it.",
-    date: "May 1, 2026",
-    dateISO: "2026-05-01",
+    date: "July 10, 2026",
+    dateISO: "2026-07-10",
     readMinutes: 10,
   },
 ];

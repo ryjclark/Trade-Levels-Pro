@@ -18,8 +18,7 @@ export default function PublicFooter() {
           <Link href="/sample" className="public-footer-link" data-testid="footer-link-sample">Sample</Link>
           <Link href="/how-it-works" className="public-footer-link" data-testid="footer-link-how">How It Works</Link>
           <Link href="/pricing" className="public-footer-link" data-testid="footer-link-pricing">Pricing</Link>
-          <Link href="/indicator" className="public-footer-link" data-testid="footer-link-indicator">Indicator</Link>
-          <Link href="/login" className="public-footer-link" data-testid="footer-link-login">Login</Link>
+          <Link href="/indicator" className="public-footer-link" data-testid="footer-link-indicator">Indicator (waitlist)</Link>
         </div>
         <div className="public-footer-col">
           <div className="public-footer-heading">Resources</div>
@@ -55,6 +54,8 @@ export default function PublicFooter() {
         </p>
       </div>
       <div className="public-footer-copy">
+        Trade Levels Pro · <a href={`mailto:${CONTACT_EMAIL}`} className="public-footer-link" data-testid="footer-link-copy-email">{CONTACT_EMAIL}</a>
+        <br />
         © {year} Trade Levels Pro. All rights reserved.
       </div>
     </footer>

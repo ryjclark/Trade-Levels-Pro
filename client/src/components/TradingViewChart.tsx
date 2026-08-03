@@ -101,7 +101,7 @@ export default function TradingViewChart({
       data-testid={`tv-chart-${symbol}`}
     >
       <div className="tv-chart-caption">
-        Live S&amp;P 500 index chart powered by TradingView — tracks ES futures during cash market hours
+        S&amp;P 500 reference chart (TradingView). Trade Levels Pro levels are set after the close, and site price data is delayed about a minute.
       </div>
       <div
         id={idRef.current}

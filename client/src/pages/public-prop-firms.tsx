@@ -37,9 +37,8 @@ export default function PublicPropFirmsPage() {
 
         <section className="public-section" style={{ paddingTop: 0 }}>
           <div className="affiliate-disclosure" data-testid="text-affiliate-disclosure">
-            Some links on this page are affiliate links. If you fund an account
-            through them, Trade Levels Pro may receive compensation at no extra
-            cost to you. We only list firms we believe are credible options.
+            Some links on this page may become affiliate links in the future. We
+            only list firms we would consider ourselves.
           </div>
 
           <Reveal>
@@ -94,8 +93,8 @@ export default function PublicPropFirmsPage() {
         </section>
 
         <div className="affiliate-disclosure" style={{ marginTop: 24 }}>
-          Affiliate disclosure: links on this page may earn Trade Levels Pro a
-          commission. This never changes the price you pay.
+          Some links on this page may become affiliate links in the future. We
+          only list firms we would consider ourselves.
         </div>
 
         <PublicFooter />

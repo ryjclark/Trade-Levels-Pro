@@ -20,7 +20,7 @@ export default function PublicLegalPage({ kind }: LegalPageProps) {
           </div>
           <div className="public-hero-content">
             <h1>{content.title}</h1>
-            <p className="public-hero-subtitle">Last updated: May 11, 2026</p>
+            <p className="public-hero-subtitle">Last updated: August 2, 2026</p>
           </div>
         </section>
         <section className="public-section" style={{ paddingTop: 0 }}>
@@ -44,9 +44,10 @@ const LEGAL_CONTENT: Record<
     title: "Terms of Service",
     body: [
       "Welcome to Trade Levels Pro. By accessing or using this website and the private Telegram channel (the &ldquo;Service&rdquo;), you agree to these Terms of Service. If you do not agree, do not use the Service.",
-      "<strong>Service description.</strong> Trade Levels Pro publishes a daily, educational ES futures trade plan with key levels, bias, and example setups. The Service is intended for traders who already understand the futures market.",
+      "<strong>Service description.</strong> Trade Levels Pro publishes a daily, educational ES and NQ futures trade plan with key levels, bias, and example setups. The Service is intended for traders who already understand the futures market.",
       "<strong>No investment advice.</strong> All content is provided for educational and informational purposes only. Nothing in the Service constitutes investment advice, a recommendation, or a solicitation to buy or sell any security or derivative. You are solely responsible for your trading decisions and outcomes.",
-      "<strong>Subscription and access.</strong> Access is provided through a recurring monthly subscription. You may cancel at any time. Membership grants a personal, non-transferable right to use the published plans; you may not redistribute, resell, or share the content.",
+      "<strong>Subscription and access.</strong> Access is provided through a recurring monthly or annual subscription. You may cancel at any time. Membership grants a personal, non-transferable right to use the published plans; you may not redistribute, resell, or share the content.",
+      "<strong>Cancellation.</strong> You may cancel your subscription at any time by contacting support to stop future billing. Your access continues through the end of the period you have already paid for. We do not offer refunds for the current period unless required by law.",
       "<strong>Acceptable use.</strong> You agree not to misuse the Service, attempt to gain unauthorized access, or share access credentials. We may suspend or terminate accounts that violate these terms.",
       "<strong>Limitation of liability.</strong> To the fullest extent permitted by law, Trade Levels Pro and its operators are not liable for any losses, damages, or costs arising from your use of, or inability to use, the Service.",
       `<strong>Contact.</strong> Questions about these terms can be sent to <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.`,

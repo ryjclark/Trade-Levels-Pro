@@ -75,8 +75,9 @@ export function ArticleDailyTemplate() {
         <li>S1, S2, S3, S4 — symmetric: prior lows, untested support, fresh gaps.</li>
       </ul>
       <p>
-        These levels are not equal. R1 and S1 will print 80% of days. R4 and
-        S4 will print 10–15%. Plan accordingly.
+        These levels are not equal. The inner rungs (R1 and S1) get tagged far
+        more often than the outer ones (R4 and S4), which only come into play on
+        the biggest range days. Plan accordingly.
       </p>
 
       <h3>Section 4: Bias</h3>
@@ -260,10 +261,10 @@ export function ArticleDailyTemplate() {
 
       <h2>What to do when the plan doesn't trigger</h2>
       <p>
-        Roughly 30% of trading days, neither of your setups will fire. ES will
-        spend the day inside the Dynamic Zone, never reaching S1 or R1, and the
-        trade you planned just doesn't appear. New traders treat this as
-        failure. It's not. It's the plan working.
+        On many days, neither of your setups will fire, and sitting out is the
+        correct play. ES will spend the day inside the Dynamic Zone, never
+        reaching S1 or R1, and the trade you planned just doesn't appear. New
+        traders treat this as failure. It's not. It's the plan working.
       </p>
       <p>
         A no-trade day is a passing day. You preserved capital, preserved

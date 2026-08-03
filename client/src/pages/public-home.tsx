@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import {
   BarChart3, TrendingUp, Magnet,
   Eye, Crosshair, Layers, Compass, Send,
-  Check, X, CheckCircle2,
+  Check, X,
 } from "lucide-react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
@@ -17,11 +16,11 @@ import SectionDivider from "@/components/section-divider";
 import TradingViewChart from "@/components/TradingViewChart";
 import { useSeo } from "@/hooks/use-seo";
 import {
-  CTA_TEXT, CTA_MAILTO, PRICE_PER_MONTH, TAGLINE, SITE_NAME, SITE_URL,
+  CTA_TEXT, PRICE_PER_MONTH, TAGLINE, SITE_NAME, SITE_URL,
 } from "@/lib/constants";
 
 const FOR_LIST = [
-  "You trade ES futures and want a repeatable, level-based process.",
+  "You trade ES or NQ futures and want a repeatable, level-based process.",
   "You're working through a prop firm evaluation or funded account.",
   "You want to react to price instead of predicting it.",
   "You value structure over shortcuts and signal spam.",
@@ -29,7 +28,7 @@ const FOR_LIST = [
 const NOT_FOR_LIST = [
   "You want copy-trading alerts or buy/sell signals.",
   "You're looking for guaranteed profits or win-rate claims.",
-  "You want indices, options, crypto, or stocks coverage.",
+  "You want options, crypto, or stocks coverage.",
   "You're not willing to do the work of executing a plan.",
 ];
 
@@ -42,20 +41,17 @@ const METHOD = [
 ];
 
 const FAQ = [
-  { q: "Is this ES only?", a: "Yes — ES only for now. NQ is on the roadmap." },
-  { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions — not follow someone else's calls." },
-  { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES session." },
-  { q: "When are plans posted?", a: "After market close, for the next trading session — so you're prepared before the open." },
+  { q: "Which markets are covered?", a: "Both ES (S&P 500) and NQ (Nasdaq 100) E-mini futures. ES is the primary focus, and NQ is published alongside it." },
+  { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions, not follow someone else's calls." },
+  { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ sessions." },
+  { q: "When are plans posted?", a: "After the cash close each trading day, for the next session, so you're prepared before the open." },
+  { q: "Is the market data on this site live?", a: "No. Market data on this site is delayed about a minute and is not a live trading feed. Plans and levels are set after the close." },
 ];
 
 export default function PublicHomePage() {
-  const [email, setEmail] = useState("");
-  const [signupStatus, setSignupStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [signupMessage, setSignupMessage] = useState("");
-
   useSeo({
-    title: `${SITE_NAME} — Daily ES Futures Trade Plans`,
-    description: `Daily ES futures trade plans with Magnet, Dynamic Zone, and a full S/R ladder — delivered to Telegram after the close. ${TAGLINE}`,
+    title: `${SITE_NAME}: Daily ES and NQ Futures Trade Plans`,
+    description: `Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, and a full S/R ladder, delivered to Telegram and the on-site terminal after the close. ${TAGLINE}`,
     path: "/",
     jsonLd: {
       "@context": "https://schema.org",
@@ -67,35 +63,6 @@ export default function PublicHomePage() {
       sameAs: [],
     },
   });
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !email.includes("@")) {
-      setSignupStatus("error");
-      setSignupMessage("Please enter a valid email.");
-      return;
-    }
-    setSignupStatus("loading");
-    try {
-      const res = await fetch("/api/preview-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source: "home" }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setSignupStatus("error");
-        setSignupMessage(data?.error || "Something went wrong.");
-        return;
-      }
-      setSignupStatus("success");
-      setSignupMessage("We've got it. Sample on the way.");
-      setEmail("");
-    } catch {
-      setSignupStatus("error");
-      setSignupMessage("Network error, please try again.");
-    }
-  };
 
   return (
     <div className="public-page">
@@ -117,18 +84,18 @@ export default function PublicHomePage() {
                 Founding Members
               </div>
               <h1>
-                Daily ES levels for traders who <span className="accent">plan</span>, not react.
+                Daily ES and NQ levels for traders who <span className="accent">prepare</span>, then react.
               </h1>
               <p className="public-hero-subtitle">
-                Tomorrow's Magnet, Dynamic Zone, S/R ladder, and trade plan —
-                delivered to Telegram after the close.
+                Tomorrow's Magnet, Dynamic Zone, S/R ladder, and trade plan for ES and NQ,
+                delivered to Telegram and the on-site terminal after the close.
               </p>
               <div className="hero-cta-row">
-                <a href={CTA_MAILTO} className="btn-primary" data-testid="button-cta-hero">
+                <Link href="/pricing" className="btn-primary" data-testid="button-cta-hero">
                   {CTA_TEXT} →
-                </a>
+                </Link>
                 <Link href="/sample" className="btn-secondary" data-testid="button-cta-sample-hero">
-                  See Tomorrow's Sample
+                  See a Sample Plan
                 </Link>
               </div>
               <p className="public-small-text">{PRICE_PER_MONTH} · Cancel anytime</p>
@@ -141,65 +108,38 @@ export default function PublicHomePage() {
 
         <SectionDivider />
 
-        {/* Live ES chart */}
+        {/* ES reference chart */}
         <Reveal>
           <section className="public-section" style={{ paddingTop: 0 }}>
             <TradingViewChart height={500} />
+            <p className="public-small-text" style={{ textAlign: "center", marginTop: "12px" }}>
+              Market data on this site is delayed about a minute and is not a live trading feed.
+            </p>
           </section>
         </Reveal>
 
         <SectionDivider />
 
-        {/* 2. Email capture */}
+        {/* 2. Sample plan CTA */}
         <Reveal>
           <section className="public-section">
-            <div className="capture-box" data-testid="box-email-capture">
+            <div className="capture-box" data-testid="box-sample-cta">
               <div>
-                <h3 className="capture-title">See a free sample plan first.</h3>
+                <h3 className="capture-title">See a full sample plan first.</h3>
                 <p className="capture-sub">
-                  Drop your email and we'll send you a sample so you know exactly
-                  what you're getting.
+                  Read a complete ES and NQ daily plan, exactly as members receive it,
+                  so you know precisely what you're getting.
                 </p>
               </div>
-              <form onSubmit={handleSignup} className="capture-form">
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="capture-input"
-                  disabled={signupStatus === "loading"}
-                  data-testid="input-preview-email"
-                />
-                <button
-                  type="submit"
-                  className="capture-button"
-                  disabled={signupStatus === "loading"}
-                  data-testid="button-preview-submit"
+              <div className="capture-form">
+                <Link
+                  href="/sample"
+                  className="btn-primary"
+                  data-testid="button-see-sample"
                 >
-                  {signupStatus === "loading" ? (
-                    <>
-                      <span className="capture-spinner" />
-                      Sending…
-                    </>
-                  ) : (
-                    "Send me a sample"
-                  )}
-                </button>
-              </form>
-              {signupMessage && (
-                <p
-                  className={
-                    signupStatus === "success"
-                      ? "capture-msg capture-msg-ok"
-                      : "capture-msg capture-msg-err"
-                  }
-                  data-testid="text-preview-message"
-                >
-                  {signupStatus === "success" && <CheckCircle2 size={16} />}
-                  {signupMessage}
-                </p>
-              )}
+                  See a sample plan →
+                </Link>
+              </div>
             </div>
           </section>
         </Reveal>
@@ -238,7 +178,7 @@ export default function PublicHomePage() {
               <div className="public-card" data-testid="card-feature-levels">
                 <div className="public-card-icon"><BarChart3 size={22} /></div>
                 <h3>Key Market Levels</h3>
-                <p>R1–R4 and S1–S4 for the next ES session, clearly defined before the open.</p>
+                <p>R1–R4 and S1–S4 for the next ES and NQ session, clearly defined before the open.</p>
               </div>
               <div className="public-card" data-testid="card-feature-zone">
                 <div className="public-card-icon"><Magnet size={22} /></div>
@@ -248,7 +188,7 @@ export default function PublicHomePage() {
               <div className="public-card" data-testid="card-feature-bias">
                 <div className="public-card-icon"><TrendingUp size={22} /></div>
                 <h3>Bias & Setups</h3>
-                <p>Daily bias and 1–2 high-quality setups based on the levels — not noisy alerts.</p>
+                <p>Daily bias and 1–2 high-quality setups based on the levels, not noisy alerts.</p>
               </div>
             </div>
           </section>
@@ -335,7 +275,7 @@ export default function PublicHomePage() {
             </div>
             <div className="public-steps">
               <div className="public-step"><div className="public-step-num">1</div><p>Subscribe once to access the private Telegram channel.</p></div>
-              <div className="public-step"><div className="public-step-num">2</div><p>Receive tomorrow's ES plan in Telegram after the close.</p></div>
+              <div className="public-step"><div className="public-step-num">2</div><p>Receive tomorrow's ES and NQ plan in Telegram and the on-site terminal after the close.</p></div>
               <div className="public-step"><div className="public-step-num">3</div><p>Use the levels and bias to trade with discipline at the open.</p></div>
             </div>
           </section>
@@ -364,9 +304,9 @@ export default function PublicHomePage() {
           <p className="public-section-subtitle" style={{ marginBottom: "32px" }}>
             {PRICE_PER_MONTH} · Cancel anytime.
           </p>
-          <a href={CTA_MAILTO} className="btn-primary" data-testid="button-cta-final">
+          <Link href="/pricing" className="btn-primary" data-testid="button-cta-final">
             {CTA_TEXT} →
-          </a>
+          </Link>
         </section>
 
         <PublicFooter />

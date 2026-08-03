@@ -9,8 +9,8 @@ import { CTA_TEXT, CTA_MAILTO, SITE_NAME } from "@/lib/constants";
 
 export default function PublicSamplePage() {
   useSeo({
-    title: `Sample Daily ES Trade Plan | ${SITE_NAME}`,
-    description: "See exactly what's inside the daily ES trade plan delivered to subscribers — Dynamic Zone, Magnet, R1–R4, S1–S4, bias, and setups.",
+    title: `Sample Daily ES and NQ Trade Plan | ${SITE_NAME}`,
+    description: "See exactly what's inside the daily ES and NQ trade plan delivered to subscribers: Dynamic Zone, Magnet, R1–R4, S1–S4, bias, and ranked setups.",
     path: "/sample",
   });
 
@@ -27,8 +27,9 @@ export default function PublicSamplePage() {
           <div className="public-hero-content public-hero-centered">
             <h1>Sample <span className="accent">Daily Plan</span></h1>
             <p className="public-hero-subtitle">
-              This is exactly what you receive in Telegram each trading day.
-              Numbers below are illustrative only.
+              This is the structure you receive in Telegram each trading day for
+              ES and NQ (an ES example is shown below). Numbers below are
+              illustrative only.
             </p>
           </div>
         </section>
@@ -36,7 +37,7 @@ export default function PublicSamplePage() {
         <Reveal>
           <section className="public-section" style={{ paddingTop: 0 }}>
             <div className="sample-card" data-testid="card-sample-plan">
-              <div className="sample-title">ES Daily Trade Plan — Monday, May 12, 2026</div>
+              <div className="sample-title">ES Daily Trade Plan (Example), Friday, July 31, 2026</div>
               <div className="sample-row">
                 <div className="sample-label">Bias</div>
                 <div className="sample-value">Bullish above magnet</div>
@@ -68,10 +69,16 @@ export default function PublicSamplePage() {
                 </div>
               </div>
               <div className="sample-block">
-                <div className="sample-label">Setups</div>
+                <div className="sample-label">Failed-Breakdown Longs (primary, ranked best-first)</div>
                 <ul className="sample-list">
-                  <li>Long reaction at S1 (5,804) targeting magnet, stop below S2.</li>
-                  <li>Short rejection at R2 (5,847) if price overextends, stop above R3.</li>
+                  <li>1. Flush below S1 (5,804), reclaim and accept back above, then long toward the magnet and R1. Stop below S2.</li>
+                  <li>2. Deeper flush below S2 (5,790) that reclaims and holds, targeting S1 then the magnet. Stop below S3.</li>
+                </ul>
+              </div>
+              <div className="sample-block">
+                <div className="sample-label">Rejection Shorts (secondary, lower win-rate)</div>
+                <ul className="sample-list">
+                  <li>1. Rejection at R2 (5,847) if price overextends into it. Stop above R3.</li>
                 </ul>
               </div>
             </div>

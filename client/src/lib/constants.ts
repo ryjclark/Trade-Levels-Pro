@@ -5,7 +5,7 @@ export const PRICE_ANNUAL_PER_YEAR = "$250/year";
 export const ANNUAL_SAVINGS_LABEL = "Save $50 · 2 months free";
 export const INDICATOR_PRICE = "$297";
 
-export const CTA_TEXT = "Get Instant Access";
+export const CTA_TEXT = "Subscribe";
 export const CTA_MAILTO =
   "mailto:contact@tradelevelspro.com?subject=Founding%20Member%20Signup";
 export const CTA_MAILTO_ANNUAL =
@@ -46,7 +46,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "Live trading once funded with profit-split payouts",
     ],
     cons: ["Daily loss limit and trailing drawdown require strict risk control"],
-    url: "https://www.topstep.com/?ref=PLACEHOLDER_TOPSTEP",
+    url: "https://www.topstep.com/",
   },
   {
     slug: "apex-trader-funding",
@@ -62,7 +62,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "Trailing drawdown is strict and can catch new traders",
       "Some news-trading restrictions",
     ],
-    url: "https://apextraderfunding.com/?ref=PLACEHOLDER_APEX",
+    url: "https://apextraderfunding.com/",
   },
   {
     slug: "myfundedfutures",
@@ -75,7 +75,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "Multiple plan tiers (Starter, Expert, Milestone)",
     ],
     cons: ["Newer firm — shorter operating history than legacy names"],
-    url: "https://myfundedfutures.com/?ref=PLACEHOLDER_MFF",
+    url: "https://myfundedfutures.com/",
   },
   {
     slug: "tradeify",
@@ -88,7 +88,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "Trader-friendly platform support",
     ],
     cons: ["Smaller community and fewer reviews to reference"],
-    url: "https://tradeify.co/?ref=PLACEHOLDER_TRADEIFY",
+    url: "https://tradeify.co/",
   },
   {
     slug: "earn2trade",
@@ -101,7 +101,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "Live broker setup with established partners",
     ],
     cons: ["Slower payout cycles than newer competitors"],
-    url: "https://www.earn2trade.com/?ref=PLACEHOLDER_E2T",
+    url: "https://www.earn2trade.com/",
   },
   {
     slug: "the-trading-pit",
@@ -114,7 +114,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "EU-based, regulated parent entity",
     ],
     cons: ["Lower starting position sizes vs. US-focused futures props"],
-    url: "https://www.thetradingpit.com/?ref=PLACEHOLDER_TTP",
+    url: "https://www.thetradingpit.com/",
   },
   {
     slug: "tick-tick-trader",
@@ -127,7 +127,7 @@ export const PROP_FIRMS: PropFirm[] = [
       "Responsive support team",
     ],
     cons: ["Smaller account ladder vs. larger competitors"],
-    url: "https://www.tickticktrader.com/?ref=PLACEHOLDER_TTT",
+    url: "https://www.tickticktrader.com/",
   },
   {
     slug: "bulenox",
@@ -140,6 +140,6 @@ export const PROP_FIRMS: PropFirm[] = [
       "Multiple platform options",
     ],
     cons: ["Newer brand — do your own due diligence on payout history"],
-    url: "https://bulenox.com/?ref=PLACEHOLDER_BULENOX",
+    url: "https://bulenox.com/",
   },
 ];

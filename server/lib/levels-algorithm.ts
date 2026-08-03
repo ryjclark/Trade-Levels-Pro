@@ -38,6 +38,8 @@ export interface ComputedLevels {
     recentLow: number | null;
     swingSupports: number[];
     swingResistances: number[];
+    swingSupportPoints?: SwingPoint[];
+    swingResistancePoints?: SwingPoint[];
   };
 }
 
@@ -430,7 +432,9 @@ function buildPlan(x: {
     ...(swings ? swings.lows : []),
     s?.recentLow, s?.priorWeekLow, s2,
   ].filter((v): v is number => v != null && v < breakdownLow);
-  const downTarget = belowLevels.length ? Math.max(...belowLevels) : s2;
+  // Only a level strictly below the one being broken is a valid down-target; if
+  // none exists, omit the continuation line rather than print a target above it.
+  const downTarget: number | null = belowLevels.length ? Math.max(...belowLevels) : null;
 
   let reasoning: string;
   if (bias === "bullish") {
@@ -473,9 +477,13 @@ function buildPlan(x: {
         return `${medals[2]} ${fmtLevel(p.price)} (${tag}): higher, take it if it reaches`;
       })
     : [`${medals[0]} ${fmtLevel(firstHighVal)}: reject + fail to hold → short toward ${fmtLevel(magnet)}`];
+  const continuation =
+    downTarget != null
+      ? `Continuation: breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}. `
+      : "";
   const short =
     `Rejection shorts (secondary, lower win-rate — best first):\n${shortParts.join("\n")}\n` +
-    `Continuation: breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}. ` +
+    continuation +
     `Wait for acceptance the same way; size down — most breakdowns trap.`;
 
   return { reasoning, long, short };
@@ -542,6 +550,8 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
       recentLow: structure?.recentLow ?? null,
       swingSupports: swings?.lows ?? [],
       swingResistances: swings?.highs ?? [],
+      swingSupportPoints: swings?.lowPoints ?? [],
+      swingResistancePoints: swings?.highPoints ?? [],
     },
   };
 }

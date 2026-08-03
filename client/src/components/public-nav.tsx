@@ -9,10 +9,8 @@ const NAV_ITEMS = [
   { href: "/how-it-works", label: "How It Works" },
   { href: "/prop-firms", label: "Prop Firms" },
   { href: "/learn", label: "Learn" },
-  { href: "/indicator", label: "Indicator" },
   { href: "/pricing", label: "Pricing" },
   { href: "/member-login", label: "Members" },
-  { href: "/login", label: "Login" },
 ];
 
 export default function PublicNav() {

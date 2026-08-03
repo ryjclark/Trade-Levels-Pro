@@ -18,7 +18,7 @@ const METHOD = [
 export default function PublicHowItWorksPage() {
   useSeo({
     title: `How It Works — The Methodology | ${SITE_NAME}`,
-    description: "How Trade Levels Pro builds a daily ES futures trade plan: Dynamic Zone, Magnet, S/R ladder, bias, and 1–2 setups — applied the same way every day.",
+    description: "How Trade Levels Pro builds a daily ES and NQ futures trade plan: Dynamic Zone, Magnet, S/R ladder, bias, and 1–2 setups, applied the same way every day.",
     path: "/how-it-works",
   });
 
@@ -45,13 +45,13 @@ export default function PublicHowItWorksPage() {
             <div className="public-info-box">
               <p>
                 Trade Levels Pro is built for prop traders and developing futures
-                traders who want a structured way to approach the ES session.
+                traders who want a structured way to approach the ES and NQ session.
               </p>
               <p>
-                Each evening after the close, we publish a complete daily plan to
-                the private Telegram channel. The plan gives you the levels and
-                context you need to be prepared before the open — and the
-                discipline to react instead of guess.
+                Each evening after the close, we publish a complete daily plan for
+                ES and NQ to the private Telegram channel. The plan gives you the
+                levels and context you need to be prepared before the open, and the
+                discipline to react instead of guess. React to price. No predictions.
               </p>
             </div>
           </section>
@@ -99,14 +99,14 @@ export default function PublicHowItWorksPage() {
               <span className="public-section-eyebrow">The Edge</span>
               <h2 className="public-section-title">The Failed Breakdown</h2>
               <p className="public-section-subtitle">
-                Our primary setup — the reversal that starts most ES rallies.
+                Our primary setup: the reversal that starts most ES and NQ rallies.
               </p>
             </div>
             <div className="public-info-box">
               <p>
                 Price rarely moves in a straight line. The cleanest long entries come
-                after ES flushes below a key support, fails to follow through, and
-                reclaims the level — trapping the sellers who chased the breakdown.
+                after ES or NQ flushes below a key support, fails to follow through, and
+                reclaims the level, trapping the sellers who chased the breakdown.
                 That reclaim is the trigger. We call it a <b>Failed Breakdown</b>, and
                 it anchors every daily plan.
               </p>
@@ -158,15 +158,20 @@ export default function PublicHowItWorksPage() {
             <div className="public-steps">
               <div className="public-step">
                 <div className="public-step-num">1</div>
-                <p>Subscribe once to access the private Telegram channel.</p>
+                <p>Subscribe once to access the private Telegram channel and the on-site terminal.</p>
               </div>
               <div className="public-step">
                 <div className="public-step-num">2</div>
-                <p>Receive tomorrow's ES plan in Telegram after the close.</p>
+                <p>
+                  Receive tomorrow's ranked ES and NQ plan in Telegram after the close:
+                  failed-breakdown longs listed best-first, rejection shorts as the
+                  secondary play. The same levels are on the terminal (market data is
+                  delayed roughly 60 seconds).
+                </p>
               </div>
               <div className="public-step">
                 <div className="public-step-num">3</div>
-                <p>Use the levels and bias to trade with discipline at the open.</p>
+                <p>Use the levels and bias to react with discipline at the open.</p>
               </div>
             </div>
           </section>

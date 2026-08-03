@@ -54,12 +54,8 @@ function n(v: number | null | undefined) {
 }
 
 // Render a row of detected levels, ranked by quality: majors bold + ★, micro dimmed.
-// Falls back to plain numbers if the ranked points aren't present in the payload.
-function renderSwingRow(points: SwingPt[] | undefined, fallback: number[]) {
-  const list: SwingPt[] = points && points.length
-    ? points
-    : fallback.map((price) => ({ price, prominence: 0, tier: "minor" as const }));
-  const shown = list.slice(0, 6);
+function renderSwingRow(points: SwingPt[]) {
+  const shown = points.slice(0, 6);
   if (!shown.length) return "—";
   return shown.map((p, i) => (
     <span key={p.price}>
@@ -133,6 +129,19 @@ export default function PublicTerminalPage() {
           recentLow: structure?.recentLow ?? null,
         }
       : null;
+
+  // Bucket detected levels by SIDE (above the reference = resistance, below =
+  // support), not by whether they were a swing high or low. A swing low that now
+  // sits above price is functioning as resistance. Use the plan's magnet as the
+  // reference so this list matches how the plan classifies levels.
+  const swingRef = plan?.magnet ?? lastPrice ?? null;
+  const allSwingPts: SwingPt[] = swings
+    ? [...(swings.lowPoints ?? []), ...(swings.highPoints ?? [])]
+    : [];
+  const resistancePts =
+    swingRef == null ? [] : allSwingPts.filter((p) => p.price > swingRef).sort((a, b) => a.price - b.price);
+  const supportPts =
+    swingRef == null ? [] : allSwingPts.filter((p) => p.price < swingRef).sort((a, b) => b.price - a.price);
 
   return (
     <div className="public-page">
@@ -255,7 +264,7 @@ export default function PublicTerminalPage() {
                 <div>Low <b>{n(structure?.recentLow)}</b></div>
               </div>
             </div>
-            {swings && (swings.lows.length > 0 || swings.highs.length > 0) && (
+            {(resistancePts.length > 0 || supportPts.length > 0) && (
               <div style={{ marginTop: 14, borderTop: "1px solid var(--border, #26262b)", paddingTop: 12 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, opacity: 0.8 }}>
                   Detected reaction levels
@@ -263,15 +272,16 @@ export default function PublicTerminalPage() {
                 <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                   <div>
                     <span style={{ color: "#f87171" }}>Resistance:</span>{" "}
-                    {renderSwingRow(swings.highPoints, swings.highs)}
+                    {renderSwingRow(resistancePts)}
                   </div>
                   <div>
                     <span style={{ color: "#4ade80" }}>Support:</span>{" "}
-                    {renderSwingRow(swings.lowPoints, swings.lows)}
+                    {renderSwingRow(supportPts)}
                   </div>
                 </div>
                 <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
-                  ★ = major (strongest reactions); dimmed = micro shelf (lower quality)
+                  ★ = major (strongest reactions); dimmed = micro shelf (lower quality).
+                  Support/resistance are relative to the magnet.
                 </div>
               </div>
             )}

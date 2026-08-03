@@ -55,7 +55,8 @@ export default function PublicWelcomePage() {
             </h1>
             <p className="public-hero-subtitle">
               Your subscription is active. Here's how to access the private
-              Telegram channel.
+              Telegram channel where daily ES and NQ plans are posted after the
+              cash close.
             </p>
           </div>
         </section>
@@ -109,7 +110,8 @@ export default function PublicWelcomePage() {
                 <h3 className="capture-title">Thanks for subscribing</h3>
                 <p className="capture-sub">
                   Check your inbox for a welcome email with your private
-                  Telegram invite link.
+                  Telegram invite link. Daily ES and NQ plans are posted to the
+                  channel after the cash close.
                 </p>
               </>
             )}
