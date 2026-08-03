@@ -133,5 +133,10 @@ describe("detectSwings — quality ranking", () => {
     expect(plan.top_long_trade).toContain("significant low");
     // The micro shelf must NOT be offered as a failed-breakdown long.
     expect(plan.top_long_trade).not.toContain("6,950");
+
+    // Shorts are a ranked ladder of resistances ABOVE the magnet and must be
+    // labelled as highs, never "low" (the bug this guards against).
+    expect(plan.top_short_trade).toContain("significant high");
+    expect(plan.top_short_trade).not.toContain("significant low");
   });
 });

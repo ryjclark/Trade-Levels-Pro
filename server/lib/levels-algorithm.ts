@@ -374,9 +374,14 @@ function buildPlan(x: {
   // magnet — so the plan leads with the significant low, not just the nearest
   // line. Drop micro shelves unless they're all we have. Fall back to structure.
   const tierRank: Record<SwingTier, number> = { major: 0, minor: 1, micro: 2 };
-  const tierWord: Record<SwingTier, string> = {
+  const tierWordLow: Record<SwingTier, string> = {
     major: "significant low",
     minor: "decent low",
+    micro: "micro shelf — lower quality",
+  };
+  const tierWordHigh: Record<SwingTier, string> = {
+    major: "significant high",
+    minor: "decent high",
     micro: "micro shelf — lower quality",
   };
   let longPts: SwingPoint[] = [];
@@ -405,16 +410,19 @@ function buildPlan(x: {
   }
   if (!targetHighs.length) targetHighs = [r1];
 
-  // Primary short = best-QUALITY resistance above the magnet (not just nearest).
-  let shortPt: SwingPoint | null = null;
+  // Rejection shorts = resistances above the magnet, ranked by QUALITY then
+  // proximity — mirrors the longs so the short side is a ranked ladder of the
+  // major highs, not a single line. Drop micro unless they're all we have.
+  let shortPts: SwingPoint[] = [];
   if (swings) {
     const above = swings.highPoints.filter((p) => p.price > magnet);
     above.sort(
       (a, b) => tierRank[a.tier] - tierRank[b.tier] || (a.price - magnet) - (b.price - magnet),
     );
-    shortPt = above.find((p) => p.tier !== "micro") ?? above[0] ?? null;
+    const strong = above.filter((p) => p.tier !== "micro");
+    shortPts = (strong.length ? strong : above).slice(0, 3);
   }
-  const firstHighVal = shortPt ? shortPt.price : targetHighs[0];
+  const firstHighVal = shortPts[0] ? shortPts[0].price : targetHighs[0];
 
   // Breakdown-short target must sit BELOW the level being lost.
   const breakdownLow = lowVals[0];
@@ -439,7 +447,7 @@ function buildPlan(x: {
   const target = targetHighs[0] != null ? fmtLevel(targetHighs[0]) : fmtLevel(magnet);
   const longParts = longPts.length
     ? longPts.map((p, i) => {
-        const tag = tierWord[p.tier];
+        const tag = tierWordLow[p.tier];
         if (i === 0)
           return `${medals[0]} ${fmtLevel(p.price)} (${tag}): flush + reclaim → long toward ${fmtLevel(magnet)}, then ${target}`;
         if (i === 1) return `${medals[1]} ${fmtLevel(p.price)} (${tag}): deeper backup if the first fails`;
@@ -454,12 +462,21 @@ function buildPlan(x: {
     `Failed-breakdown longs (best first):\n${longParts.join("\n")}\n` +
     `Entry rule: wait for acceptance — price holds back above the level, or reclaims by ~5 pts and holds a couple minutes (don't knife-catch). Then manage level-to-level and leave a runner.`;
 
-  const shortTag = shortPt ? ` (${tierWord[shortPt.tier]})` : "";
+  // Ranked rejection shorts (best QUALITY first), mirroring the longs — built from
+  // the major resistances above the magnet with a quality tag on each.
+  const shortParts = shortPts.length
+    ? shortPts.map((p, i) => {
+        const tag = tierWordHigh[p.tier];
+        if (i === 0)
+          return `${medals[0]} ${fmtLevel(p.price)} (${tag}): reject + fail to hold → short toward ${fmtLevel(magnet)}`;
+        if (i === 1) return `${medals[1]} ${fmtLevel(p.price)} (${tag}): next resistance up`;
+        return `${medals[2]} ${fmtLevel(p.price)} (${tag}): higher, take it if it reaches`;
+      })
+    : [`${medals[0]} ${fmtLevel(firstHighVal)}: reject + fail to hold → short toward ${fmtLevel(magnet)}`];
   const short =
-    `Shorts (secondary, lower win-rate):\n` +
-    `• Rejection at ${fmtLevel(firstHighVal)}${shortTag} → short toward ${fmtLevel(magnet)}\n` +
-    `• Breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}\n` +
-    `Size down — most breakdowns trap.`;
+    `Rejection shorts (secondary, lower win-rate — best first):\n${shortParts.join("\n")}\n` +
+    `Continuation: breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}. ` +
+    `Wait for acceptance the same way; size down — most breakdowns trap.`;
 
   return { reasoning, long, short };
 }
