@@ -30,6 +30,39 @@ export interface LevelHits {
   resistances: { total: number; tagged: number };
 }
 
+// Zod schemas for the jsonb columns above. drizzle-zod does not infer a jsonb
+// column's `$type<T>()`, so these are wired into the insert schemas via .extend()
+// (same pattern as editedFields) to keep InsertPlan/InsertPlanResult types aligned
+// with the Drizzle column types.
+export const planLevelsSchema = z.object({
+  magnet: z.number().nullable(),
+  dynamicZoneTop: z.number().nullable(),
+  dynamicZoneBottom: z.number().nullable(),
+  priorHigh: z.number().nullable(),
+  priorLow: z.number().nullable(),
+  priorClose: z.number().nullable(),
+  overnightHigh: z.number().nullable(),
+  overnightLow: z.number().nullable(),
+  priorWeekHigh: z.number().nullable(),
+  priorWeekLow: z.number().nullable(),
+  recentHigh: z.number().nullable(),
+  recentLow: z.number().nullable(),
+  swingSupports: z.array(z.number()),
+  swingResistances: z.array(z.number()),
+});
+
+export const levelHitsSchema = z.object({
+  magnet: z.union([z.literal(0), z.literal(1)]),
+  named: z.record(z.string(), z.union([z.literal(0), z.literal(1)])),
+  supports: z.object({
+    total: z.number(),
+    tagged: z.number(),
+    flushed: z.number(),
+    reclaimed: z.number(),
+  }),
+  resistances: z.object({ total: z.number(), tagged: z.number() }),
+});
+
 export const plans = pgTable("plans", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
@@ -124,25 +157,7 @@ export const ingestLevelsSchema = z.object({
   top_long_trade: z.string().nullable().optional(),
   top_short_trade: z.string().nullable().optional(),
   // Full curated level set for the track record to score later.
-  levels: z
-    .object({
-      magnet: z.number().nullable(),
-      dynamicZoneTop: z.number().nullable(),
-      dynamicZoneBottom: z.number().nullable(),
-      priorHigh: z.number().nullable(),
-      priorLow: z.number().nullable(),
-      priorClose: z.number().nullable(),
-      overnightHigh: z.number().nullable(),
-      overnightLow: z.number().nullable(),
-      priorWeekHigh: z.number().nullable(),
-      priorWeekLow: z.number().nullable(),
-      recentHigh: z.number().nullable(),
-      recentLow: z.number().nullable(),
-      swingSupports: z.array(z.number()),
-      swingResistances: z.array(z.number()),
-    })
-    .nullable()
-    .optional(),
+  levels: planLevelsSchema.nullable().optional(),
 });
 export type IngestLevelsPayload = z.infer<typeof ingestLevelsSchema>;
 
@@ -240,6 +255,8 @@ export const planResults = pgTable("plan_results", {
 export const insertPlanResultSchema = createInsertSchema(planResults).omit({
   id: true,
   createdAt: true,
+}).extend({
+  levelHits: levelHitsSchema.nullish(),
 });
 export type InsertPlanResult = z.infer<typeof insertPlanResultSchema>;
 export type PlanResult = typeof planResults.$inferSelect;
@@ -302,6 +319,7 @@ export const insertPlanSchema = createInsertSchema(plans).omit({
   updatedAt: true,
 }).extend({
   editedFields: z.array(z.string()).nullish(),
+  levels: planLevelsSchema.nullish(),
 });
 
 export const insertPublishLogSchema = createInsertSchema(publishLogs).omit({
