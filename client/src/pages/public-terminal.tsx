@@ -10,6 +10,7 @@ import LevelsTerminalChart, {
   type TerminalLevels,
 } from "@/components/LevelsTerminalChart";
 import { useMemberAuth } from "@/hooks/use-member-auth";
+import { keyEventForDate } from "@/lib/key-events";
 import "./public.css";
 
 interface MemberPlan {
@@ -53,8 +54,9 @@ function n(v: number | null | undefined) {
   return v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-// Render a row of detected levels, ranked by quality: majors bold + ★, micro dimmed.
-function renderSwingRow(points: SwingPt[]) {
+// Render a row of detected levels, ranked by quality: majors bold + ★, micro dimmed,
+// with a ✓ on levels the current session has already traded to.
+function renderSwingRow(points: SwingPt[], isTagged?: (price: number) => boolean) {
   const shown = points.slice(0, 6);
   if (!shown.length) return "—";
   return shown.map((p, i) => (
@@ -67,6 +69,7 @@ function renderSwingRow(points: SwingPt[]) {
       >
         {n(p.price)}
         {p.tier === "major" ? "★" : ""}
+        {isTagged && isTagged(p.price) ? <span style={{ color: "#eab308" }}> ✓</span> : ""}
       </span>
       {i < shown.length - 1 ? "  ·  " : ""}
     </span>
@@ -143,6 +146,42 @@ export default function PublicTerminalPage() {
   const supportPts =
     swingRef == null ? [] : allSwingPts.filter((p) => p.price < swingRef).sort((a, b) => b.price - a.price);
 
+  // Level-hit + acceptance markers: measure the current session (the latest ET
+  // day present in the bars) against the levels. A level is "tagged" if the
+  // session traded to it; the key support is "accepted" if price flushed below
+  // and reclaimed it (the failed breakdown working in real time).
+  const etDate = (t: number) =>
+    new Date(t * 1000).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+  const sessionDay = lastBar ? etDate(lastBar.time) : null;
+  const sessionBars = sessionDay ? bars.filter((b) => etDate(b.time) === sessionDay) : [];
+  const sessHigh = sessionBars.length ? Math.max(...sessionBars.map((b) => b.high)) : null;
+  const sessLow = sessionBars.length ? Math.min(...sessionBars.map((b) => b.low)) : null;
+  const sessClose = sessionBars.length ? sessionBars[sessionBars.length - 1].close : null;
+  const isTagged = (price: number, side: "support" | "resistance") =>
+    side === "support" ? sessLow != null && sessLow <= price : sessHigh != null && sessHigh >= price;
+
+  const keySupport = supportPts.find((p) => p.tier === "major") ?? supportPts[0] ?? null;
+  let acceptance: "untested" | "flushed" | "accepted" | null = null;
+  if (keySupport && sessLow != null) {
+    const flushed = sessLow < keySupport.price;
+    const reclaimed = flushed && sessClose != null && sessClose > keySupport.price;
+    acceptance = reclaimed ? "accepted" : flushed ? "flushed" : "untested";
+  }
+
+  const keyEvent = keyEventForDate(plan?.date);
+
+  // Prior-session recap (proof) for this symbol, folded in from the daily brief.
+  const { data: brief } = useQuery<{ recap: { symbol: string; date: string; line: string }[] }>({
+    queryKey: ["/api/public/daily-brief"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/daily-brief");
+      if (!res.ok) throw new Error("Failed to load brief");
+      return res.json();
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+  const recap = (brief?.recap ?? []).find((r) => r.symbol === symbol) ?? null;
+
   return (
     <div className="public-page">
       <PublicNav />
@@ -191,6 +230,24 @@ export default function PublicTerminalPage() {
             </div>
           )}
         </div>
+
+        {/* Key macro-event flag */}
+        {keyEvent && (
+          <div
+            data-testid="terminal-event-flag"
+            style={{
+              border: "1px solid rgba(234,179,8,0.4)",
+              background: "rgba(234,179,8,0.08)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 16,
+              fontSize: 13,
+            }}
+          >
+            <b style={{ color: "#eab308" }}>Heads up, {keyEvent.label} on {plan?.date}.</b>{" "}
+            {keyEvent.note}
+          </div>
+        )}
 
         {/* Chart */}
         <div
@@ -272,15 +329,27 @@ export default function PublicTerminalPage() {
                 <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                   <div>
                     <span style={{ color: "#f87171" }}>Resistance:</span>{" "}
-                    {renderSwingRow(resistancePts)}
+                    {renderSwingRow(resistancePts, (px) => isTagged(px, "resistance"))}
                   </div>
                   <div>
                     <span style={{ color: "#4ade80" }}>Support:</span>{" "}
-                    {renderSwingRow(supportPts)}
+                    {renderSwingRow(supportPts, (px) => isTagged(px, "support"))}
                   </div>
                 </div>
+                {keySupport && acceptance && (
+                  <div style={{ fontSize: 12, marginTop: 8 }} data-testid="terminal-acceptance">
+                    Failed breakdown at <b>{n(keySupport.price)}</b>:{" "}
+                    {acceptance === "accepted" ? (
+                      <span style={{ color: "#4ade80" }}>flushed and reclaimed (accepted) ✓</span>
+                    ) : acceptance === "flushed" ? (
+                      <span style={{ color: "#eab308" }}>flushed, not yet reclaimed, wait for acceptance</span>
+                    ) : (
+                      <span style={{ opacity: 0.65 }}>not tested this session</span>
+                    )}
+                  </div>
+                )}
                 <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
-                  ★ = major (strongest reactions); dimmed = micro shelf (lower quality).
+                  ★ = major (strongest reactions); dimmed = micro shelf. ✓ = tagged this session.
                   Support/resistance are relative to the magnet.
                 </div>
               </div>
@@ -351,6 +420,31 @@ export default function PublicTerminalPage() {
             )}
           </div>
         </div>
+
+        {recap && (
+          <div
+            data-testid="terminal-recap"
+            style={{
+              border: "1px solid var(--border, #26262b)",
+              borderRadius: 12,
+              padding: 18,
+              background: "var(--card, rgba(255,255,255,0.02))",
+              marginTop: 16,
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+              Yesterday in review
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.9 }}>{recap.line}</div>
+            <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
+              Measured from the session's OHLC. See the{" "}
+              <Link href="/track-record" style={{ color: "inherit", textDecoration: "underline" }}>
+                track record
+              </Link>
+              .
+            </div>
+          </div>
+        )}
 
         {isMember && (
           <div style={{ fontSize: 12, opacity: 0.55, marginTop: 16 }} data-testid="terminal-member-status">
