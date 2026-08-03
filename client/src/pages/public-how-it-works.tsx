@@ -122,8 +122,10 @@ export default function PublicHowItWorksPage() {
               <div className="public-step">
                 <div className="public-step-num">2</div>
                 <p>
-                  It fails to keep falling and <b>reclaims</b> the level. Wait for the
-                  reclaim — never catch the falling knife.
+                  It fails to keep falling and <b>reclaims</b> the level — but don't buy
+                  the instant it does. Wait for <b>acceptance</b>: price holds back above
+                  the level, or reclaims it by ~5 points and holds for a couple minutes.
+                  That confirmation is what keeps you from getting trapped.
                 </p>
               </div>
               <div className="public-step">

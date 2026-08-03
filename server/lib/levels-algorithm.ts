@@ -357,7 +357,7 @@ function buildPlan(x: {
     if (i === 1) return `${medals[1]} ${fmtLevel(v)}: deeper backup if the first fails`;
     return `${medals[2]} ${fmtLevel(v)}: lower, higher-quality`;
   });
-  const long = `Failed-breakdown longs (best first) — ${longParts.join("  ·  ")}. Wait for the reclaim; never knife-catch.`;
+  const long = `Failed-breakdown longs (best first) — ${longParts.join("  ·  ")}. Don't buy the instant it reclaims (that's where most losses happen) — wait for acceptance: price holds back above the level, or reclaims it by ~5 pts and holds a couple minutes. Then enter and manage level-to-level, leaving a runner.`;
 
   const short =
     `Shorts (secondary, lower win-rate) — rejection at ${fmtLevel(firstHighVal)} → short toward ${fmtLevel(magnet)}; or a breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}. Size down — most breakdowns trap.`;
