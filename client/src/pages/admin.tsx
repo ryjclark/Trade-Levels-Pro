@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { formatTelegramFree, formatTelegramPro, formatSubstackFree, formatSubstackPro, formatMiddayUpdate, formatXPost } from "@/lib/formatter";
+import { formatTelegramPro, formatXPost } from "@/lib/formatter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import AlgorithmLevelsPanel from "@/components/AlgorithmLevelsPanel";
@@ -62,7 +62,7 @@ export default function AdminPage() {
   const [symbol, setSymbol] = useState("ES");
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [pasteText, setPasteText] = useState<string>("");
-  const [copied, setCopied] = useState<"telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | "xPost" | null>(null);
+  const [copied, setCopied] = useState<"telegramPro" | "xPost" | null>(null);
   
   const [formData, setFormData] = useState({
     id: null as number | null,
@@ -310,8 +310,8 @@ export default function AdminPage() {
     setLocation("/login");
   };
 
-  const handleCopy = async (type: "telegramFree" | "telegramPro" | "substackFree" | "substackPro" | "middayUpdate" | "xPost") => {
-    const planPreview = {
+  const handleCopy = async (type: "telegramPro" | "xPost") => {
+    const preview = {
       ...formData,
       date,
       symbol,
@@ -327,36 +327,14 @@ export default function AdminPage() {
       s3: formData.s3 ? parseFloat(formData.s3) : null,
       s4: formData.s4 ? parseFloat(formData.s4) : null,
     } as Plan;
-    
-    let text: string;
-    if (type === "xPost") {
-      text = formatXPost(planPreview);
-    } else {
-      const formatters = {
-        telegramFree: formatTelegramFree,
-        telegramPro: formatTelegramPro,
-        substackFree: formatSubstackFree,
-        substackPro: formatSubstackPro,
-        middayUpdate: formatMiddayUpdate
-      };
-      text = formatters[type](planPreview);
-    }
-    
+
+    const text = type === "xPost" ? formatXPost(preview) : formatTelegramPro(preview);
     await navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
-    
-    const labels = {
-      telegramFree: "Telegram Free",
-      telegramPro: "Telegram Pro", 
-      substackFree: "Substack Free",
-      substackPro: "Substack Pro",
-      middayUpdate: "Midday Update",
-      xPost: "X Post"
-    };
     toast({
       title: "Copied",
-      description: `${labels[type]} version copied to clipboard.`,
+      description: type === "xPost" ? "X post copied to clipboard." : "Telegram message copied to clipboard.",
     });
   };
 
@@ -806,67 +784,9 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Midday Update</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleCopy("middayUpdate")}
-                    data-testid="button-copy-midday"
-                  >
-                    {copied === "middayUpdate" ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-48 overflow-auto" data-testid="preview-midday">
-                  {formatMiddayUpdate(planPreview)}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">X (Twitter) Post</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-mono ${xPostLength > 280 ? 'text-destructive font-semibold' : 'text-muted-foreground'}`} data-testid="text-xpost-count">
-                      {xPostLength}/280
-                    </span>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleCopy("xPost")}
-                      data-testid="button-copy-xpost"
-                    >
-                      {copied === "xPost" ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className={`text-xs font-mono whitespace-pre-wrap p-3 rounded-lg max-h-48 overflow-auto ${xPostLength > 280 ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted'}`} data-testid="preview-xpost">
-                  {xPostText}
-                </pre>
-                {xPostLength > 280 && (
-                  <p className="text-xs text-destructive mt-2" data-testid="text-xpost-warning">Over 280 character limit by {xPostLength - 280} characters</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">Telegram Preview</CardTitle>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="ghost"
                     onClick={() => handleCopy("telegramPro")}
                     data-testid="button-copy-telegram"
@@ -889,25 +809,43 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Substack Preview</CardTitle>
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    onClick={() => handleCopy("substackPro")}
-                    data-testid="button-copy-substack"
-                  >
-                    {copied === "substackPro" ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
+                  <CardTitle className="text-base">X (Twitter) Post</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-mono ${xPostLength > 280 ? 'text-destructive font-semibold' : 'text-muted-foreground'}`} data-testid="text-xpost-count">
+                      {xPostLength}/280
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleCopy("xPost")}
+                      data-testid="button-copy-xpost"
+                    >
+                      {copied === "xPost" ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <pre className="text-xs font-mono whitespace-pre-wrap bg-muted p-3 rounded-lg max-h-64 overflow-auto" data-testid="preview-substack">
-                  {formatSubstackPro(planPreview)}
+                <pre className={`text-xs font-mono whitespace-pre-wrap p-3 rounded-lg max-h-48 overflow-auto ${xPostLength > 280 ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted'}`} data-testid="preview-xpost">
+                  {xPostText}
                 </pre>
+                {xPostLength > 280 && (
+                  <p className="text-xs text-destructive mt-2" data-testid="text-xpost-warning">Over the 280 character limit by {xPostLength - 280} characters</p>
+                )}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(xPostText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center justify-center w-full rounded-md border border-white/15 px-3 py-2 text-sm text-white/90 hover:bg-white/5"
+                  data-testid="link-open-x"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Open X with this post
+                </a>
               </CardContent>
             </Card>
           </div>
