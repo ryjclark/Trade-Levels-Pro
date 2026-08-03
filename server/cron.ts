@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
-import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars } from "./lib/levels-algorithm";
 import { postToX } from "./lib/twitter";
 import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
 import type { PlanLevels } from "@shared/schema";
@@ -228,6 +228,94 @@ async function postDailyBriefToTelegram() {
   }
 }
 
+// ===== Level-proximity alerts (opt-in) =====
+// Sends a short heads-up to Telegram when price comes near one of the day's
+// MAJOR levels. OFF unless PROXIMITY_ALERTS_ENABLED === "true". Each level
+// alerts at most once per session, only during the regular cash session, so it
+// can never spam the channel.
+
+const proximityAlerted = new Set<string>(); // keys: `${date}-${symbol}-${price}`
+const PROXIMITY_THRESHOLD: Record<"ES" | "NQ", number> = { ES: 3, NQ: 12 };
+
+function isRegularSessionET(): boolean {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const wd = parts.find((p) => p.type === "weekday")?.value;
+  if (wd === "Sat" || wd === "Sun") return false;
+  const hh = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+  const mm = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+  const mins = hh * 60 + mm;
+  return mins >= 9 * 60 + 30 && mins <= 16 * 60; // 9:30–16:00 ET
+}
+
+async function checkProximityAlerts() {
+  if (process.env.PROXIMITY_ALERTS_ENABLED !== "true") return;
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  if (!isRegularSessionET()) return;
+
+  const today = nyToday();
+  const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+  for (const symbol of ["ES", "NQ"] as const) {
+    try {
+      const plan = await storage.getPlanByDateSymbol(today, symbol);
+      if (!plan || plan.magnet == null) continue;
+      const lv = (plan as any).levels as import("@shared/schema").PlanLevels | null;
+      const magnet = plan.magnet;
+
+      // Current (delayed) price from the latest 1-minute bar.
+      let price: number | null = null;
+      try {
+        const bars = await fetchIntradayBars(symbol, "1d", "1m");
+        price = bars.length ? bars[bars.length - 1].close : null;
+      } catch {
+        price = null;
+      }
+      if (price == null) continue;
+
+      type Lvl = { price: number; kind: "support" | "resistance" | "magnet" };
+      const levels: Lvl[] = [{ price: magnet, kind: "magnet" }];
+      if (lv) {
+        for (const p of lv.swingSupportPoints ?? []) {
+          if (p.tier === "major" && p.price < magnet) levels.push({ price: p.price, kind: "support" });
+        }
+        for (const p of lv.swingResistancePoints ?? []) {
+          if (p.tier === "major" && p.price > magnet) levels.push({ price: p.price, kind: "resistance" });
+        }
+      }
+
+      const threshold = PROXIMITY_THRESHOLD[symbol];
+      for (const level of levels) {
+        const key = `${today}-${symbol}-${level.price}`;
+        if (proximityAlerted.has(key)) continue;
+        if (Math.abs(price - level.price) > threshold) continue;
+
+        const text =
+          level.kind === "magnet"
+            ? `⚡ ${symbol} is back at the ${fmt(level.price)} magnet.`
+            : level.kind === "support"
+              ? `⚡ ${symbol} is approaching ${fmt(level.price)}, a key failed-breakdown level. Watch for a flush and reclaim (wait for acceptance).`
+              : `⚡ ${symbol} is approaching ${fmt(level.price)}, a key resistance. Watch for a rejection.`;
+
+        try {
+          await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN, chatId: TELEGRAM_CHAT_ID, text, parseMode: "none" });
+          proximityAlerted.add(key);
+          console.log(`[cron] proximity alert sent: ${symbol} near ${level.price}`);
+        } catch (sendErr: any) {
+          console.error(`[cron] proximity send failed:`, sendErr?.message || sendErr);
+        }
+      }
+    } catch (err: any) {
+      console.error(`[cron] proximity ${symbol} failed:`, err?.message || err);
+    }
+  }
+}
+
 export function registerCronJobs() {
   // Every minute: publish any plans whose scheduled_for has passed.
   cron.schedule("* * * * *", () => {
@@ -256,7 +344,17 @@ export function registerCronJobs() {
     { timezone: "America/New_York" } as any,
   );
 
+  // Every 2 minutes during the cash session — level-proximity heads-up alerts.
+  // No-op unless PROXIMITY_ALERTS_ENABLED === "true".
+  cron.schedule(
+    "*/2 9-16 * * 1-5",
+    () => {
+      checkProximityAlerts().catch((e) => console.error("[cron] proximity error:", e));
+    },
+    { timezone: "America/New_York" } as any,
+  );
+
   console.log(
-    "[cron] Registered scheduled-publish (every minute) + daily-results (5pm ET) + self-generating levels (5:15pm ET)",
+    "[cron] Registered scheduled-publish (every minute) + daily-results (5pm ET) + self-generating levels (5:15pm ET) + proximity alerts (2min, opt-in)",
   );
 }
