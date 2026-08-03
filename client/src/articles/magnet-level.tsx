@@ -61,10 +61,11 @@ export function ArticleMagnet() {
           number with the highest concentration of unfinished business.
         </li>
         <li>
-          <strong>Floor pivots</strong> are formulaic. R1, R2, S1, S2 are
-          calculated from the prior day's high, low, and close. A Magnet is
-          discretionary and contextual — derived from auction structure, not a
-          spreadsheet.
+          <strong>Floor pivots</strong> are the anchor. Our Magnet starts from
+          the session pivot (calculated from the prior day's high, low, and
+          close) and is then read in the context of where price actually
+          reacted, so you treat it as a gravity level rather than a mechanical
+          line.
         </li>
       </ul>
       <p>
@@ -165,10 +166,10 @@ export function ArticleMagnet() {
 
       <h3>3. Magnet break with continuation</h3>
       <p>
-        Price decisively breaks the Magnet — usually after multiple tests — and
+        Price decisively breaks the Magnet, usually after multiple tests, and
         confirms with momentum on the other side. This is the trend day setup.
         The break of the Magnet is the trigger. The retest is the entry. The
-        next major level (R2, R3, or S2, S3) is the target.
+        next reaction level in the direction of the break is the target.
       </p>
       <p>
         The key word is <em>decisively</em>. A wick through the Magnet is not a
@@ -200,31 +201,32 @@ export function ArticleMagnet() {
       <h2>How a Magnet fits inside a daily plan</h2>
       <p>
         The Magnet is not a standalone signal. It lives inside a structured
-        daily plan with a Dynamic Zone, an S/R ladder (R1–R4 and S1–S4), and a
+        daily plan with a Dynamic Zone, ranked reaction levels, and a
         directional bias. The Magnet tells you <em>where</em>. The bias tells
-        you <em>which side</em>. The ladder tells you <em>where to scale or
-        cover</em>.
+        you <em>which side</em>. The reaction levels tell you <em>where to scale
+        or cover</em>.
       </p>
       <p>
         On a typical bullish day, ES might open above the Magnet, drift back to
-        test it, get bought aggressively, and rally to R1 or R2. The Magnet
-        was your entry zone. The bias was your green light. The ladder was your
-        target.
+        test it, get bought aggressively, and rally to the next reaction level.
+        The Magnet was your entry zone. The bias was your green light. The
+        reaction levels were your targets.
       </p>
 
       <h2>A hypothetical worked example</h2>
       <p>
-        Imagine the daily plan is published with Magnet <code>5,872</code>,
-        Dynamic Zone <code>5,864 – 5,880</code>, R1 <code>5,887</code>,
-        S1 <code>5,856</code>, and a bullish bias above the Magnet.
+        Imagine the daily plan is published with Magnet <code>7,496</code>,
+        Dynamic Zone <code>7,475 – 7,517</code>, a reaction level above at{" "}
+        <code>7,517</code>, one below at <code>7,468</code>, and a bullish bias
+        above the Magnet.
       </p>
       <p>
-        ES opens at <code>5,884</code>, rallies briefly, then drifts back into
-        the Dynamic Zone. It tags <code>5,872</code> exactly, prints a wick,
-        and starts forming higher lows on the 5-minute chart. That's the
-        Magnet rejection setup, aligned with bias. Entry around{" "}
-        <code>5,874</code>, stop below <code>5,866</code>, first target{" "}
-        <code>5,887</code> (R1), runner toward <code>5,901</code> (R2).
+        ES opens at <code>7,508</code>, rallies briefly, then drifts back into
+        the Dynamic Zone. It tags <code>7,496</code> exactly, prints a wick,
+        and starts forming higher lows on the 5-minute chart. That is the
+        Magnet holding, aligned with bias. Entry around{" "}
+        <code>7,499</code>, stop below <code>7,489</code>, first target{" "}
+        <code>7,517</code>, runner toward the next reaction level above.
       </p>
       <p>
         The trade isn't right because you predicted price would hold. It's
@@ -317,8 +319,8 @@ export function ArticleMagnet() {
       </p>
       <p>
         When your Magnet is wrong, the day usually becomes a trend day, and
-        the trade is in the S/R ladder rather than around the Magnet itself.
-        Step aside from Magnet-based setups and let the ladder work. Tomorrow
+        the trade is at the reaction levels rather than around the Magnet itself.
+        Step aside from Magnet-based setups and let those levels work. Tomorrow
         is a new chart and a new Magnet.
       </p>
 

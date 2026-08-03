@@ -1,8 +1,8 @@
-export const PRICE = "$25";
-export const PRICE_PER_MONTH = "$25/month";
-export const PRICE_ANNUAL = "$250";
-export const PRICE_ANNUAL_PER_YEAR = "$250/year";
-export const ANNUAL_SAVINGS_LABEL = "Save $50 · 2 months free";
+export const PRICE = "$49";
+export const PRICE_PER_MONTH = "$49/month";
+export const PRICE_ANNUAL = "$490";
+export const PRICE_ANNUAL_PER_YEAR = "$490/year";
+export const ANNUAL_SAVINGS_LABEL = "Save $98 · 2 months free";
 export const INDICATOR_PRICE = "$297";
 
 export const CTA_TEXT = "Subscribe";

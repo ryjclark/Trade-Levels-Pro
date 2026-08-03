@@ -199,13 +199,22 @@ export default function PublicTrackRecordPage() {
               </section>
             )}
 
-            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 32, maxWidth: 640 }}>
+            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 32, maxWidth: 660 }}>
               A "tag" means price traded to or through that level during the
               regular session. Magnet hit means the session's range contained the
-              magnet. Failed-breakdown win rate = of the support levels that
+              magnet. Failed-breakdown win rate is, of the support levels that
               flushed below (traded under the line), the share that closed back
-              above it — the core setup we trade. Past performance is not
-              indicative of future results.
+              above it, which is the core setup we trade.
+            </p>
+            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 12, maxWidth: 660 }}>
+              These figures are level-interaction statistics measured
+              automatically from daily open/high/low/close data. They describe
+              how price interacted with the published levels. They are NOT trading
+              results or account performance, they do not represent any actual
+              profit or loss, and they do not account for fees, commissions,
+              slippage, or execution. Statistical and hypothetical measures have
+              inherent limitations. Past performance is not indicative of future
+              results. Nothing here is financial advice.
             </p>
           </>
         )}

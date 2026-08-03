@@ -10,7 +10,7 @@ const WAITLIST_MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("I
 
 const FEATURES = [
   "Pine Script for TradingView (Pro+ tier required)",
-  "Plots the Magnet, Dynamic Zone, and R1–R4 / S1–S4 ladder on your chart",
+  "Plots the Magnet, Dynamic Zone, and key support and resistance levels on your chart",
   "Customizable colors, line styles, and labels",
   "Lifetime updates once released",
 ];
@@ -18,7 +18,7 @@ const FEATURES = [
 export default function PublicIndicatorPage() {
   useSeo({
     title: `Trade Levels Pro Indicator (Waitlist) | ${SITE_NAME}`,
-    description: "The Pine Script indicator that plots the Magnet, Dynamic Zone, and full S/R ladder on your TradingView chart is in development. Join the waitlist to be notified when it launches.",
+    description: "The Pine Script indicator that plots the Magnet, Dynamic Zone, and key support and resistance levels on your TradingView chart is in development. Join the waitlist to be notified when it launches.",
     path: "/indicator",
   });
 
@@ -39,7 +39,7 @@ export default function PublicIndicatorPage() {
             </h1>
             <p className="public-hero-subtitle">
               A Pine Script indicator that plots the Magnet, Dynamic Zone, and
-              S/R ladder directly on your TradingView chart is on the way. It is
+              key support and resistance levels directly on your TradingView chart is on the way. It is
               not available for purchase yet. Join the waitlist and we will email
               you the moment it is ready.
             </p>

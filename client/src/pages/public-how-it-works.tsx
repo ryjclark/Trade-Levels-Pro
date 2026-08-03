@@ -10,7 +10,7 @@ import { CTA_TEXT, CTA_MAILTO, SITE_NAME } from "@/lib/constants";
 const METHOD = [
   { icon: Eye, title: "Map the Dynamic Zone", body: "Define the reactive band where price is most likely to consolidate or reverse." },
   { icon: Crosshair, title: "Identify the Magnet", body: "Locate the level price tends to pull back toward intraday." },
-  { icon: Layers, title: "Layer Support and Resistance", body: "Define R1–R4 and S1–S4 to frame the day's playable range." },
+  { icon: Layers, title: "Map the Reaction Levels", body: "Prior-day, overnight, and detected swing levels, ranked by quality, frame the day's playable range." },
   { icon: Compass, title: "Set the Bias", body: "Establish a directional lean based on context, not prediction." },
   { icon: Send, title: "Define 1–2 High-Quality Setups", body: "Concrete, level-based ideas you can prepare for ahead of the open." },
 ];
@@ -18,7 +18,7 @@ const METHOD = [
 export default function PublicHowItWorksPage() {
   useSeo({
     title: `How It Works — The Methodology | ${SITE_NAME}`,
-    description: "How Trade Levels Pro builds a daily ES and NQ futures trade plan: Dynamic Zone, Magnet, S/R ladder, bias, and 1–2 setups, applied the same way every day.",
+    description: "How Trade Levels Pro builds a daily ES and NQ futures trade plan: Magnet, Dynamic Zone, ranked reaction levels, bias, and failed-breakdown setups, applied the same way every day.",
     path: "/how-it-works",
   });
 
@@ -163,7 +163,7 @@ export default function PublicHowItWorksPage() {
               <div className="public-step">
                 <div className="public-step-num">2</div>
                 <p>
-                  Receive tomorrow's ranked ES and NQ plan in Telegram after the close:
+                  Receive tomorrow's ranked ES and NQ plan in Telegram by 5:30 PM ET:
                   failed-breakdown longs listed best-first, rejection shorts as the
                   secondary play. The same levels are on the terminal (market data is
                   delayed roughly 60 seconds).

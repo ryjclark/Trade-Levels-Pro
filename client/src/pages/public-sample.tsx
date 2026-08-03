@@ -5,12 +5,12 @@ import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
 import TradingViewChart from "@/components/TradingViewChart";
 import { useSeo } from "@/hooks/use-seo";
-import { CTA_TEXT, CTA_MAILTO, SITE_NAME } from "@/lib/constants";
+import { CTA_TEXT, SITE_NAME } from "@/lib/constants";
 
 export default function PublicSamplePage() {
   useSeo({
     title: `Sample Daily ES and NQ Trade Plan | ${SITE_NAME}`,
-    description: "See exactly what's inside the daily ES and NQ trade plan delivered to subscribers: Dynamic Zone, Magnet, R1–R4, S1–S4, bias, and ranked setups.",
+    description: "See exactly what's inside the daily ES and NQ trade plan: Magnet, Dynamic Zone, ranked reaction levels, and ranked failed-breakdown longs plus rejection shorts, with the acceptance rule.",
     path: "/sample",
   });
 
@@ -37,48 +37,50 @@ export default function PublicSamplePage() {
         <Reveal>
           <section className="public-section" style={{ paddingTop: 0 }}>
             <div className="sample-card" data-testid="card-sample-plan">
-              <div className="sample-title">ES Daily Trade Plan (Example), Friday, July 31, 2026</div>
+              <div className="sample-title">ES Daily Trade Plan (Example)</div>
               <div className="sample-row">
                 <div className="sample-label">Bias</div>
-                <div className="sample-value">Bullish above magnet</div>
-              </div>
-              <div className="sample-row">
-                <div className="sample-label">Dynamic Zone</div>
-                <div className="sample-value mono">5,812 – 5,824</div>
+                <div className="sample-value">Bullish while price holds the magnet</div>
               </div>
               <div className="sample-row">
                 <div className="sample-label">Magnet</div>
-                <div className="sample-value mono">5,818</div>
+                <div className="sample-value mono">7,496</div>
               </div>
-              <div className="sample-block">
-                <div className="sample-label">Resistance</div>
-                <div className="sample-grid">
-                  <div><span className="sample-tag">R1</span><span className="mono">5,832</span></div>
-                  <div><span className="sample-tag">R2</span><span className="mono">5,847</span></div>
-                  <div><span className="sample-tag">R3</span><span className="mono">5,861</span></div>
-                  <div><span className="sample-tag">R4</span><span className="mono">5,878</span></div>
-                </div>
+              <div className="sample-row">
+                <div className="sample-label">Dynamic Zone</div>
+                <div className="sample-value mono">7,475 – 7,517</div>
               </div>
-              <div className="sample-block">
-                <div className="sample-label">Support</div>
-                <div className="sample-grid">
-                  <div><span className="sample-tag">S1</span><span className="mono">5,804</span></div>
-                  <div><span className="sample-tag">S2</span><span className="mono">5,790</span></div>
-                  <div><span className="sample-tag">S3</span><span className="mono">5,776</span></div>
-                  <div><span className="sample-tag">S4</span><span className="mono">5,761</span></div>
-                </div>
-              </div>
+
               <div className="sample-block">
                 <div className="sample-label">Failed-Breakdown Longs (primary, ranked best-first)</div>
                 <ul className="sample-list">
-                  <li>1. Flush below S1 (5,804), reclaim and accept back above, then long toward the magnet and R1. Stop below S2.</li>
-                  <li>2. Deeper flush below S2 (5,790) that reclaims and holds, targeting S1 then the magnet. Stop below S3.</li>
+                  <li>🥇 7,427 (significant low): flush below, reclaim, and accept back above, then long toward the magnet (7,496), then 7,517. Stop below 7,410.</li>
+                  <li>🥈 7,399 (significant low): deeper backup if the first fails. Target 7,427, then the magnet.</li>
+                  <li>🥉 7,372 (significant low): deeper still, take it only if price reaches and reclaims it.</li>
                 </ul>
               </div>
+
               <div className="sample-block">
                 <div className="sample-label">Rejection Shorts (secondary, lower win-rate)</div>
                 <ul className="sample-list">
-                  <li>1. Rejection at R2 (5,847) if price overextends into it. Stop above R3.</li>
+                  <li>🥇 7,517 (significant high): reject and fail to hold, then short toward the magnet. Stop above 7,530. Size down.</li>
+                  <li>🥈 7,547 (significant high): next resistance up if 7,517 gives way.</li>
+                </ul>
+              </div>
+
+              <div className="sample-block">
+                <div className="sample-label">Detected reaction levels</div>
+                <div className="sample-grid">
+                  <div><span className="sample-tag">Resistance</span><span className="mono">7,517 · 7,547 · 7,563</span></div>
+                  <div><span className="sample-tag">Support</span><span className="mono">7,427 · 7,399 · 7,372</span></div>
+                </div>
+              </div>
+
+              <div className="sample-block">
+                <div className="sample-label">How to take it</div>
+                <ul className="sample-list">
+                  <li>Acceptance first: do not knife-catch. Wait for price to hold back above the level, or reclaim it by about 5 points and hold for a couple of minutes.</li>
+                  <li>Manage level to level: bank the first target, move your stop, and trail a runner. React to price, no predictions.</li>
                 </ul>
               </div>
             </div>
@@ -96,16 +98,18 @@ export default function PublicSamplePage() {
             <div className="glossary-box" data-testid="box-glossary" style={{ marginTop: 40 }}>
               <h3>Glossary</h3>
               <dl className="glossary-list">
-                <dt>Dynamic Zone (DZ)</dt>
-                <dd>The reactive band where price often consolidates or reverses.</dd>
                 <dt>Magnet</dt>
-                <dd>The price level price tends to gravitate toward intraday.</dd>
-                <dt>R1–R4 / S1–S4</dt>
-                <dd>Layered resistance and support levels for the session.</dd>
-                <dt>Bias</dt>
-                <dd>Overall directional context for the day.</dd>
-                <dt>Setup</dt>
-                <dd>A specific, level-based trade idea — a starting point, not a signal.</dd>
+                <dd>The price the session tends to gravitate toward. Our main anchor for bias.</dd>
+                <dt>Dynamic Zone (DZ)</dt>
+                <dd>A volatility band around the magnet where price often consolidates or reverses.</dd>
+                <dt>Reaction levels</dt>
+                <dd>The real spots where price flushed and reversed, ranked by quality (major, minor, micro).</dd>
+                <dt>Failed breakdown</dt>
+                <dd>Our primary setup: price flushes below a significant low, traps sellers, then reclaims it, so you go long.</dd>
+                <dt>Acceptance</dt>
+                <dd>The confirmation to enter: price holds back above the level, or reclaims it by about 5 points and holds.</dd>
+                <dt>Level to level</dt>
+                <dd>How we manage: bank the first target, trail a runner, and react to price rather than predict.</dd>
               </dl>
             </div>
           </section>
@@ -123,9 +127,9 @@ export default function PublicSamplePage() {
             <div className="cta-orb-b" />
           </div>
           <h2 className="public-section-title">Ready for tomorrow's plan?</h2>
-          <a href={CTA_MAILTO} className="btn-primary" data-testid="button-cta-sample">
+          <Link href="/pricing" className="btn-primary" data-testid="button-cta-sample">
             {CTA_TEXT} →
-          </a>
+          </Link>
         </section>
 
         <PublicFooter />

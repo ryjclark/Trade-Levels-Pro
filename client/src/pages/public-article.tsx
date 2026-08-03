@@ -12,8 +12,12 @@ import NotFound from "@/pages/not-found";
 import { ArticleMagnet } from "@/articles/magnet-level";
 import { ArticlePropFirm } from "@/articles/prop-firm-sr";
 import { ArticleDailyTemplate } from "@/articles/daily-template";
+import { ArticleFailedBreakdown } from "@/articles/the-failed-breakdown-setup";
+import { ArticleAcceptance } from "@/articles/acceptance-and-level-to-level";
 
 const BODY_MAP: Record<string, () => JSX.Element> = {
+  "the-failed-breakdown-setup": ArticleFailedBreakdown,
+  "acceptance-and-level-to-level": ArticleAcceptance,
   "what-is-a-magnet-level-es-futures": ArticleMagnet,
   "prop-firm-traders-support-resistance": ArticlePropFirm,
   "building-a-daily-es-trade-plan-template": ArticleDailyTemplate,
@@ -23,7 +27,7 @@ function MidCta() {
   return (
     <div className="article-cta">
       <h3>Want this work done for you every trading day?</h3>
-      <p>Trade Levels Pro publishes the full ES plan to Telegram after each close.</p>
+      <p>Trade Levels Pro publishes the full ES and NQ plan to Telegram after each close.</p>
       <div className="article-cta-row">
         <Link href="/sample" className="btn-secondary" data-testid="article-link-sample">See a sample</Link>
         <a href={CTA_MAILTO} className="btn-primary" data-testid="article-link-pricing">{CTA_TEXT} →</a>
@@ -36,7 +40,7 @@ function EndCta() {
   return (
     <div className="article-cta">
       <h3>Trade tomorrow with structure.</h3>
-      <p>The same Magnet, Dynamic Zone, and S/R ladder — delivered to Telegram every evening.</p>
+      <p>The same Magnet, Dynamic Zone, structure levels, and ranked setups, delivered to Telegram every evening for ES and NQ.</p>
       <div className="article-cta-row">
         <Link href="/pricing" className="btn-secondary" data-testid="article-link-pricing-end">View pricing</Link>
         <a href={CTA_MAILTO} className="btn-primary" data-testid="article-link-cta-end">{CTA_TEXT} →</a>

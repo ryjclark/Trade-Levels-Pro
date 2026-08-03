@@ -112,22 +112,23 @@ export function ArticlePropFirm() {
         reverse. The DZ defines your "no trade" middle ground. If price is in
         the DZ and not at an edge, you're not trading.
       </p>
-      <h3>3. R1 / S1 — the first ladder rung</h3>
+      <h3>3. The nearest reaction levels</h3>
       <p>
-        The first level above and below the Dynamic Zone. R1 and S1 are your
-        most-likely scalp targets and your most-likely first reaction zones.
-        These are the bread-and-butter trades for a prop evaluation: small,
-        defined, repeatable.
+        The first significant support below and resistance above the Dynamic
+        Zone, the spots where price actually flushed and reversed before. These
+        are your most-likely first reactions and the home of the bread-and-butter
+        trades for a prop evaluation: the failed-breakdown long and the rejection
+        short. Small, defined, repeatable.
       </p>
-      <h3>4. R4 / S4 — the outer rung</h3>
+      <h3>4. The far reaction levels</h3>
       <p>
-        The outermost level of your daily range. R4 and S4 are the "session
-        extreme" levels — touched on real trend days, ignored on most others.
-        These are also where you cover, not where you initiate. A prop trader
-        who chases R4 is asking to be trailed out.
+        The session-extreme levels, the edges of the prior-week and roughly
+        one-month range. These get touched on real trend days and ignored on
+        most others. They are where you cover, not where you initiate. A prop
+        trader who chases the far level is asking to be trailed out.
       </p>
       <p>
-        Four numbers. That's the entire chart. Everything else is noise.
+        A handful of levels. That is the entire chart. Everything else is noise.
       </p>
 
       <MidCta />
@@ -139,31 +140,32 @@ export function ArticlePropFirm() {
         the day looks like this:
       </p>
       <ul>
-        <li>Magnet: <code>5,818</code></li>
-        <li>Dynamic Zone: <code>5,812 – 5,824</code></li>
-        <li>R1: <code>5,832</code> · R2: <code>5,847</code> · R3: <code>5,861</code> · R4: <code>5,878</code></li>
-        <li>S1: <code>5,804</code> · S2: <code>5,790</code> · S3: <code>5,776</code> · S4: <code>5,761</code></li>
+        <li>Magnet: <code>7,496</code></li>
+        <li>Dynamic Zone: <code>7,475 – 7,517</code></li>
+        <li>Reaction levels above: <code>7,517</code> · <code>7,547</code></li>
+        <li>Reaction levels below: <code>7,468</code> · <code>7,449</code></li>
         <li>Bias: bullish above the Magnet.</li>
       </ul>
       <p>
-        ES opens at <code>5,820</code> — inside the DZ. You don't trade. Price
-        drifts down to S1 at <code>5,804</code>, prints a wick, and forms a
-        5-minute reversal. That's setup #1: long S1 reaction toward the
-        Magnet. Entry <code>5,806</code>, stop <code>5,799</code> (just below
-        S1), first target <code>5,818</code> (Magnet), runner to{" "}
-        <code>5,832</code> (R1).
+        ES opens at <code>7,500</code>, inside the DZ. You don't trade. Price
+        flushes down to <code>7,468</code>, prints a wick, and reclaims the
+        level on the 5-minute chart. That is the failed breakdown, setup #1:
+        long the reclaim toward the Magnet. You wait for acceptance, enter{" "}
+        <code>7,471</code>, stop <code>7,464</code> (below the reclaimed level),
+        first target <code>7,496</code> (Magnet), runner toward{" "}
+        <code>7,517</code>.
       </p>
       <p>
-        Risk: 7 ticks × 4 contracts = $350. Well under the daily loss limit
-        and well under the trailing drawdown. You take partial at the Magnet,
-        runner stops out at break-even after R1 prints. Trade nets ~$650.
+        Risk: 7 points times 2 contracts is $700. Under the daily loss limit
+        and well under the trailing drawdown. You bank partials at the Magnet,
+        and the runner stops at break-even after <code>7,517</code> prints.
       </p>
       <p>
-        ES then ranges between R1 and the Magnet for two hours. You don't
-        trade. Setup #2 was a short rejection at R2 — that level never
-        prints. The day is mathematically over for you. You're up ~$650, took
-        one trade, and the trail moved with you. <em>That</em> is what passing
-        an evaluation looks like.
+        ES then ranges between the Magnet and <code>7,517</code> for two hours.
+        You don't trade. Setup #2 was a rejection short at <code>7,547</code>,
+        which never prints. The day is mathematically over for you. You took
+        one trade, you are green, and the trail moved with you. <em>That</em> is
+        what passing an evaluation looks like.
       </p>
 
       <h2>Common prop firm mistakes</h2>
@@ -175,18 +177,19 @@ export function ArticlePropFirm() {
         </li>
         <li>
           <strong>Trading every direction.</strong> If your bias is bullish
-          and you take a counter-trend short into S1, size it like the
-          contrarian trade it is — 25% of normal size, not 100%.
+          and you take a counter-trend short into a support level, size it like
+          the contrarian trade it is, 25% of normal size, not 100%.
         </li>
         <li>
-          <strong>Holding for "the next level" without scaling.</strong> R1
-          becomes R2 becomes R3 becomes a full reversal back through R1.
-          Without scaling, your winners turn into stops.
+          <strong>Holding for "the next level" without scaling.</strong> The
+          first level becomes the second becomes the third becomes a full
+          reversal back through your entry. Without scaling, your winners turn
+          into stops.
         </li>
         <li>
-          <strong>Adding to losers.</strong> If your stop is at S2 and price
-          is at S1.5, you do not add. You wait for the level or you take the
-          stop.
+          <strong>Adding to losers.</strong> If your stop is at the next
+          support and price is drifting toward it, you do not add. You wait for
+          the level or you take the stop.
         </li>
         <li>
           <strong>Trading after a daily limit hit.</strong> Most firms forbid
@@ -225,11 +228,11 @@ export function ArticlePropFirm() {
       </p>
       <p>
         The same logic applies to scaling out. A first partial at the Magnet
-        on a long from S1 should cover at least the original risk. If you
-        risked $300, scale enough at the Magnet to lock in $300+ as
-        realized P&amp;L. The runner is then a free lottery ticket on R1 or R2
-        — it cannot turn a winning day into a losing one because your scaled
-        portion already paid for the trade.
+        on a long from a reclaimed support should cover at least the original
+        risk. If you risked $300, scale enough at the Magnet to lock in $300+ as
+        realized P&amp;L. The runner is then a free lottery ticket on the next
+        reaction levels, and it cannot turn a winning day into a losing one
+        because your scaled portion already paid for the trade.
       </p>
 
       <h2>The two-trade rule</h2>
@@ -349,9 +352,10 @@ export function ArticlePropFirm() {
 
       <h2>What to do tomorrow</h2>
       <p>
-        Pick a $50K evaluation. Define your four numbers tonight: Magnet, DZ,
-        R1/S1, R4/S4. Pre-write your two setups. Tomorrow, take only those
-        setups. Walk away when both have triggered or invalidated. Repeat for
+        Pick a $50K evaluation. Define your levels tonight: the Magnet, the
+        Dynamic Zone, and the nearest and far reaction levels. Pre-write your
+        two setups. Tomorrow, take only those setups. Walk away when both have
+        triggered or invalidated. Repeat for
         20 days.
       </p>
       <p>

@@ -776,7 +776,7 @@ export default function AdminPage() {
                         rows={5}
                         value={pasteText}
                         onChange={(e) => setPasteText(e.target.value)}
-                        placeholder={`Paste JSON or key:value lines, e.g.\nmagnet: 5872\ndzTop: 5880\ndzBottom: 5864\nr1: 5894\ns1: 5856\nbias: Neutral upside lean`}
+                        placeholder={`Paste JSON or key:value lines, e.g.\nmagnet: 7496\ndzTop: 7517\ndzBottom: 7475\nr1: 7517\ns1: 7468\nbias: Bullish above magnet`}
                         data-testid="input-paste"
                       />
                       <div>

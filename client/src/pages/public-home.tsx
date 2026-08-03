@@ -35,7 +35,7 @@ const NOT_FOR_LIST = [
 const METHOD = [
   { icon: Eye, title: "Map the Dynamic Zone", body: "Define the reactive band where price is most likely to consolidate or reverse." },
   { icon: Crosshair, title: "Identify the Magnet", body: "Locate the level price tends to pull back toward intraday." },
-  { icon: Layers, title: "Layer Support and Resistance", body: "Define R1–R4 and S1–S4 to frame the day's playable range." },
+  { icon: Layers, title: "Map the Reaction Levels", body: "Prior-day, overnight, and detected swing levels, ranked by quality, frame the day's playable range." },
   { icon: Compass, title: "Set the Bias", body: "Establish a directional lean based on context, not prediction." },
   { icon: Send, title: "Define 1–2 High-Quality Setups", body: "Concrete, level-based ideas you can prepare for ahead of the open." },
 ];
@@ -44,14 +44,14 @@ const FAQ = [
   { q: "Which markets are covered?", a: "Both ES (S&P 500) and NQ (Nasdaq 100) E-mini futures. ES is the primary focus, and NQ is published alongside it." },
   { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions, not follow someone else's calls." },
   { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ sessions." },
-  { q: "When are plans posted?", a: "After the cash close each trading day, for the next session, so you're prepared before the open." },
+  { q: "When are plans posted?", a: "By 5:30 PM ET each trading day, for the next session, so you're prepared before the open." },
   { q: "Is the market data on this site live?", a: "No. Market data on this site is delayed about a minute and is not a live trading feed. Plans and levels are set after the close." },
 ];
 
 export default function PublicHomePage() {
   useSeo({
     title: `${SITE_NAME}: Daily ES and NQ Futures Trade Plans`,
-    description: `Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, and a full S/R ladder, delivered to Telegram and the on-site terminal after the close. ${TAGLINE}`,
+    description: `Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, ranked reaction levels, and a failed-breakdown plan, delivered to Telegram and the on-site terminal after the close. ${TAGLINE}`,
     path: "/",
     jsonLd: {
       "@context": "https://schema.org",
@@ -87,7 +87,7 @@ export default function PublicHomePage() {
                 Daily ES and NQ levels for traders who <span className="accent">prepare</span>, then react.
               </h1>
               <p className="public-hero-subtitle">
-                Tomorrow's Magnet, Dynamic Zone, S/R ladder, and trade plan for ES and NQ,
+                Tomorrow's Magnet, Dynamic Zone, ranked reaction levels, and trade plan for ES and NQ,
                 delivered to Telegram and the on-site terminal after the close.
               </p>
               <div className="hero-cta-row">
@@ -178,7 +178,7 @@ export default function PublicHomePage() {
               <div className="public-card" data-testid="card-feature-levels">
                 <div className="public-card-icon"><BarChart3 size={22} /></div>
                 <h3>Key Market Levels</h3>
-                <p>R1–R4 and S1–S4 for the next ES and NQ session, clearly defined before the open.</p>
+                <p>The Magnet, Dynamic Zone, and ranked reaction levels for the next ES and NQ session, defined before the open.</p>
               </div>
               <div className="public-card" data-testid="card-feature-zone">
                 <div className="public-card-icon"><Magnet size={22} /></div>

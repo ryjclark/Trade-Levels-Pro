@@ -17,9 +17,9 @@ export default function PublicAboutPage() {
 
         <p style={{ color: "var(--text-dim)", lineHeight: 1.7, marginBottom: 18 }}>
           Trade Levels Pro publishes one focused plan per session for ES and NQ
-          futures: a Magnet, a Dynamic Zone, and a four-rung resistance and
-          support ladder — delivered to a private Telegram channel after the
-          close so you have it before the next open.
+          futures: a Magnet, a Dynamic Zone, ranked reaction levels, and a
+          failed-breakdown trade plan, delivered to a private Telegram channel
+          and the on-site terminal so you have it before the next open.
         </p>
         <p style={{ color: "var(--text-dim)", lineHeight: 1.7, marginBottom: 18 }}>
           The plans are reactive, not predictive. We don't post win-rates, we

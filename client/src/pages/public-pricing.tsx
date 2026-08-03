@@ -14,18 +14,20 @@ import {
 
 const FAQ = [
   { q: "Which markets does this cover?", a: "Both ES and NQ E-mini futures, with ES as the primary focus. You get a plan and levels for each." },
-  { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions." },
+  { q: "Is this an alerts service?", a: "No. It is a daily plan with the key levels and ranked setups. You learn to navigate the levels and make your own decisions." },
   { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ session." },
-  { q: "What do I get each day?", a: "Dynamic Zone, Magnet, R1–R4 / S1–S4, daily bias, and 1–2 setups based on those levels, for both ES and NQ." },
-  { q: "When are plans posted?", a: "After market close, for the next trading session." },
-  { q: "Can I cancel anytime?", a: "Yes. Email support to cancel and we'll stop future billing. There are no contracts and no long-term commitment." },
+  { q: "What do I get each day?", a: "The Magnet and Dynamic Zone, the key structure and reaction levels, a daily bias, and ranked failed-breakdown longs plus secondary rejection shorts, for both ES and NQ." },
+  { q: "When are plans posted?", a: "By 5:30 PM ET each trading day, for the next session, to Telegram and the on-site terminal." },
+  { q: "Is the market data live?", a: "No. Price data shown on the site is delayed about a minute and is not a live trading feed. The levels are set after the cash close." },
+  { q: "Can I cancel anytime?", a: "Yes. Email support to cancel and we will stop future billing. There are no contracts and no long-term commitment." },
+  { q: "Do you offer refunds?", a: "You can cancel anytime to stop future billing, and access continues through the period you already paid for. Because the plans are delivered daily, we do not refund elapsed subscription time." },
 ];
 
 const FEATURES = [
-  "Daily ES & NQ support & resistance levels",
-  "Dynamic Zone + Magnet",
-  "Daily bias + 1–2 high-quality setups",
-  "Delivered via Telegram after the close",
+  "Daily ES and NQ levels and trade plan",
+  "Magnet, Dynamic Zone, and ranked reaction levels",
+  "Ranked failed-breakdown longs plus rejection shorts",
+  "Posted by 5:30 PM ET via Telegram and the on-site terminal",
   "Cancel anytime",
 ];
 
@@ -34,7 +36,7 @@ export default function PublicPricingPage() {
 
   useSeo({
     title: `Pricing — Founding Members | ${SITE_NAME}`,
-    description: "Founding Members pricing for Trade Levels Pro: $25/month or $250/year for daily ES and NQ futures trade plans delivered to a private Telegram channel.",
+    description: "Founding Members pricing for Trade Levels Pro: $49/month or $490/year for daily ES and NQ futures trade plans delivered to a private Telegram channel and the on-site terminal.",
     path: "/pricing",
     jsonLd: {
       "@context": "https://schema.org",
