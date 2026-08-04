@@ -69,6 +69,26 @@ export function formatAlgorithmPlan(plan: Plan): string {
   L.push(`Magnet: ${num(magnet)}`);
   L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
 
+  // Full level lists (nearest first, ★ = major) so the alert carries the same
+  // picture as the terminal, including the deeper key levels and upside targets
+  // that the ranked top-3 setups below leave out.
+  if (lv && magnet != null) {
+    const fmtRow = (pts: SwingPointData[] | undefined, side: "above" | "below") => {
+      const filtered = (pts ?? []).filter((p) => (side === "above" ? p.price > magnet : p.price < magnet));
+      filtered.sort((a, b) =>
+        side === "above" ? a.price - magnet - (b.price - magnet) : magnet - a.price - (magnet - b.price),
+      );
+      return filtered.slice(0, 6).map((p) => num(p.price) + (p.tier === "major" ? "★" : "")).join(", ");
+    };
+    const res = fmtRow(lv.swingResistancePoints, "above");
+    const sup = fmtRow(lv.swingSupportPoints, "below");
+    if (res || sup) {
+      L.push("");
+      if (res) L.push(`Resistances: ${res}`);
+      if (sup) L.push(`Supports: ${sup}`);
+    }
+  }
+
   if (longVals.length) {
     L.push("");
     L.push("🟢 Failed-breakdown longs (best first)");
