@@ -588,10 +588,18 @@ function buildPlan(x: {
       `${upTargets.length ? ` Targets ${tstr}.` : ""}\n` +
       `Shallow pullbacks toward the ${fmtLevel(magnet)} magnet are chases — no trade unless price ` +
       `actually flushes a level and recovers. If it just grinds higher all day, do nothing.`;
+    // Keep the short LEVELS (resistances above current price) — just frame them
+    // with the momentum caveat. He still lists shorts "for those who want them."
+    const shortLevels = (swings ? swings.highs : [])
+      .filter((v) => v > price)
+      .sort((a, b) => a - b)
+      .slice(0, 3);
+    const ladder = shortLevels.length ? shortLevels : [firstHighVal];
     short =
-      `Shorts: not the edge in a momentum uptrend — the plan is to pass. If you must, ` +
-      `${fmtLevel(firstHighVal)} is the only spot, and only as a small level-to-level scalp ` +
-      `(size down), never a reversal.`;
+      `Rejection shorts — NOT the edge in a momentum uptrend (the plan is to pass), but ` +
+      `listed for those who want them:\n` +
+      ladder.map((v, i) => `${medals[i]} ${fmtLevel(v)} → reject + fail, small level-to-level scalp`).join("\n") +
+      `\nScalps only, size down — never a reversal in this tape.`;
   }
 
   return { reasoning, long, short };

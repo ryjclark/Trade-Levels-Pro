@@ -241,9 +241,11 @@ describe("computeLevels — momentum/breakout regime", () => {
     expect(r.top_long_trade.toLowerCase()).toContain("chase");
   });
 
-  it("mutes shorts to a pass/scalp, not a ranked ladder", () => {
+  it("keeps the short LEVELS but frames them as not-the-edge scalps", () => {
     expect(r.top_short_trade.toLowerCase()).toContain("not the edge");
-    expect(r.top_short_trade).not.toContain("🥈");
+    // The short levels themselves are still listed (a resistance above price).
+    expect(r.top_short_trade).toContain("🥇");
+    expect(r.top_short_trade.toLowerCase()).toContain("scalp");
   });
 });
 

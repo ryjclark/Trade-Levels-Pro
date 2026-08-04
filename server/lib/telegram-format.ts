@@ -118,7 +118,14 @@ export function formatAlgorithmPlan(plan: Plan): string {
     if (targets.length) L.push(`Targets: ${targets.join(", ")}`);
     L.push(`Shallow dips toward ${num(magnet)} are chases — no trade unless it flushes and recovers.`);
     L.push("");
-    L.push("🔴 Shorts: not the edge here — small level-to-level scalps only, if at all.");
+    L.push("🔴 Rejection shorts (not the edge here — scalps only, if at all)");
+    const shortLvls = (lv?.swingResistancePoints ?? [])
+      .map((p) => p.price)
+      .filter((v) => v > priceRef)
+      .sort((a, b) => a - b)
+      .slice(0, 3);
+    if (shortLvls.length) shortLvls.forEach((v, i) => L.push(`${medals[i]} ${num(v)} → reject and fail, small scalp`));
+    else L.push("Small level-to-level scalps only.");
   } else {
     if (longVals.length) {
       L.push("");
