@@ -40,6 +40,7 @@ export interface ComputedLevels {
     swingResistances: number[];
     swingSupportPoints?: SwingPoint[];
     swingResistancePoints?: SwingPoint[];
+    regime?: "momentum" | "normal";
   };
 }
 
@@ -439,10 +440,12 @@ function buildPlan(x: {
   magnet: number; dzHigh: number; dzLow: number;
   r1: number; s1: number; s2: number;
   roundStep: number;
+  regime: "momentum" | "normal";
+  price: number;
   structure: StructureLevels | null;
   swings: SwingLevels | null;
 }): { reasoning: string; long: string; short: string } {
-  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, roundStep, structure: s, swings } = x;
+  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, roundStep, regime, price, structure: s, swings } = x;
 
   // Failed-breakdown longs: nearest level leads, but we prefer real detected
   // shelves over round-number filler and guarantee the strongest major is in the
@@ -472,6 +475,23 @@ function buildPlan(x: {
   let shortPts: SwingPoint[] = [];
   if (swings) shortPts = pickSetupLevels(swings.highPoints, magnet, "above", roundStep);
   const firstHighVal = shortPts[0] ? shortPts[0].price : targetHighs[0];
+
+  // A+ failed-breakdown = the strongest MAJOR support below the magnet — the deep
+  // reaction low a momentum-phase plan is built around (his ⭐⭐⭐⭐⭐ level). In a
+  // breakout/momentum regime this LEADS the plan; shallow near-price levels are chases.
+  const majorsBelow = swings
+    ? swings.lowPoints
+        .filter((p) => p.price < magnet && p.tier === "major")
+        .sort((a, b) => b.prominence - a.prominence)
+    : [];
+  const aPlus: SwingPoint | null = majorsBelow[0] ?? longPts.find((p) => p.tier === "major") ?? null;
+  // Momentum upside targets = resistances above CURRENT PRICE (price is already
+  // above the magnet on a breakout day), nearest-first, up to three.
+  const momoTargets: number[] = (swings ? swings.highs : [])
+    .filter((v) => v > price)
+    .sort((a, b) => a - b)
+    .slice(0, 3);
+  const upTargets = momoTargets.length ? momoTargets : targetHighs.slice(0, 3);
 
   // Breakdown-short target must sit BELOW the level being lost.
   const breakdownLow = lowVals[0];
@@ -509,7 +529,7 @@ function buildPlan(x: {
         if (i === 1) return `${medals[1]} ${fmtLevel(v)}: deeper backup if the first fails`;
         return `${medals[2]} ${fmtLevel(v)}: lower, higher-quality`;
       });
-  const long =
+  let long =
     `Failed-breakdown longs (best first):\n${longParts.join("\n")}\n` +
     `Entry rule: wait for acceptance — price holds back above the level, or reclaims by ~5 pts and holds a couple minutes (don't knife-catch). Then manage level-to-level and leave a runner.`;
 
@@ -528,10 +548,33 @@ function buildPlan(x: {
     downTarget != null
       ? `Continuation: breakdown of ${fmtLevel(breakdownLow)} that holds below → ${fmtLevel(downTarget)}. `
       : "";
-  const short =
+  let short =
     `Rejection shorts (secondary, lower win-rate — best first):\n${shortParts.join("\n")}\n` +
     continuation +
     `Wait for acceptance the same way; size down — most breakdowns trap.`;
+
+  // Momentum/breakout override: after a vertical move the plan is PATIENCE, not a
+  // ladder of shallow longs. Lead with the deep A+ failed-breakdown, call the
+  // shallow near-price zone a chase, extend targets, and mute shorts to a single
+  // "only if you must" scalp line — mirroring how the newsletter reads a breakout.
+  if (regime === "momentum" && aPlus) {
+    const tstr = upTargets.map(fmtLevel).join(", ");
+    reasoning =
+      `Bullish / momentum — price has broken out and gone vertical. Nothing to chase up here: ` +
+      `the A+ is a failed-breakdown flush into ${fmtLevel(aPlus.price)}. Ride a runner, manage ` +
+      `level-to-level, and don't force trades if price just grinds higher.`;
+    long =
+      `Momentum/breakout — be patient (a "wait for it to come to you" day).\n` +
+      `⭐ Best long (A+): ${fmtLevel(aPlus.price)} — wait for a flush that loses it and RECLAIMS ` +
+      `(non-acceptance entry: go on strength as it recovers ~5 pts and holds, don't knife-catch).` +
+      `${upTargets.length ? ` Targets ${tstr}.` : ""}\n` +
+      `Shallow pullbacks toward the ${fmtLevel(magnet)} magnet are chases — no trade unless price ` +
+      `actually flushes a level and recovers. If it just grinds higher all day, do nothing.`;
+    short =
+      `Shorts: not the edge in a momentum uptrend — the plan is to pass. If you must, ` +
+      `${fmtLevel(firstHighVal)} is the only spot, and only as a small level-to-level scalp ` +
+      `(size down), never a reversal.`;
+  }
 
   return { reasoning, long, short };
 }
@@ -599,6 +642,7 @@ export function augmentSwings(
   magnet: number,
   price: number,
   symbol: "ES" | "NQ",
+  upBandMult = 1,
 ): SwingLevels {
   const tick = TICK[symbol];
   const rt = (v: number) => roundToTick(v, tick);
@@ -622,10 +666,12 @@ export function augmentSwings(
   addLevel(structure?.overnightLow, "minor");
 
   // Round numbers within a band above and below price (near-price levels +
-  // clean upside/downside targets).
+  // clean upside/downside targets). In a momentum/breakout regime the upside band
+  // is stretched so parabolic targets (e.g. ES 7,850/7,875) still get generated.
   const step = ROUND_STEP[symbol];
   const band = AUGMENT_BAND[symbol];
-  for (let r = Math.ceil((price - band) / step) * step; r <= price + band; r += step) {
+  const upBand = band * upBandMult;
+  for (let r = Math.ceil((price - band) / step) * step; r <= price + upBand; r += step) {
     addLevel(r, "minor");
   }
 
@@ -666,12 +712,24 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
   const r3 = rt(H + 2 * (PP - L)), s3 = rt(L - 2 * (H - PP));
   const r4 = rt(r3 + (r3 - r2)), s4 = rt(s3 - (s2 - s3));
   const bias: ComputedLevels["bias"] = C > PP + dz ? "bullish" : C < PP - dz ? "bearish" : "neutral";
+  const price = rt(C);
+
+  // Regime detection (data-driven, no hardcoded levels): a MOMENTUM/breakout phase
+  // is when the trend is up AND price has pressed to within ~0.6·ATR of the recent
+  // (~1-month) high — i.e. we've broken out / gone vertical. After a move like that
+  // the right plan is patience: lead with the deep A+ failed-breakdown, treat
+  // shallow pullbacks as chases, extend upside targets, and mute shorts. Otherwise
+  // it's a NORMAL range day and the nearest-first ladder applies.
+  const recentHigh = structure?.recentHigh ?? null;
+  const regime: "momentum" | "normal" =
+    bias === "bullish" && recentHigh != null && price >= recentHigh - 0.6 * a ? "momentum" : "normal";
 
   // Enrich the detected swings with structure, round numbers, and extensions so
   // the plan always has near-price levels and beyond-price targets on both sides.
-  const enriched = augmentSwings(swings, structure, magnet, rt(C), symbol);
+  // Momentum stretches the upside target band so parabolic targets still appear.
+  const enriched = augmentSwings(swings, structure, magnet, price, symbol, regime === "momentum" ? 2 : 1);
 
-  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, roundStep: ROUND_STEP[symbol], structure, swings: enriched });
+  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, roundStep: ROUND_STEP[symbol], regime, price, structure, swings: enriched });
 
   return {
     symbol, target_date: nextTradingDay(prev.date), current_price: rt(C),
@@ -699,6 +757,7 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
       swingResistances: enriched.highs,
       swingSupportPoints: enriched.lowPoints,
       swingResistancePoints: enriched.highPoints,
+      regime,
     },
   };
 }

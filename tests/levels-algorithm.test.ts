@@ -143,13 +143,15 @@ describe("detectSwings — quality ranking", () => {
   });
 });
 
-describe("computeLevels — breakout enrichment", () => {
-  // Price at new highs with no swings above: plan must still produce near-price
-  // supports and real upside targets (round numbers, prior high, extension).
+describe("computeLevels — breakout enrichment (normal regime)", () => {
+  // Bullish push, but still BELOW the ~1-month high (recentHigh 7700) so this is a
+  // normal range day, not a breakout — the nearest-first ladder applies. With no
+  // detected swings above price, enrichment must still produce near-price supports
+  // and real upside targets (round numbers, prior high, extension).
   const daily: Bar[] = [];
   for (let i = 0; i < 14; i++) daily.push({ date: `2026-07-${String(i + 1).padStart(2, "0")}`, open: 7600, high: 7620, low: 7560, close: 7600 });
   daily.push({ date: "2026-08-03", open: 7560, high: 7637.75, low: 7542.75, close: 7628.25 }); // PP ~ 7603
-  const structure: any = { priorHigh: 7637.75, priorLow: 7542.75, priorClose: 7628.25, overnightHigh: 7567.75, overnightLow: 7543.5, priorWeekHigh: 7541, priorWeekLow: 7345.75, recentHigh: 7637.75, recentLow: 7345.75 };
+  const structure: any = { priorHigh: 7637.75, priorLow: 7542.75, priorClose: 7628.25, overnightHigh: 7567.75, overnightLow: 7543.5, priorWeekHigh: 7541, priorWeekLow: 7345.75, recentHigh: 7700, recentLow: 7345.75 };
   const swings: any = {
     lows: [7542.75, 7427.5, 7399], highs: [7561.5, 7526],
     lowPoints: [{ price: 7542.75, prominence: 95, tier: "major" }, { price: 7427.5, prominence: 113, tier: "major" }, { price: 7399, prominence: 99, tier: "major" }],
@@ -195,6 +197,50 @@ describe("pickSetupLevels — real shelves beat round filler, major guaranteed",
     expect(isRoundRef({ price: 7725, prominence: 0 }, 25)).toBe(true);
     expect(isRoundRef({ price: 7631.75, prominence: 88 }, 25)).toBe(false);
     expect(isRoundRef({ price: 7666, prominence: 0 }, 25)).toBe(false); // non-round structure
+  });
+});
+
+describe("computeLevels — momentum/breakout regime", () => {
+  // Price pressed right up to a new recent high (broken out / vertical), with a
+  // deep MAJOR reaction low well below the magnet. The plan should flip to the
+  // patience script: lead with the deep A+, flag chasing, and mute shorts.
+  const daily: Bar[] = [];
+  for (let i = 0; i < 14; i++) daily.push({ date: `2026-07-${String(i + 1).padStart(2, "0")}`, open: 7700, high: 7720, low: 7680, close: 7700 });
+  // Last session closes at the top of its range → bullish + at the recent high.
+  daily.push({ date: "2026-08-04", open: 7710, high: 7772, low: 7705, close: 7765 });
+  const structure: any = {
+    priorHigh: 7772, priorLow: 7705, priorClose: 7765,
+    overnightHigh: 7666, overnightLow: 7629,
+    priorWeekHigh: 7541, priorWeekLow: 7345.75,
+    recentHigh: 7772, recentLow: 7345.75,
+  };
+  const swings: any = {
+    lows: [7666, 7649.25, 7631.75], highs: [7772],
+    lowPoints: [
+      { price: 7666, prominence: 8, tier: "minor" },
+      { price: 7649.25, prominence: 42, tier: "minor" },
+      { price: 7631.75, prominence: 96, tier: "major" }, // deep A+
+    ],
+    highPoints: [{ price: 7772, prominence: 90, tier: "major" }],
+  };
+  const r = computeLevels(daily, "ES", structure, swings);
+
+  it("flags the momentum regime", () => {
+    expect(r.levels.regime).toBe("momentum");
+    expect(r.bias).toBe("bullish");
+  });
+
+  it("leads the long with the deep A+ (not a shallow near-price level)", () => {
+    expect(r.top_long_trade).toContain("Best long (A+)");
+    expect(r.top_long_trade).toContain("7,631.75");
+    // The patience message must be present and shallow dips called chases.
+    expect(r.top_long_trade.toLowerCase()).toContain("patient");
+    expect(r.top_long_trade.toLowerCase()).toContain("chase");
+  });
+
+  it("mutes shorts to a pass/scalp, not a ranked ladder", () => {
+    expect(r.top_short_trade.toLowerCase()).toContain("not the edge");
+    expect(r.top_short_trade).not.toContain("🥈");
   });
 });
 

@@ -25,6 +25,9 @@ export interface PlanLevels {
   // predate these and fall back to the bare number arrays above.
   swingSupportPoints?: SwingPointData[];
   swingResistancePoints?: SwingPointData[];
+  // "momentum" = breakout/parabolic phase (lead with the deep A+, be patient);
+  // "normal" = range day (nearest-first ladder). Set by the level generator.
+  regime?: "momentum" | "normal";
 }
 
 export interface SwingPointData {
@@ -78,6 +81,7 @@ export const planLevelsSchema = z.object({
       }),
     )
     .optional(),
+  regime: z.enum(["momentum", "normal"]).optional(),
 });
 
 export const levelHitsSchema = z.object({

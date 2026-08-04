@@ -90,21 +90,46 @@ export function formatAlgorithmPlan(plan: Plan): string {
     }
   }
 
-  if (longVals.length) {
+  // Momentum/breakout regime: patience plan — lead with the deep A+ failed-
+  // breakdown, call shallow dips a chase, and mute shorts. Mirrors the on-site plan.
+  const aPlus =
+    magnet != null
+      ? (lv?.swingSupportPoints ?? [])
+          .filter((p) => p.price < magnet && p.tier === "major")
+          .sort((a, b) => b.prominence - a.prominence)[0] ?? null
+      : null;
+  if (lv?.regime === "momentum" && aPlus) {
+    const targets = (lv?.swingResistancePoints ?? [])
+      .filter((p) => magnet != null && p.price > magnet)
+      .sort((a, b) => a.price - b.price)
+      .slice(0, 3)
+      .map((p) => num(p.price));
     L.push("");
-    L.push("🟢 Failed-breakdown longs (best first)");
-    longVals.forEach((v, i) => {
-      if (i === 0) L.push(`${medals[0]} ${num(v)} → flush and reclaim, long toward the magnet ${num(magnet)}`);
-      else L.push(`${medals[i]} ${num(v)} ${i === 1 ? "(backup)" : "(deeper)"}`);
-    });
-  }
-  if (shortVals.length) {
+    L.push("⚠️ Momentum/breakout — be patient. Don't chase up here.");
     L.push("");
-    L.push("🔴 Rejection shorts (secondary)");
-    shortVals.forEach((v, i) => {
-      if (i === 0) L.push(`${medals[0]} ${num(v)} → reject and fail, short toward the magnet`);
-      else L.push(`${medals[i]} ${num(v)}`);
-    });
+    L.push(`🟢 ⭐ Best long (A+): ${num(aPlus.price)}`);
+    L.push("Wait for a flush that loses it and reclaims (enter on strength, don't knife-catch).");
+    if (targets.length) L.push(`Targets: ${targets.join(", ")}`);
+    L.push(`Shallow dips toward ${num(magnet)} are chases — no trade unless it flushes and recovers.`);
+    L.push("");
+    L.push("🔴 Shorts: not the edge here — small level-to-level scalps only, if at all.");
+  } else {
+    if (longVals.length) {
+      L.push("");
+      L.push("🟢 Failed-breakdown longs (best first)");
+      longVals.forEach((v, i) => {
+        if (i === 0) L.push(`${medals[0]} ${num(v)} → flush and reclaim, long toward the magnet ${num(magnet)}`);
+        else L.push(`${medals[i]} ${num(v)} ${i === 1 ? "(backup)" : "(deeper)"}`);
+      });
+    }
+    if (shortVals.length) {
+      L.push("");
+      L.push("🔴 Rejection shorts (secondary)");
+      shortVals.forEach((v, i) => {
+        if (i === 0) L.push(`${medals[0]} ${num(v)} → reject and fail, short toward the magnet`);
+        else L.push(`${medals[i]} ${num(v)}`);
+      });
+    }
   }
 
   L.push("");
