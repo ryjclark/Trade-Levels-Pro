@@ -581,13 +581,21 @@ function buildPlan(x: {
       `Bullish / momentum — price has broken out and gone vertical. Nothing to chase up here: ` +
       `the A+ is a failed-breakdown flush into ${fmtLevel(aPlus.price)}. Ride a runner, manage ` +
       `level-to-level, and don't force trades if price just grinds higher.`;
+    // Long ladder mirrors the short's medal rows: the A+ then deeper failed-
+    // breakdown majors (nearest-first), so both sides read the same way.
+    const detectedMajors = nearestBelow(majorsBelow.filter((p) => p.prominence > 0));
+    const longLadder = (detectedMajors.length ? detectedMajors : aPlus ? [aPlus] : []).slice(0, 3);
+    const longRows = longLadder.map((p, i) =>
+      i === 0
+        ? `${medals[0]} ⭐ ${fmtLevel(p.price)} (A+) → flush + reclaim, long the failed breakdown`
+        : `${medals[i]} ${fmtLevel(p.price)} → deeper failed-breakdown${i === 2 ? ", only if it reaches" : " backup"}`,
+    );
     long =
       `Momentum/breakout — be patient (a "wait for it to come to you" day).\n` +
-      `⭐ Best long (A+): ${fmtLevel(aPlus.price)} — wait for a flush that loses it and RECLAIMS ` +
-      `(non-acceptance entry: go on strength as it recovers ~5 pts and holds, don't knife-catch).` +
-      `${upTargets.length ? ` Targets ${tstr}.` : ""}\n` +
-      `Shallow pullbacks toward the ${fmtLevel(magnet)} magnet are chases — no trade unless price ` +
-      `actually flushes a level and recovers. If it just grinds higher all day, do nothing.`;
+      `${longRows.join("\n")}\n` +
+      `${upTargets.length ? `Targets: ${tstr}\n` : ""}` +
+      `Shallow dips toward the ${fmtLevel(magnet)} magnet are chases — no trade unless price ` +
+      `flushes a level and recovers. If it just grinds higher all day, do nothing.`;
     // Keep the short LEVELS (resistances above current price) — just frame them
     // with the momentum caveat. He still lists shorts "for those who want them."
     const shortLevels = (swings ? swings.highs : [])

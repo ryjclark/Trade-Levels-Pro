@@ -232,10 +232,10 @@ describe("computeLevels — momentum/breakout regime", () => {
   });
 
   it("leads with the NEAREST major A+, not the deepest/most-prominent stale low", () => {
-    expect(r.top_long_trade).toContain("Best long (A+)");
-    expect(r.top_long_trade).toContain("7,631.75");
-    // The far, higher-prominence 7,427.5 must NOT be chosen as the A+.
-    expect(r.top_long_trade).not.toContain("7,427.5");
+    expect(r.top_long_trade).toContain("(A+)");
+    // The A+ (🥇 ⭐) is the nearest detected major, not the far/prominent 7,427.5.
+    expect(r.top_long_trade).toContain("🥇 ⭐ 7,631.75");
+    expect(r.top_long_trade).not.toContain("⭐ 7,427.5");
     // The patience message must be present and shallow dips called chases.
     expect(r.top_long_trade.toLowerCase()).toContain("patient");
     expect(r.top_long_trade.toLowerCase()).toContain("chase");

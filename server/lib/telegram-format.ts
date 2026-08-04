@@ -113,8 +113,13 @@ export function formatAlgorithmPlan(plan: Plan): string {
     L.push("");
     L.push("⚠️ Momentum/breakout — be patient. Don't chase up here.");
     L.push("");
-    L.push(`🟢 ⭐ Best long (A+): ${num(aPlus.price)}`);
-    L.push("Wait for a flush that loses it and reclaims (enter on strength, don't knife-catch).");
+    L.push("🟢 Failed-breakdown longs (wait for it to come to you)");
+    const longLadder = nearestBelow(belowMajors.filter((p) => p.prominence > 0)).slice(0, 3);
+    const rows = longLadder.length ? longLadder : aPlus ? [aPlus] : [];
+    rows.forEach((p, i) => {
+      if (i === 0) L.push(`${medals[0]} ⭐ ${num(p.price)} (A+) → flush and reclaim, long the failed breakdown`);
+      else L.push(`${medals[i]} ${num(p.price)} → deeper backup`);
+    });
     if (targets.length) L.push(`Targets: ${targets.join(", ")}`);
     L.push(`Shallow dips toward ${num(magnet)} are chases — no trade unless it flushes and recovers.`);
     L.push("");
