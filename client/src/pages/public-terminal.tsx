@@ -54,26 +54,39 @@ function n(v: number | null | undefined) {
   return v == null ? "—" : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-// Render a row of detected levels, ranked by quality: majors bold + ★, micro dimmed,
-// with a ✓ on levels the current session has already traded to.
-function renderSwingRow(points: SwingPt[], isTagged?: (price: number) => boolean) {
+// A round-number reference is enrichment filler (no prominence, sits exactly on
+// the round grid — ES 25 / NQ 100). Real detected shelves and structure are not.
+function isRoundRef(p: SwingPt, step: number) {
+  return p.prominence === 0 && Math.abs(p.price - Math.round(p.price / step) * step) < 1e-6;
+}
+
+// Render a row of levels: real detected shelves show normal (majors bold + ★),
+// round-number references are dimmed + italic grey so it's obvious which lines
+// are actual reactions vs. filler, micro dimmed, and a ✓ marks levels the current
+// session has already traded to.
+function renderSwingRow(points: SwingPt[], step: number, isTagged?: (price: number) => boolean) {
   const shown = points.slice(0, 6);
   if (!shown.length) return "—";
-  return shown.map((p, i) => (
-    <span key={p.price}>
-      <span
-        style={{
-          opacity: p.tier === "micro" ? 0.5 : 1,
-          fontWeight: p.tier === "major" ? 700 : 400,
-        }}
-      >
-        {n(p.price)}
-        {p.tier === "major" ? "★" : ""}
-        {isTagged && isTagged(p.price) ? <span style={{ color: "#eab308" }}> ✓</span> : ""}
+  return shown.map((p, i) => {
+    const round = isRoundRef(p, step);
+    return (
+      <span key={p.price}>
+        <span
+          style={{
+            opacity: p.tier === "micro" || round ? 0.55 : 1,
+            fontWeight: p.tier === "major" ? 700 : 400,
+            fontStyle: round ? "italic" : "normal",
+            color: round ? "#94a3b8" : undefined,
+          }}
+        >
+          {n(p.price)}
+          {p.tier === "major" ? "★" : ""}
+          {isTagged && isTagged(p.price) ? <span style={{ color: "#eab308" }}> ✓</span> : ""}
+        </span>
+        {i < shown.length - 1 ? "  ·  " : ""}
       </span>
-      {i < shown.length - 1 ? "  ·  " : ""}
-    </span>
-  ));
+    );
+  });
 }
 
 export default function PublicTerminalPage() {
@@ -329,11 +342,11 @@ export default function PublicTerminalPage() {
                 <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                   <div>
                     <span style={{ color: "#f87171" }}>Resistance:</span>{" "}
-                    {renderSwingRow(resistancePts, (px) => isTagged(px, "resistance"))}
+                    {renderSwingRow(resistancePts, symbol === "NQ" ? 100 : 25, (px) => isTagged(px, "resistance"))}
                   </div>
                   <div>
                     <span style={{ color: "#4ade80" }}>Support:</span>{" "}
-                    {renderSwingRow(supportPts, (px) => isTagged(px, "support"))}
+                    {renderSwingRow(supportPts, symbol === "NQ" ? 100 : 25, (px) => isTagged(px, "support"))}
                   </div>
                 </div>
                 {keySupport && acceptance && (
@@ -349,8 +362,7 @@ export default function PublicTerminalPage() {
                   </div>
                 )}
                 <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
-                  ★ = major (strongest reactions); dimmed = micro shelf. ✓ = tagged this session.
-                  Support/resistance are relative to the magnet.
+                  ★ = major shelf (strongest reactions); <i style={{ color: "#94a3b8" }}>italic grey</i> = round-number reference (filler, not a detected reaction); dimmed = micro shelf. ✓ = tagged this session. Support/resistance are relative to the magnet.
                 </div>
               </div>
             )}

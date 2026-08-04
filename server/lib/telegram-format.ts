@@ -1,5 +1,6 @@
 import type { Plan, PlanLevels, SwingPointData } from "@shared/schema";
 import { escapeMdV2, formatTelegramPro } from "../formatter";
+import { pickSetupLevels, isRoundRef, roundStepFor } from "./levels-algorithm";
 
 export { escapeMdV2 };
 
@@ -8,16 +9,11 @@ export function formatManualPlan(plan: Plan): string {
   return formatTelegramPro(plan);
 }
 
-
-/** Rank swing points on one side by quality then proximity to the magnet,
- *  dropping micro shelves unless they are all that's available. */
-function rankSide(points: SwingPointData[], magnet: number, side: "below" | "above"): SwingPointData[] {
-  const filtered = points.filter((p) => (side === "below" ? p.price < magnet : p.price > magnet));
-  filtered.sort((a, b) =>
-    side === "below" ? magnet - a.price - (magnet - b.price) : a.price - magnet - (b.price - magnet),
-  );
-  const strong = filtered.filter((p) => p.tier !== "micro");
-  return (strong.length ? strong : filtered).slice(0, 3);
+/** Rank the 3 setup levels for one side using the SAME logic as the on-site plan
+ *  (nearest leads, prefer real shelves over round-number filler, guarantee the
+ *  strongest major) so Telegram and the terminal never disagree. */
+function rankSide(points: SwingPointData[], magnet: number, side: "below" | "above", step: number): SwingPointData[] {
+  return pickSetupLevels(points as any, magnet, side, step) as SwingPointData[];
 }
 
 function num(v: number | null | undefined): string {
@@ -46,10 +42,11 @@ export function formatAlgorithmPlan(plan: Plan): string {
   // resistances above it. Prefer the ranked swing points; if a plan has none,
   // fall back to the S1-S4 / R1-R4 levels so we ALWAYS emit the clean compact
   // plan and never the old pivot dump.
+  const step = roundStepFor((plan.symbol as "ES" | "NQ") ?? "ES");
   let longVals: number[] = [];
   let shortVals: number[] = [];
-  if (lv?.swingSupportPoints && magnet != null) longVals = rankSide(lv.swingSupportPoints, magnet, "below").map((p) => p.price);
-  if (lv?.swingResistancePoints && magnet != null) shortVals = rankSide(lv.swingResistancePoints, magnet, "above").map((p) => p.price);
+  if (lv?.swingSupportPoints && magnet != null) longVals = rankSide(lv.swingSupportPoints, magnet, "below", step).map((p) => p.price);
+  if (lv?.swingResistancePoints && magnet != null) shortVals = rankSide(lv.swingResistancePoints, magnet, "above", step).map((p) => p.price);
   if (!longVals.length && magnet != null) {
     longVals = [plan.s1, plan.s2, plan.s3, plan.s4].filter((v): v is number => v != null && v < magnet).slice(0, 3);
   }
@@ -78,7 +75,10 @@ export function formatAlgorithmPlan(plan: Plan): string {
       filtered.sort((a, b) =>
         side === "above" ? a.price - magnet - (b.price - magnet) : magnet - a.price - (magnet - b.price),
       );
-      return filtered.slice(0, 6).map((p) => num(p.price) + (p.tier === "major" ? "★" : "")).join(", ");
+      return filtered
+        .slice(0, 6)
+        .map((p) => num(p.price) + (p.tier === "major" ? "★" : isRoundRef(p, step) ? "°" : ""))
+        .join(", ");
     };
     const res = fmtRow(lv.swingResistancePoints, "above");
     const sup = fmtRow(lv.swingSupportPoints, "below");
@@ -86,6 +86,7 @@ export function formatAlgorithmPlan(plan: Plan): string {
       L.push("");
       if (res) L.push(`Resistances: ${res}`);
       if (sup) L.push(`Supports: ${sup}`);
+      L.push("★ = major shelf · ° = round-number reference");
     }
   }
 

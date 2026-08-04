@@ -355,6 +355,78 @@ function fmtLevel(v: number): string {
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
+export function roundStepFor(symbol: "ES" | "NQ"): number {
+  return ROUND_STEP[symbol];
+}
+
+/**
+ * A "round-number reference" is a filler level the enrichment adds so the plan
+ * always has near-price and target coverage (e.g. ES 7,700 / 7,725). It has NO
+ * prominence (never bounced off in the data) and sits exactly on the round-number
+ * grid (multiple of the symbol's step). Real detected shelves (a swing low that
+ * actually bounced) and real structure (prior high/close, etc.) are NOT round refs.
+ */
+export function isRoundRef(p: { price: number; prominence: number }, step: number): boolean {
+  return p.prominence === 0 && Math.abs(p.price - Math.round(p.price / step) * step) < 1e-6;
+}
+
+/**
+ * Pick the 3 setup levels for one side, ranked the way a trader actually works
+ * them: the NEAREST level leads (the first pullback / rejection), then we prefer
+ * REAL detected shelves over round-number filler, and we GUARANTEE the strongest
+ * major shelf is in the three even if it's further away (so the A+ level is never
+ * buried under round numbers). Micro shelves are dropped unless nothing else exists.
+ * Returned nearest-first for display.
+ */
+export function pickSetupLevels(
+  points: SwingPoint[],
+  magnet: number,
+  side: "below" | "above",
+  step: number,
+): SwingPoint[] {
+  const filtered = points.filter((p) => (side === "below" ? p.price < magnet : p.price > magnet));
+  const nonMicro = filtered.filter((p) => p.tier !== "micro");
+  const pool = nonMicro.length ? nonMicro : filtered;
+  if (!pool.length) return [];
+  const dist = (p: SwingPoint) => (side === "below" ? magnet - p.price : p.price - magnet);
+  const nearFirst = [...pool].sort((a, b) => dist(a) - dist(b));
+  const chosen: SwingPoint[] = [];
+  const push = (p?: SwingPoint) => {
+    if (p && !chosen.some((q) => q.price === p.price)) chosen.push(p);
+  };
+  // 1) Nearest level leads — this is the first pullback/rejection a trader watches
+  //    (fine if it's a round number; price does react at 7,700/7,725).
+  push(nearFirst[0]);
+  // 2) Fill the remaining slots with the nearest REAL shelves, skipping round filler.
+  const realNear = nearFirst.filter((p) => !isRoundRef(p, step));
+  for (const p of realNear) {
+    if (chosen.length >= 3) break;
+    push(p);
+  }
+  // 3) Still short? backfill with the next-nearest of anything (round numbers ok).
+  for (const p of nearFirst) {
+    if (chosen.length >= 3) break;
+    push(p);
+  }
+  // 4) Guarantee the strongest major real shelf is present (drop the weakest to fit).
+  const major = realNear.find((p) => p.tier === "major");
+  if (major && !chosen.some((p) => p.price === major.price)) {
+    chosen.pop();
+    push(major);
+  }
+  return chosen.sort((a, b) => dist(a) - dist(b)).slice(0, 3);
+}
+
+/** Plain-English quality tag for a chosen setup level, distinguishing real
+ *  detected shelves from round-number references. */
+export function levelTag(p: SwingPoint, side: "support" | "resistance", step: number): string {
+  const noun = side === "support" ? "support" : "resistance";
+  if (isRoundRef(p, step)) return `round-number ${noun}`;
+  if (p.tier === "major") return "major shelf ★";
+  if (p.prominence > 0) return "detected shelf";
+  return "structure level";
+}
+
 /**
  * Reactive trading plan built around the Failed-Breakdown edge: wait for a flush
  * that loses a significant low and reclaims it (long), manage level-to-level and
@@ -366,31 +438,17 @@ function buildPlan(x: {
   bias: "bullish" | "neutral" | "bearish";
   magnet: number; dzHigh: number; dzLow: number;
   r1: number; s1: number; s2: number;
+  roundStep: number;
   structure: StructureLevels | null;
   swings: SwingLevels | null;
 }): { reasoning: string; long: string; short: string } {
-  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, structure: s, swings } = x;
+  const { bias, magnet, dzHigh, dzLow, r1, s1, s2, roundStep, structure: s, swings } = x;
 
-  // Rank failed-breakdown longs NEAREST-first (below the magnet), the way a
-  // trader actually works down through supports, dropping only micro shelves so
-  // the list stays actionable. Quality shows as a tag on each level.
-  const tierWordLow: Record<SwingTier, string> = {
-    major: "significant low",
-    minor: "decent low",
-    micro: "micro shelf — lower quality",
-  };
-  const tierWordHigh: Record<SwingTier, string> = {
-    major: "significant high",
-    minor: "decent high",
-    micro: "micro shelf — lower quality",
-  };
+  // Failed-breakdown longs: nearest level leads, but we prefer real detected
+  // shelves over round-number filler and guarantee the strongest major is in the
+  // three (see pickSetupLevels). Each level carries a tag saying WHAT it is.
   let longPts: SwingPoint[] = [];
-  if (swings) {
-    const below = swings.lowPoints.filter((p) => p.price < magnet);
-    below.sort((a, b) => (magnet - a.price) - (magnet - b.price)); // nearest below the magnet first
-    const strong = below.filter((p) => p.tier !== "micro");
-    longPts = (strong.length ? strong : below).slice(0, 3);
-  }
+  if (swings) longPts = pickSetupLevels(swings.lowPoints, magnet, "below", roundStep);
   let lowVals: number[] = longPts.map((p) => p.price);
   if (!lowVals.length) {
     lowVals = [s?.priorLow, s?.overnightLow, s?.priorWeekLow, s1].filter(
@@ -408,16 +466,11 @@ function buildPlan(x: {
   }
   if (!targetHighs.length) targetHighs = [r1];
 
-  // Rejection shorts = resistances above the magnet, ranked by QUALITY then
-  // proximity — mirrors the longs so the short side is a ranked ladder of the
-  // major highs, not a single line. Drop micro unless they're all we have.
+  // Rejection shorts = resistances above the magnet, ranked the same way as the
+  // longs (nearest leads, prefer real shelves over round filler, guarantee the
+  // strongest major high).
   let shortPts: SwingPoint[] = [];
-  if (swings) {
-    const above = swings.highPoints.filter((p) => p.price > magnet);
-    above.sort((a, b) => (a.price - magnet) - (b.price - magnet)); // nearest above the magnet first
-    const strong = above.filter((p) => p.tier !== "micro");
-    shortPts = (strong.length ? strong : above).slice(0, 3);
-  }
+  if (swings) shortPts = pickSetupLevels(swings.highPoints, magnet, "above", roundStep);
   const firstHighVal = shortPts[0] ? shortPts[0].price : targetHighs[0];
 
   // Breakdown-short target must sit BELOW the level being lost.
@@ -445,7 +498,7 @@ function buildPlan(x: {
   const target = targetHighs[0] != null ? fmtLevel(targetHighs[0]) : fmtLevel(magnet);
   const longParts = longPts.length
     ? longPts.map((p, i) => {
-        const tag = tierWordLow[p.tier];
+        const tag = levelTag(p, "support", roundStep);
         if (i === 0)
           return `${medals[0]} ${fmtLevel(p.price)} (${tag}): flush + reclaim → long toward ${fmtLevel(magnet)}, then ${target}`;
         if (i === 1) return `${medals[1]} ${fmtLevel(p.price)} (${tag}): deeper backup if the first fails`;
@@ -464,7 +517,7 @@ function buildPlan(x: {
   // the major resistances above the magnet with a quality tag on each.
   const shortParts = shortPts.length
     ? shortPts.map((p, i) => {
-        const tag = tierWordHigh[p.tier];
+        const tag = levelTag(p, "resistance", roundStep);
         if (i === 0)
           return `${medals[0]} ${fmtLevel(p.price)} (${tag}): reject + fail to hold → short toward ${fmtLevel(magnet)}`;
         if (i === 1) return `${medals[1]} ${fmtLevel(p.price)} (${tag}): next resistance up`;
@@ -618,7 +671,7 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
   // the plan always has near-price levels and beyond-price targets on both sides.
   const enriched = augmentSwings(swings, structure, magnet, rt(C), symbol);
 
-  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, structure, swings: enriched });
+  const plan = buildPlan({ bias, magnet, dzHigh: dynamic_zone_high, dzLow: dynamic_zone_low, r1, s1, s2, roundStep: ROUND_STEP[symbol], structure, swings: enriched });
 
   return {
     symbol, target_date: nextTradingDay(prev.date), current_price: rt(C),

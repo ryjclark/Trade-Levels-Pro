@@ -119,7 +119,7 @@ describe("detectSwings — quality ranking", () => {
     }
   });
 
-  it("leads the plan with the major low and drops the micro shelf", () => {
+  it("guarantees the major low in the top-3 (flagged) and drops the micro shelf", () => {
     // Daily series whose LAST floor pivot (magnet) sits above both swing lows so
     // they qualify as failed-breakdown longs: PP = (6990+6930+6960)/3 = 6960.
     // Padded so ATR (14) is well-defined.
@@ -129,15 +129,17 @@ describe("detectSwings — quality ranking", () => {
     }
     daily.push({ date: "2026-07-31", open: 6960, high: 6990, low: 6930, close: 6960 });
     const plan = computeLevels(daily, "ES", null, swings);
+    // The major detected low is present and flagged as the key shelf, even though
+    // a nearer round-number level leads the ladder.
     expect(plan.top_long_trade).toContain("6,900");
-    expect(plan.top_long_trade).toContain("significant low");
+    expect(plan.top_long_trade).toContain("major shelf ★");
     // The micro shelf must NOT be offered as a failed-breakdown long.
     expect(plan.top_long_trade).not.toContain("6,950");
 
-    // Shorts are a ranked ladder of resistances ABOVE the magnet and must be
-    // labelled as highs, never "low" (the bug this guards against).
-    expect(plan.top_short_trade).toContain("significant high");
-    expect(plan.top_short_trade).not.toContain("significant low");
+    // Shorts are a ranked ladder of resistances ABOVE the magnet: reject-and-fail,
+    // never the long's "flush + reclaim" (the mislabel bug this guards against).
+    expect(plan.top_short_trade).toContain("reject");
+    expect(plan.top_short_trade).not.toContain("flush + reclaim");
   });
 });
 
@@ -167,6 +169,32 @@ describe("computeLevels — breakout enrichment", () => {
 
   it("gives longs a real upside target above the magnet", () => {
     expect(r.top_long_trade).toMatch(/7,62[0-9]|7,63[0-9]/);
+  });
+});
+
+describe("pickSetupLevels — real shelves beat round filler, major guaranteed", () => {
+  it("keeps the nearest level, prefers real shelves, and always includes the major", async () => {
+    const { pickSetupLevels, isRoundRef } = await import("../server/lib/levels-algorithm");
+    const magnet = 7735.5;
+    // Mirrors the real Aug 5 support side: two nearby round-number fillers, a
+    // couple of real detected shelves, and a far MAJOR shelf.
+    const supports: any = [
+      { price: 7725, prominence: 0, tier: "minor" },     // round filler
+      { price: 7700, prominence: 0, tier: "minor" },     // round filler
+      { price: 7666, prominence: 0, tier: "minor" },     // overnight high (structure, non-round)
+      { price: 7649.25, prominence: 42, tier: "minor" }, // detected shelf
+      { price: 7631.75, prominence: 88, tier: "major" }, // MAJOR detected shelf (far)
+      { price: 7591, prominence: 0, tier: "minor" },
+    ];
+    const picked = pickSetupLevels(supports, magnet, "below", 25).map((p: any) => p.price);
+    // Nearest round-number level still leads (the first pullback).
+    expect(picked[0]).toBe(7725);
+    // The far MAJOR shelf is guaranteed in the three despite being furthest.
+    expect(picked).toContain(7631.75);
+    // Round-number classification is correct (7,725 is filler; 7,631.75 is not).
+    expect(isRoundRef({ price: 7725, prominence: 0 }, 25)).toBe(true);
+    expect(isRoundRef({ price: 7631.75, prominence: 88 }, 25)).toBe(false);
+    expect(isRoundRef({ price: 7666, prominence: 0 }, 25)).toBe(false); // non-round structure
   });
 });
 
