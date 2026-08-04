@@ -1,6 +1,6 @@
 import type { Plan, PlanLevels, SwingPointData } from "@shared/schema";
 import { escapeMdV2, formatTelegramPro } from "../formatter";
-import { pickSetupLevels, isRoundRef, roundStepFor } from "./levels-algorithm";
+import { pickSetupLevels, isRoundRef, roundStepFor, pickMomentumTargets } from "./levels-algorithm";
 
 export { escapeMdV2 };
 
@@ -92,18 +92,24 @@ export function formatAlgorithmPlan(plan: Plan): string {
 
   // Momentum/breakout regime: patience plan — lead with the deep A+ failed-
   // breakdown, call shallow dips a chase, and mute shorts. Mirrors the on-site plan.
+  // A+ = nearest DETECTED (prominence > 0) major below the magnet; fall back to a
+  // structural major only if no detected one exists. Matches the on-site plan.
+  const belowMajors = magnet != null
+    ? (lv?.swingSupportPoints ?? []).filter((p) => p.price < magnet && p.tier === "major")
+    : [];
+  const nearestBelow = (arr: SwingPointData[]) =>
+    [...arr].sort((a, b) => magnet! - a.price - (magnet! - b.price));
   const aPlus =
-    magnet != null
-      ? (lv?.swingSupportPoints ?? [])
-          .filter((p) => p.price < magnet && p.tier === "major")
-          .sort((a, b) => b.prominence - a.prominence)[0] ?? null
-      : null;
+    nearestBelow(belowMajors.filter((p) => p.prominence > 0))[0] ??
+    nearestBelow(belowMajors)[0] ??
+    null;
   if (lv?.regime === "momentum" && aPlus) {
-    const targets = (lv?.swingResistancePoints ?? [])
-      .filter((p) => magnet != null && p.price > magnet)
-      .sort((a, b) => a.price - b.price)
-      .slice(0, 3)
-      .map((p) => num(p.price));
+    const priceRef = (plan as any).currentPrice ?? magnet ?? 0;
+    const targets = pickMomentumTargets(
+      (lv?.swingResistancePoints ?? []).map((p) => p.price),
+      priceRef,
+      step * 0.8,
+    ).map((v) => num(v));
     L.push("");
     L.push("⚠️ Momentum/breakout — be patient. Don't chase up here.");
     L.push("");

@@ -418,6 +418,19 @@ export function pickSetupLevels(
   return chosen.sort((a, b) => dist(a) - dist(b)).slice(0, 3);
 }
 
+/** Momentum upside targets: distinct resistances above current price, spaced out
+ *  (skip anything closer than minGap to price or to the last pick) so we get real
+ *  objectives (e.g. 7,786 / 7,825 / 7,850), not three levels bunched at price. */
+export function pickMomentumTargets(highs: number[], price: number, minGap: number): number[] {
+  const out: number[] = [];
+  for (const v of highs.filter((h) => h >= price + minGap).sort((a, b) => a - b)) {
+    if (out.length && v - out[out.length - 1] < minGap) continue;
+    out.push(v);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
 /** Plain-English quality tag for a chosen setup level, distinguishing real
  *  detected shelves from round-number references. */
 export function levelTag(p: SwingPoint, side: "support" | "resistance", step: number): string {
@@ -479,18 +492,23 @@ function buildPlan(x: {
   // A+ failed-breakdown = the strongest MAJOR support below the magnet — the deep
   // reaction low a momentum-phase plan is built around (his ⭐⭐⭐⭐⭐ level). In a
   // breakout/momentum regime this LEADS the plan; shallow near-price levels are chases.
+  // A+ = the NEAREST major below the magnet that is a real DETECTED reaction low
+  // (prominence > 0 — a spot price actually bounced from). Nearest, not deepest:
+  // prominence alone favours distant stale lows. And detected, not structural: a
+  // prior-day low that enrichment tagged "major" (prominence 0) is a weaker A+ and
+  // only used if there's no detected major at all.
+  const nearestBelow = (arr: SwingPoint[]) =>
+    [...arr].sort((a, b) => magnet - a.price - (magnet - b.price));
   const majorsBelow = swings
-    ? swings.lowPoints
-        .filter((p) => p.price < magnet && p.tier === "major")
-        .sort((a, b) => b.prominence - a.prominence)
+    ? swings.lowPoints.filter((p) => p.price < magnet && p.tier === "major")
     : [];
-  const aPlus: SwingPoint | null = majorsBelow[0] ?? longPts.find((p) => p.tier === "major") ?? null;
-  // Momentum upside targets = resistances above CURRENT PRICE (price is already
-  // above the magnet on a breakout day), nearest-first, up to three.
-  const momoTargets: number[] = (swings ? swings.highs : [])
-    .filter((v) => v > price)
-    .sort((a, b) => a - b)
-    .slice(0, 3);
+  const aPlus: SwingPoint | null =
+    nearestBelow(majorsBelow.filter((p) => p.prominence > 0))[0] ??
+    nearestBelow(majorsBelow)[0] ??
+    longPts.find((p) => p.tier === "major") ??
+    null;
+  // Momentum upside targets = spaced resistances above current price.
+  const momoTargets = pickMomentumTargets(swings ? swings.highs : [], price, roundStep * 0.8);
   const upTargets = momoTargets.length ? momoTargets : targetHighs.slice(0, 3);
 
   // Breakdown-short target must sit BELOW the level being lost.

@@ -215,11 +215,12 @@ describe("computeLevels — momentum/breakout regime", () => {
     recentHigh: 7772, recentLow: 7345.75,
   };
   const swings: any = {
-    lows: [7666, 7649.25, 7631.75], highs: [7772],
+    lows: [7666, 7649.25, 7631.75, 7427.5], highs: [7772],
     lowPoints: [
       { price: 7666, prominence: 8, tier: "minor" },
       { price: 7649.25, prominence: 42, tier: "minor" },
-      { price: 7631.75, prominence: 96, tier: "major" }, // deep A+
+      { price: 7631.75, prominence: 96, tier: "major" }, // nearest major = the actionable A+
+      { price: 7427.5, prominence: 240, tier: "major" }, // deepest/highest-prominence, but far & stale
     ],
     highPoints: [{ price: 7772, prominence: 90, tier: "major" }],
   };
@@ -230,9 +231,11 @@ describe("computeLevels — momentum/breakout regime", () => {
     expect(r.bias).toBe("bullish");
   });
 
-  it("leads the long with the deep A+ (not a shallow near-price level)", () => {
+  it("leads with the NEAREST major A+, not the deepest/most-prominent stale low", () => {
     expect(r.top_long_trade).toContain("Best long (A+)");
     expect(r.top_long_trade).toContain("7,631.75");
+    // The far, higher-prominence 7,427.5 must NOT be chosen as the A+.
+    expect(r.top_long_trade).not.toContain("7,427.5");
     // The patience message must be present and shallow dips called chases.
     expect(r.top_long_trade.toLowerCase()).toContain("patient");
     expect(r.top_long_trade.toLowerCase()).toContain("chase");
