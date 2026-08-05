@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, ALGORITHM_VERSION } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -812,6 +812,13 @@ export async function registerRoutes(
       console.error("public daily-brief error:", err);
       res.status(500).json({ error: "Failed to load daily brief" });
     }
+  });
+
+  // Build/version marker so we can confirm which server code is actually live
+  // without regenerating or logging in. `regimeAware:true` only exists in the
+  // momentum build.
+  app.get("/api/public/version", (_req, res) => {
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v2", regimeAware: true });
   });
 
   app.get("/api/public/track-record", async (_req, res) => {
