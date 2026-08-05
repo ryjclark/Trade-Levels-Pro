@@ -818,7 +818,42 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v2", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v3", regimeAware: true });
+  });
+
+  // Ground-truth diagnostic: runs the DEPLOYED generation on live ES data and
+  // reports what the server actually produces (regime + the momentum lines of the
+  // Telegram). Lets us see the real code behavior without regenerating/logging in.
+  app.get("/api/public/debug-gen", async (_req, res) => {
+    try {
+      const algo = await import("./lib/levels-algorithm");
+      const tg = await import("./lib/telegram-format");
+      const intr = await algo.fetchIntradayBars("ES", "1mo", "30m");
+      const bars = await algo.fetchRthDailyBars("ES");
+      const st = algo.computeStructureLevels(intr, "ES");
+      let sw = algo.detectSwings(intr, "ES");
+      try {
+        const f = await algo.fetchIntradayBars("ES", "5d", "15m");
+        const rp = intr.length ? intr[intr.length - 1].close : 0;
+        if (rp > 0) sw = algo.mergeSwings(sw, algo.detectSwings(f, "ES"), rp);
+      } catch {}
+      const lv = algo.computeLevels(bars, "ES", st, sw);
+      const plan: any = {
+        symbol: "ES", date: lv.target_date, bias: lv.bias, source: "algorithm",
+        magnet: lv.magnet, dynamicZoneBottom: lv.dynamic_zone_low, dynamicZoneTop: lv.dynamic_zone_high,
+        currentPrice: lv.current_price, s1: lv.s1, s2: lv.s2, s3: lv.s3, s4: lv.s4,
+        r1: lv.r1, r2: lv.r2, r3: lv.r3, r4: lv.r4, levels: lv.levels,
+      };
+      const telegram = tg.formatAlgorithmPlan(plan);
+      res.json({
+        version: algo.ALGORITHM_VERSION,
+        regime: lv.levels.regime ?? "MISSING",
+        topLongHead: lv.top_long_trade.slice(0, 120),
+        telegramHasMomentum: telegram.includes("Momentum/breakout"),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: String(e?.message || e) });
+    }
   });
 
   app.get("/api/public/track-record", async (_req, res) => {

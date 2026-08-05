@@ -4,7 +4,7 @@
  * posts to POST /api/levels/ingest (which upserts source="algorithm" and
  * auto-sends to Telegram). No newsletter. Data source is pluggable.
  */
-export const ALGORITHM_VERSION = "v1.1";
+export const ALGORITHM_VERSION = "v1.2";
 
 export interface Bar { date: string; open: number; high: number; low: number; close: number; }
 
