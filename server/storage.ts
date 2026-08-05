@@ -98,6 +98,7 @@ export class DatabaseStorage implements IStorage {
           ...(data.algorithmVersion !== undefined ? { algorithmVersion: data.algorithmVersion } : {}),
           ...(data.generatedAt !== undefined ? { generatedAt: data.generatedAt } : {}),
           ...(data.currentPrice !== undefined ? { currentPrice: data.currentPrice } : {}),
+          ...(data.levels !== undefined ? { levels: data.levels } : {}),
           ...(data.biasReasoning !== undefined ? { biasReasoning: data.biasReasoning } : {}),
           ...(data.topLongTrade !== undefined ? { topLongTrade: data.topLongTrade } : {}),
           ...(data.topShortTrade !== undefined ? { topShortTrade: data.topShortTrade } : {}),

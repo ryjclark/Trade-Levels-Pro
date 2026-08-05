@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v3", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v4", regimeAware: true });
   });
 
   // Ground-truth diagnostic: runs the DEPLOYED generation on live ES data and
@@ -845,11 +845,23 @@ export async function registerRoutes(
         r1: lv.r1, r2: lv.r2, r3: lv.r3, r4: lv.r4, levels: lv.levels,
       };
       const telegram = tg.formatAlgorithmPlan(plan);
+      // Also report what's actually STORED for the live ES plan (round-trips
+      // through upsertPlan) so we can confirm the stored levels.regime is fresh.
+      let storedRegime = "none";
+      let storedTelegramMomentum = false;
+      try {
+        const pubs = await storage.listPublicPlans(50);
+        const es: any = pubs.find((p: any) => p.symbol === "ES");
+        storedRegime = es?.levels?.regime ?? "none";
+        if (es) storedTelegramMomentum = tg.formatAlgorithmPlan(es).includes("Momentum/breakout");
+      } catch {}
       res.json({
         version: algo.ALGORITHM_VERSION,
         regime: lv.levels.regime ?? "MISSING",
         topLongHead: lv.top_long_trade.slice(0, 120),
         telegramHasMomentum: telegram.includes("Momentum/breakout"),
+        storedRegime,
+        storedTelegramMomentum,
       });
     } catch (e: any) {
       res.status(500).json({ error: String(e?.message || e) });
