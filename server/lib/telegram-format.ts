@@ -43,10 +43,12 @@ export function formatAlgorithmPlan(plan: Plan): string {
   // fall back to the S1-S4 / R1-R4 levels so we ALWAYS emit the clean compact
   // plan and never the old pivot dump.
   const step = roundStepFor((plan.symbol as "ES" | "NQ") ?? "ES");
-  let longVals: number[] = [];
-  let shortVals: number[] = [];
-  if (lv?.swingSupportPoints && magnet != null) longVals = rankSide(lv.swingSupportPoints, magnet, "below", step).map((p) => p.price);
-  if (lv?.swingResistancePoints && magnet != null) shortVals = rankSide(lv.swingResistancePoints, magnet, "above", step).map((p) => p.price);
+  let longPts: SwingPointData[] = [];
+  let shortPts: SwingPointData[] = [];
+  if (lv?.swingSupportPoints && magnet != null) longPts = rankSide(lv.swingSupportPoints, magnet, "below", step);
+  if (lv?.swingResistancePoints && magnet != null) shortPts = rankSide(lv.swingResistancePoints, magnet, "above", step);
+  let longVals: number[] = longPts.map((p) => p.price);
+  let shortVals: number[] = shortPts.map((p) => p.price);
   if (!longVals.length && magnet != null) {
     longVals = [plan.s1, plan.s2, plan.s3, plan.s4].filter((v): v is number => v != null && v < magnet).slice(0, 3);
   }
@@ -90,46 +92,31 @@ export function formatAlgorithmPlan(plan: Plan): string {
     }
   }
 
-  // Momentum/breakout regime: patience plan — lead with the deep A+ failed-
-  // breakdown, call shallow dips a chase, and mute shorts. Mirrors the on-site plan.
-  // A+ = nearest DETECTED (prominence > 0) major below the magnet; fall back to a
-  // structural major only if no detected one exists. Matches the on-site plan.
-  const belowMajors = magnet != null
-    ? (lv?.swingSupportPoints ?? []).filter((p) => p.price < magnet && p.tier === "major")
-    : [];
-  const nearestBelow = (arr: SwingPointData[]) =>
-    [...arr].sort((a, b) => magnet! - a.price - (magnet! - b.price));
-  const aPlus =
-    nearestBelow(belowMajors.filter((p) => p.prominence > 0))[0] ??
-    nearestBelow(belowMajors)[0] ??
-    null;
-  if (lv?.regime === "momentum" && aPlus) {
-    const priceRef = (plan as any).currentPrice ?? magnet ?? 0;
+  // Momentum/breakout regime: patience plan — nearest-first supports (near shelf
+  // leads, A+ major flagged ⭐), targets ABOVE the magnet, shorts ABOVE the magnet
+  // only, all muted. Mirrors the on-site plan exactly.
+  if (lv?.regime === "momentum" && longPts.length) {
+    const priceRef = (plan as any).currentPrice ?? magnet;
     const targets = pickMomentumTargets(
       (lv?.swingResistancePoints ?? []).map((p) => p.price),
-      priceRef,
+      Math.max(priceRef, magnet),
       step * 0.8,
     ).map((v) => num(v));
     L.push("");
     L.push("⚠️ Momentum/breakout — be patient. Don't chase up here.");
     L.push("");
     L.push("🟢 Failed-breakdown longs (wait for it to come to you)");
-    const longLadder = nearestBelow(belowMajors.filter((p) => p.prominence > 0)).slice(0, 3);
-    const rows = longLadder.length ? longLadder : aPlus ? [aPlus] : [];
-    rows.forEach((p, i) => {
-      if (i === 0) L.push(`${medals[0]} ⭐ ${num(p.price)} (A+) → flush and reclaim, long the failed breakdown`);
-      else L.push(`${medals[i]} ${num(p.price)} → deeper backup`);
+    longPts.forEach((p, i) => {
+      const star = p.tier === "major" ? "⭐ " : "";
+      const aplus = p.tier === "major" ? " (A+)" : "";
+      if (i === 0) L.push(`${medals[0]} ${star}${num(p.price)}${aplus} → flush and reclaim, long the failed breakdown`);
+      else L.push(`${medals[i]} ${star}${num(p.price)}${aplus}`);
     });
     if (targets.length) L.push(`Targets: ${targets.join(", ")}`);
-    L.push(`Shallow dips toward ${num(magnet)} are chases — no trade unless it flushes and recovers.`);
+    L.push("Shallow dips are chases — no trade unless price flushes a level and reclaims.");
     L.push("");
     L.push("🔴 Rejection shorts (not the edge here — scalps only, if at all)");
-    const shortLvls = (lv?.swingResistancePoints ?? [])
-      .map((p) => p.price)
-      .filter((v) => v > priceRef)
-      .sort((a, b) => a - b)
-      .slice(0, 3);
-    if (shortLvls.length) shortLvls.forEach((v, i) => L.push(`${medals[i]} ${num(v)} → reject and fail, small scalp`));
+    if (shortPts.length) shortPts.forEach((p, i) => L.push(`${medals[i]} ${num(p.price)} → reject and fail, small scalp`));
     else L.push("Small level-to-level scalps only.");
   } else {
     if (longVals.length) {

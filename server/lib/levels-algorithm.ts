@@ -507,8 +507,10 @@ function buildPlan(x: {
     nearestBelow(majorsBelow)[0] ??
     longPts.find((p) => p.tier === "major") ??
     null;
-  // Momentum upside targets = spaced resistances above current price.
-  const momoTargets = pickMomentumTargets(swings ? swings.highs : [], price, roundStep * 0.8);
+  // Momentum upside targets = spaced resistances above the MAGNET (or price if it's
+  // already extended above it) — real objectives, never a level sitting below the
+  // magnet where price is just consolidating.
+  const momoTargets = pickMomentumTargets(swings ? swings.highs : [], Math.max(price, magnet), roundStep * 0.8);
   const upTargets = momoTargets.length ? momoTargets : targetHighs.slice(0, 3);
 
   // Breakdown-short target must sit BELOW the level being lost.
@@ -575,39 +577,38 @@ function buildPlan(x: {
   // ladder of shallow longs. Lead with the deep A+ failed-breakdown, call the
   // shallow near-price zone a chase, extend targets, and mute shorts to a single
   // "only if you must" scalp line — mirroring how the newsletter reads a breakout.
-  if (regime === "momentum" && aPlus) {
+  if (regime === "momentum" && longPts.length) {
     const tstr = upTargets.map(fmtLevel).join(", ");
+    const aPlusPt = longPts.find((p) => p.tier === "major") ?? aPlus;
     reasoning =
-      `Bullish / momentum — price has broken out and gone vertical. Nothing to chase up here: ` +
-      `the A+ is a failed-breakdown flush into ${fmtLevel(aPlus.price)}. Ride a runner, manage ` +
-      `level-to-level, and don't force trades if price just grinds higher.`;
-    // Long ladder mirrors the short's medal rows: the A+ then deeper failed-
-    // breakdown majors (nearest-first), so both sides read the same way.
-    const detectedMajors = nearestBelow(majorsBelow.filter((p) => p.prominence > 0));
-    const longLadder = (detectedMajors.length ? detectedMajors : aPlus ? [aPlus] : []).slice(0, 3);
-    const longRows = longLadder.map((p, i) =>
-      i === 0
-        ? `${medals[0]} ⭐ ${fmtLevel(p.price)} (A+) → flush + reclaim, long the failed breakdown`
-        : `${medals[i]} ${fmtLevel(p.price)} → deeper failed-breakdown${i === 2 ? ", only if it reaches" : " backup"}`,
-    );
+      `Bullish / momentum — price broke out and is holding up here. Be patient: the edge is a ` +
+      `failed-breakdown long${aPlusPt ? `, best into the A+ shelf at ${fmtLevel(aPlusPt.price)}` : ""}; ` +
+      `ride a runner, manage level-to-level, and don't force trades if price just grinds.`;
+    // Nearest-first supports (real shelves preferred, the A+ major guaranteed). The
+    // NEAR shelf leads — where price is actually working — and the deep major is
+    // flagged ⭐ as the A+ backup. (Same selection as a range day; only framing differs.)
+    const longRows = longPts.map((p, i) => {
+      const star = p.tier === "major" ? "⭐ " : "";
+      const aplus = p.tier === "major" ? " (A+)" : "";
+      const tag = levelTag(p, "support", roundStep);
+      return i === 0
+        ? `${medals[0]} ${star}${fmtLevel(p.price)}${aplus} (${tag}) → flush + reclaim, long the failed breakdown`
+        : `${medals[i]} ${star}${fmtLevel(p.price)}${aplus} (${tag})`;
+    });
     long =
       `Momentum/breakout — be patient (a "wait for it to come to you" day).\n` +
       `${longRows.join("\n")}\n` +
       `${upTargets.length ? `Targets: ${tstr}\n` : ""}` +
-      `Shallow dips toward the ${fmtLevel(magnet)} magnet are chases — no trade unless price ` +
-      `flushes a level and recovers. If it just grinds higher all day, do nothing.`;
-    // Keep the short LEVELS (resistances above current price) — just frame them
-    // with the momentum caveat. He still lists shorts "for those who want them."
-    const shortLevels = (swings ? swings.highs : [])
-      .filter((v) => v > price)
-      .sort((a, b) => a - b)
-      .slice(0, 3);
-    const ladder = shortLevels.length ? shortLevels : [firstHighVal];
+      `Shallow dips are chases — no trade unless price actually flushes a level and reclaims. ` +
+      `If it just grinds higher, do nothing.`;
+    // Shorts: resistances ABOVE the magnet only (never a level between price and the
+    // magnet), muted to level-to-level scalps.
+    const srows = shortPts.map((p, i) => `${medals[i]} ${fmtLevel(p.price)} → reject + fail, small scalp`);
     short =
       `Rejection shorts — NOT the edge in a momentum uptrend (the plan is to pass), but ` +
       `listed for those who want them:\n` +
-      ladder.map((v, i) => `${medals[i]} ${fmtLevel(v)} → reject + fail, small level-to-level scalp`).join("\n") +
-      `\nScalps only, size down — never a reversal in this tape.`;
+      `${srows.length ? srows.join("\n") : `${medals[0]} ${fmtLevel(firstHighVal)} → small scalp`}\n` +
+      `Scalps only, size down — never a reversal.`;
   }
 
   return { reasoning, long, short };

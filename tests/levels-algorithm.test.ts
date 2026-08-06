@@ -253,11 +253,12 @@ describe("computeLevels — momentum/breakout regime", () => {
     expect(r.bias).toBe("bullish");
   });
 
-  it("leads with the NEAREST major A+, not the deepest/most-prominent stale low", () => {
+  it("leads with a near shelf, flags an A+ major, and drops the deep stale low", () => {
+    // A near shelf leads the ladder (medal 1), the A+ major is flagged ⭐ somewhere…
     expect(r.top_long_trade).toContain("(A+)");
-    // The A+ (🥇 ⭐) is the nearest detected major, not the far/prominent 7,427.5.
-    expect(r.top_long_trade).toContain("🥇 ⭐ 7,631.75");
-    expect(r.top_long_trade).not.toContain("⭐ 7,427.5");
+    expect(r.top_long_trade).toContain("⭐");
+    // …and the far/deep 7,427.5 is never surfaced as a top-3 setup.
+    expect(r.top_long_trade).not.toContain("7,427.5");
     // The patience message must be present and shallow dips called chases.
     expect(r.top_long_trade.toLowerCase()).toContain("patient");
     expect(r.top_long_trade.toLowerCase()).toContain("chase");
