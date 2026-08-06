@@ -200,6 +200,28 @@ describe("pickSetupLevels — real shelves beat round filler, major guaranteed",
   });
 });
 
+describe("computeLevels — trend-aware bias", () => {
+  it("upgrades a neutral pivot read to bullish when pinned near the recent high", () => {
+    const daily: Bar[] = [];
+    for (let i = 0; i < 14; i++) daily.push({ date: `2026-07-${String(i + 1).padStart(2, "0")}`, open: 7750, high: 7770, low: 7740, close: 7758 });
+    // Last bar closes right at its pivot (a NEUTRAL pivot read) but the ~1-month
+    // high is within ~1 ATR — a consolidation-at-highs day the trend rule catches.
+    daily.push({ date: "2026-08-05", open: 7758, high: 7775, low: 7745, close: 7760 });
+    const structure: any = {
+      priorHigh: 7775, priorLow: 7745, priorClose: 7760, overnightHigh: 7770, overnightLow: 7748,
+      priorWeekHigh: 7600, priorWeekLow: 7500, recentHigh: 7775, recentLow: 7500,
+    };
+    const swings: any = {
+      lows: [7649.25, 7631.75], highs: [7775],
+      lowPoints: [{ price: 7649.25, prominence: 40, tier: "minor" }, { price: 7631.75, prominence: 90, tier: "major" }],
+      highPoints: [{ price: 7775, prominence: 80, tier: "major" }],
+    };
+    const r = computeLevels(daily, "ES", structure, swings);
+    expect(r.bias).toBe("bullish"); // upgraded from a neutral pivot base by the trend rule
+    expect(r.levels.regime).toBe("momentum");
+  });
+});
+
 describe("computeLevels — momentum/breakout regime", () => {
   // Price pressed right up to a new recent high (broken out / vertical), with a
   // deep MAJOR reaction low well below the magnet. The plan should flip to the

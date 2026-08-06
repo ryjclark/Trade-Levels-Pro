@@ -745,18 +745,31 @@ export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: Struc
   const r2 = rt(PP + (H - L)), s2 = rt(PP - (H - L));
   const r3 = rt(H + 2 * (PP - L)), s3 = rt(L - 2 * (H - PP));
   const r4 = rt(r3 + (r3 - r2)), s4 = rt(s3 - (s2 - s3));
-  const bias: ComputedLevels["bias"] = C > PP + dz ? "bullish" : C < PP - dz ? "bearish" : "neutral";
   const price = rt(C);
-
-  // Regime detection (data-driven, no hardcoded levels): a MOMENTUM/breakout phase
-  // is when the trend is up AND price has pressed to within ~0.6·ATR of the recent
-  // (~1-month) high — i.e. we've broken out / gone vertical. After a move like that
-  // the right plan is patience: lead with the deep A+ failed-breakdown, treat
-  // shallow pullbacks as chases, extend upside targets, and mute shorts. Otherwise
-  // it's a NORMAL range day and the nearest-first ladder applies.
   const recentHigh = structure?.recentHigh ?? null;
+  const recentLow = structure?.recentLow ?? null;
+
+  // Trend-aware bias (data-driven, no hardcoded levels). Base call is the classic
+  // pivot test (close vs PP ± the dynamic zone). But after a breakout, a close
+  // pinned within ~1 ATR of the ~1-month high is still a BULLISH context even when
+  // it sits mid-pivot (consolidation at highs) — a pure pivot test wrongly reads
+  // that as "neutral". So we upgrade a neutral base to bullish there, and mirror it
+  // to bearish when pinned near the recent low.
+  const nearRecentHigh = recentHigh != null && price >= recentHigh - a;
+  const nearRecentLow = recentLow != null && price <= recentLow + a;
+  let bias: ComputedLevels["bias"] = C > PP + dz ? "bullish" : C < PP - dz ? "bearish" : "neutral";
+  if (bias === "neutral") {
+    if (nearRecentHigh && !nearRecentLow) bias = "bullish";
+    else if (nearRecentLow && !nearRecentHigh) bias = "bearish";
+  }
+
+  // MOMENTUM/breakout regime: bullish AND pressed up near the recent high (the same
+  // trend signal that drives the bias upgrade). After a move like that the right
+  // plan is patience: lead with the deep A+ failed-breakdown, treat shallow
+  // pullbacks as chases, extend upside targets, and mute shorts. Otherwise it's a
+  // NORMAL range day and the nearest-first ladder applies.
   const regime: "momentum" | "normal" =
-    bias === "bullish" && recentHigh != null && price >= recentHigh - 0.6 * a ? "momentum" : "normal";
+    bias === "bullish" && nearRecentHigh ? "momentum" : "normal";
 
   // Enrich the detected swings with structure, round numbers, and extensions so
   // the plan always has near-price levels and beyond-price targets on both sides.
