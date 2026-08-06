@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v6", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v7", regimeAware: true });
   });
 
   // Ground-truth diagnostic: runs the DEPLOYED generation on live ES data and
@@ -865,6 +865,64 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  // "Levels for your chart" — the published plan's levels as copy-paste text or a
+  // TradingView Pine script that draws them as horizontal lines. High-utility,
+  // makes the levels sticky (traders plot them on their own chart).
+  app.get("/api/public/levels-export", async (req, res) => {
+    try {
+      const symParam = String(req.query.symbol || "ES").toUpperCase();
+      const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
+      const format = String(req.query.format || "text").toLowerCase();
+      const pubs = await storage.listPublicPlans(50);
+      const plan: any = pubs.find((p: any) => p.symbol === symbol);
+      if (!plan || plan.magnet == null) {
+        return res.status(404).type("text/plain").send("No published plan yet.");
+      }
+      const lv: any = plan.levels || {};
+      const magnet: number = plan.magnet;
+      const dzTop = plan.dynamicZoneTop, dzBot = plan.dynamicZoneBottom;
+      const sups: number[] = (lv.swingSupports ?? []).filter((v: number) => v < magnet).slice(0, 8);
+      const ress: number[] = (lv.swingResistances ?? []).filter((v: number) => v > magnet).slice(0, 8);
+      const majorSup: number | null =
+        (lv.swingSupportPoints ?? [])
+          .filter((p: any) => p.tier === "major" && p.price < magnet)
+          .sort((a: any, b: any) => b.price - a.price)[0]?.price ?? null;
+      const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+      const label = `Trade Levels Pro ${symbol} ${plan.date}`;
+
+      if (format === "pine") {
+        const lines: string[] = [
+          "//@version=5",
+          `indicator(${JSON.stringify(label)}, overlay=true)`,
+          `hline(${magnet}, "Magnet ${fmt(magnet)}", color=color.new(color.yellow, 0), linestyle=hline.style_solid, linewidth=2)`,
+        ];
+        if (dzTop != null) lines.push(`hline(${dzTop}, "DZ top", color=color.new(color.gray, 40), linestyle=hline.style_dashed)`);
+        if (dzBot != null) lines.push(`hline(${dzBot}, "DZ bottom", color=color.new(color.gray, 40), linestyle=hline.style_dashed)`);
+        for (const r of ress) lines.push(`hline(${r}, "R ${fmt(r)}", color=color.new(color.red, 30))`);
+        for (const s of sups)
+          lines.push(`hline(${s}, "${s === majorSup ? "A+ " : "S "}${fmt(s)}", color=color.new(color.green, ${s === majorSup ? 0 : 30})${s === majorSup ? ", linewidth=2" : ""})`);
+        return res.type("text/plain").send(lines.join("\n"));
+      }
+
+      const lines: string[] = [
+        label,
+        "",
+        `Magnet: ${fmt(magnet)}`,
+        dzBot != null && dzTop != null ? `Dynamic Zone: ${fmt(dzBot)} – ${fmt(dzTop)}` : "",
+        "",
+        `Resistances: ${ress.map(fmt).join(", ")}`,
+        `Supports: ${sups.map(fmt).join(", ")}`,
+        majorSup != null ? `A+ (key failed-breakdown): ${fmt(majorSup)}` : "",
+        "",
+        "tradelevelspro.com",
+      ].filter(Boolean);
+      res.type("text/plain").send(lines.join("\n"));
+    } catch (err) {
+      console.error("levels-export error:", err);
+      res.status(500).type("text/plain").send("Export failed.");
     }
   });
 

@@ -84,6 +84,8 @@ async function fetchAndStoreDailyResults() {
   // page (the proof that converts subscribers). One symbol failing must not
   // block the other, so each is wrapped in its own try/catch.
   const today = nyToday();
+  const rfmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const recapLines: string[] = [];
 
   for (const symbol of ["ES", "NQ"] as const) {
     try {
@@ -157,6 +159,14 @@ async function fetchAndStoreDailyResults() {
           supports: { total: sups.length, tagged: supTagged, flushed, reclaimed },
           resistances: { total: res.length, tagged: resTagged },
         };
+
+        // End-of-day recap line for this symbol (posted to Telegram below).
+        recapLines.push(
+          `${symbol}: close ${rfmt(close)}${hitMagnet ? " · magnet tagged ✅" : " · magnet not tagged"}\n` +
+            `Supports ${supTagged}/${sups.length} tested` +
+            (flushed > 0 ? ` · ${reclaimed}/${flushed} failed-breakdown${flushed === 1 ? "" : "s"} reclaimed` : "") +
+            ` · Resistances ${resTagged}/${res.length} tagged`,
+        );
       }
 
       await storage.insertPlanResult({
@@ -213,6 +223,21 @@ async function fetchAndStoreDailyResults() {
       console.error(`[cron] results: ${symbol} failed:`, err?.message || err);
     }
   }
+
+  // End-of-day recap to Telegram: how today's levels actually did (closes the loop
+  // and builds trust — the same numbers that feed the track record).
+  if (recapLines.length && TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+    const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const text =
+      `📊 Session recap · ${dateLabel}\n\n${recapLines.join("\n\n")}\n\n` +
+      `Full track record: tradelevelspro.com/track-record`;
+    try {
+      await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN, chatId: TELEGRAM_CHAT_ID, text, parseMode: "none" });
+      console.log("[cron] posted session recap to Telegram");
+    } catch (err: any) {
+      console.error("[cron] session recap post failed:", err?.message || err);
+    }
+  }
 }
 
 async function postDailyBriefToTelegram() {
@@ -253,13 +278,28 @@ function isRegularSessionET(): boolean {
   return mins >= 9 * 60 + 30 && mins <= 16 * 60; // 9:30–16:00 ET
 }
 
-async function checkProximityAlerts() {
+// Last seen price per symbol, so we can detect a level CROSSING (reclaim / lose /
+// tag) between checks — not just proximity.
+const lastPrice = new Map<"ES" | "NQ", number>();
+
+async function checkIntradayAlerts() {
   if (process.env.PROXIMITY_ALERTS_ENABLED !== "true") return;
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
   if (!isRegularSessionET()) return;
 
   const today = nyToday();
   const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+  const send = async (key: string, text: string) => {
+    if (proximityAlerted.has(key)) return;
+    try {
+      await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN!, chatId: TELEGRAM_CHAT_ID!, text, parseMode: "none" });
+      proximityAlerted.add(key);
+      console.log(`[cron] intraday alert: ${text.slice(0, 60)}`);
+    } catch (sendErr: any) {
+      console.error(`[cron] intraday alert send failed:`, sendErr?.message || sendErr);
+    }
+  };
 
   for (const symbol of ["ES", "NQ"] as const) {
     try {
@@ -277,6 +317,8 @@ async function checkProximityAlerts() {
         price = null;
       }
       if (price == null) continue;
+      const prev = lastPrice.get(symbol) ?? null;
+      lastPrice.set(symbol, price);
 
       type Lvl = { price: number; kind: "support" | "resistance" | "magnet" };
       const levels: Lvl[] = [{ price: magnet, kind: "magnet" }];
@@ -291,27 +333,38 @@ async function checkProximityAlerts() {
 
       const threshold = PROXIMITY_THRESHOLD[symbol];
       for (const level of levels) {
-        const key = `${today}-${symbol}-${level.price}`;
-        if (proximityAlerted.has(key)) continue;
-        if (Math.abs(price - level.price) > threshold) continue;
+        const L = level.price;
 
-        const text =
-          level.kind === "magnet"
-            ? `⚡ ${symbol} is back at the ${fmt(level.price)} magnet.`
-            : level.kind === "support"
-              ? `⚡ ${symbol} is approaching ${fmt(level.price)}, a key failed-breakdown level. Watch for a flush and reclaim (wait for acceptance).`
-              : `⚡ ${symbol} is approaching ${fmt(level.price)}, a key resistance. Watch for a rejection.`;
+        // Crossing events (need a prior price to know price moved THROUGH the level).
+        if (prev != null) {
+          if (level.kind === "support") {
+            if (prev < L && price >= L)
+              await send(`${today}-${symbol}-${L}-reclaim`, `✅ ${symbol} reclaimed ${fmt(L)} — failed-breakdown long in play. Wait for acceptance (holds a couple minutes above), then manage level to level.`);
+            else if (prev >= L && price < L)
+              await send(`${today}-${symbol}-${L}-lose`, `⚠️ ${symbol} flushed below ${fmt(L)} — watch for a reclaim (the failed-breakdown setup). Don't knife-catch; wait for it to recover and hold.`);
+          } else if (level.kind === "resistance") {
+            if (prev < L && price >= L)
+              await send(`${today}-${symbol}-${L}-tag`, `🎯 ${symbol} tagged ${fmt(L)} — key resistance/target reached. Bank a runner; watch for rejection.`);
+          } else {
+            if (prev < L && price >= L) await send(`${today}-${symbol}-${L}-mup`, `⚡ ${symbol} reclaimed the ${fmt(L)} magnet.`);
+            else if (prev >= L && price < L) await send(`${today}-${symbol}-${L}-mdn`, `⚡ ${symbol} lost the ${fmt(L)} magnet.`);
+          }
+        }
 
-        try {
-          await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN, chatId: TELEGRAM_CHAT_ID, text, parseMode: "none" });
-          proximityAlerted.add(key);
-          console.log(`[cron] proximity alert sent: ${symbol} near ${level.price}`);
-        } catch (sendErr: any) {
-          console.error(`[cron] proximity send failed:`, sendErr?.message || sendErr);
+        // Lighter "approaching" heads-up (once per level per session).
+        const nearKey = `${today}-${symbol}-${L}-near`;
+        if (!proximityAlerted.has(nearKey) && Math.abs(price - L) <= threshold) {
+          const t =
+            level.kind === "magnet"
+              ? `⚡ ${symbol} is back near the ${fmt(L)} magnet.`
+              : level.kind === "support"
+                ? `⚡ ${symbol} approaching ${fmt(L)} — a key failed-breakdown level. Watch for a flush and reclaim.`
+                : `⚡ ${symbol} approaching ${fmt(L)} — key resistance. Watch for a rejection.`;
+          await send(nearKey, t);
         }
       }
     } catch (err: any) {
-      console.error(`[cron] proximity ${symbol} failed:`, err?.message || err);
+      console.error(`[cron] intraday ${symbol} failed:`, err?.message || err);
     }
   }
 }
@@ -349,12 +402,12 @@ export function registerCronJobs() {
   cron.schedule(
     "*/2 9-16 * * 1-5",
     () => {
-      checkProximityAlerts().catch((e) => console.error("[cron] proximity error:", e));
+      checkIntradayAlerts().catch((e) => console.error("[cron] intraday alerts error:", e));
     },
     { timezone: "America/New_York" } as any,
   );
 
   console.log(
-    "[cron] Registered scheduled-publish (every minute) + daily-results (5pm ET) + self-generating levels (5:15pm ET) + proximity alerts (2min, opt-in)",
+    "[cron] Registered scheduled-publish (every minute) + daily-results + recap (5pm ET) + self-generating levels (5:15pm ET) + intraday level-hit alerts (2min, opt-in)",
   );
 }

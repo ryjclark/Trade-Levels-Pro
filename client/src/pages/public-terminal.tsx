@@ -91,6 +91,7 @@ function renderSwingRow(points: SwingPt[], step: number, isTagged?: (price: numb
 
 export default function PublicTerminalPage() {
   const [symbol, setSymbol] = useState<"ES" | "NQ">("ES");
+  const [copiedExport, setCopiedExport] = useState(false);
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
 
   const { data, isLoading } = useQuery<TerminalData>({
@@ -363,6 +364,34 @@ export default function PublicTerminalPage() {
                 )}
                 <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
                   ★ = major shelf (strongest reactions); <i style={{ color: "#94a3b8" }}>italic grey</i> = round-number reference (filler, not a detected reaction); dimmed = micro shelf. ✓ = tagged this session. Support/resistance are relative to the magnet.
+                </div>
+                <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const r = await fetch(`/api/public/levels-export?symbol=${symbol}`);
+                        await navigator.clipboard.writeText(await r.text());
+                        setCopiedExport(true);
+                        setTimeout(() => setCopiedExport(false), 2000);
+                      } catch {}
+                    }}
+                    data-testid="button-copy-levels"
+                    style={{
+                      fontSize: 12, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                      border: "1px solid var(--border, #26262b)", background: "var(--card, rgba(255,255,255,0.03))",
+                      color: "inherit",
+                    }}
+                  >
+                    {copiedExport ? "✓ Copied" : "📋 Copy levels for your chart"}
+                  </button>
+                  <a
+                    href={`/api/public/levels-export?symbol=${symbol}&format=pine`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12, color: "var(--teal, #5EEAD4)" }}
+                  >
+                    TradingView Pine script →
+                  </a>
                 </div>
               </div>
             )}
