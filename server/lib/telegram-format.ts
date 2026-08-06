@@ -1,6 +1,6 @@
 import type { Plan, PlanLevels, SwingPointData } from "@shared/schema";
 import { escapeMdV2, formatTelegramPro } from "../formatter";
-import { pickSetupLevels, isRoundRef, roundStepFor, pickMomentumTargets } from "./levels-algorithm";
+import { pickSetupLevels, roundStepFor, pickMomentumTargets } from "./levels-algorithm";
 
 export { escapeMdV2 };
 
@@ -27,6 +27,11 @@ function plainDate(dateStr: string): string {
   return Number.isNaN(d.getTime())
     ? dateStr
     : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Capitalize the first letter (e.g. "bullish" -> "Bullish"). */
+function cap(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 // Algorithm-sourced plans: a compact, PLAIN-TEXT message (sent with no parse mode
@@ -64,33 +69,11 @@ export function formatAlgorithmPlan(plan: Plan): string {
   const L: string[] = [];
   L.push(`🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}`);
   L.push("");
-  if (plan.bias) L.push(`Bias: ${plan.bias}`);
+  if (plan.bias) L.push(`Bias: ${cap(plan.bias)}`);
   L.push(`Magnet: ${num(magnet)}`);
   L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
-
-  // Full level lists (nearest first, ★ = major) so the alert carries the same
-  // picture as the terminal, including the deeper key levels and upside targets
-  // that the ranked top-3 setups below leave out.
-  if (lv && magnet != null) {
-    const fmtRow = (pts: SwingPointData[] | undefined, side: "above" | "below") => {
-      const filtered = (pts ?? []).filter((p) => (side === "above" ? p.price > magnet : p.price < magnet));
-      filtered.sort((a, b) =>
-        side === "above" ? a.price - magnet - (b.price - magnet) : magnet - a.price - (magnet - b.price),
-      );
-      return filtered
-        .slice(0, 6)
-        .map((p) => num(p.price) + (p.tier === "major" ? "★" : isRoundRef(p, step) ? "°" : ""))
-        .join(", ");
-    };
-    const res = fmtRow(lv.swingResistancePoints, "above");
-    const sup = fmtRow(lv.swingSupportPoints, "below");
-    if (res || sup) {
-      L.push("");
-      if (res) L.push(`Resistances: ${res}`);
-      if (sup) L.push(`Supports: ${sup}`);
-      L.push("★ = major shelf · ° = round-number reference");
-    }
-  }
+  // The full support/resistance map lives on the terminal (tradelevelspro.com/terminal).
+  // The alert stays lean: bias, zone, the setups, and targets.
 
   // Momentum/breakout regime: patience plan — nearest-first supports (near shelf
   // leads, A+ major flagged ⭐), targets ABOVE the magnet, shorts ABOVE the magnet

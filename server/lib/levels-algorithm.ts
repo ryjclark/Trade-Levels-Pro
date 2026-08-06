@@ -385,7 +385,11 @@ export function pickSetupLevels(
   side: "below" | "above",
   step: number,
 ): SwingPoint[] {
-  const filtered = points.filter((p) => (side === "below" ? p.price < magnet : p.price > magnet));
+  // Exclude levels sitting essentially ON the magnet (within ~0.1%): a failed
+  // breakdown needs a real pullback level price can flush and reclaim, not the
+  // pivot itself. This makes the #1 long the range shelf, not the magnet.
+  const tol = magnet * 0.001;
+  const filtered = points.filter((p) => (side === "below" ? p.price < magnet - tol : p.price > magnet + tol));
   const nonMicro = filtered.filter((p) => p.tier !== "micro");
   const pool = nonMicro.length ? nonMicro : filtered;
   if (!pool.length) return [];
