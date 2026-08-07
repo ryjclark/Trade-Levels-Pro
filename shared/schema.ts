@@ -42,6 +42,13 @@ export interface LevelHits {
   named: Record<string, 0 | 1>; // priorHigh, priorLow, overnightHigh, ...
   supports: { total: number; tagged: number; flushed: number; reclaimed: number };
   resistances: { total: number; tagged: number };
+  // The flagged A+ failed-breakdown level and whether it flushed AND reclaimed
+  // (the setup working), plus the first upside target and whether price hit it.
+  // Optional so older scored rows (before these were tracked) still validate.
+  aPlus?: number | null;
+  aPlusReclaimed?: 0 | 1;
+  firstTarget?: number | null;
+  firstTargetHit?: 0 | 1;
 }
 
 // Zod schemas for the jsonb columns above. drizzle-zod does not infer a jsonb
@@ -94,6 +101,10 @@ export const levelHitsSchema = z.object({
     reclaimed: z.number(),
   }),
   resistances: z.object({ total: z.number(), tagged: z.number() }),
+  aPlus: z.number().nullable().optional(),
+  aPlusReclaimed: z.union([z.literal(0), z.literal(1)]).optional(),
+  firstTarget: z.number().nullable().optional(),
+  firstTargetHit: z.union([z.literal(0), z.literal(1)]).optional(),
 });
 
 export const plans = pgTable("plans", {

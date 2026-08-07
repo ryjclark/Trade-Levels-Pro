@@ -153,11 +153,35 @@ async function fetchAndStoreDailyResults() {
         }
         const resTagged = res.filter((r) => high >= r).length;
 
+        // The flagged A+ (nearest major support below the magnet): did it flush
+        // AND reclaim (the failed-breakdown setup actually working)?
+        let aPlus: number | null = null;
+        let aPlusReclaimed: 0 | 1 = 0;
+        if (plan.magnet != null) {
+          const majors = (lv.swingSupportPoints ?? [])
+            .filter((p) => p.tier === "major" && p.price < plan.magnet!)
+            .sort((a, b) => b.price - a.price);
+          aPlus = majors[0]?.price ?? null;
+          if (aPlus != null && low < aPlus && close > aPlus) aPlusReclaimed = 1;
+        }
+        // First upside target (nearest resistance above the magnet): did price hit it?
+        let firstTarget: number | null = null;
+        let firstTargetHit: 0 | 1 = 0;
+        if (plan.magnet != null) {
+          const above = (lv.swingResistances ?? []).filter((r) => r > plan.magnet!).sort((a, b) => a - b);
+          firstTarget = above[0] ?? null;
+          if (firstTarget != null && high >= firstTarget) firstTargetHit = 1;
+        }
+
         levelHits = {
           magnet: hitMagnet as 0 | 1,
           named,
           supports: { total: sups.length, tagged: supTagged, flushed, reclaimed },
           resistances: { total: res.length, tagged: resTagged },
+          aPlus,
+          aPlusReclaimed,
+          firstTarget,
+          firstTargetHit,
         };
 
         // End-of-day recap line for this symbol (posted to Telegram below).

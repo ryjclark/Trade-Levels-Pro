@@ -16,6 +16,20 @@ interface Summary {
   resistanceTagRate?: number | null;
   failedBreakdownWinRate?: number | null;
   failedBreakdownSamples?: number;
+  targetHitRate?: number | null;
+  targetSamples?: number;
+}
+
+interface Session {
+  date: string;
+  symbol: string;
+  close: number | null;
+  aPlus: number | null;
+  aPlusReclaimed: 0 | 1 | null;
+  flushed: number;
+  reclaimed: number;
+  firstTarget: number | null;
+  firstTargetHit: 0 | 1 | null;
 }
 
 const NAMED_LABELS: Record<string, string> = {
@@ -33,10 +47,24 @@ const NAMED_LABELS: Record<string, string> = {
 interface TrackRecord {
   overall: Summary;
   bySymbol: Record<string, Summary>;
+  sessions?: Session[];
 }
 
-function pct(v: number | null) {
+function pct(v: number | null | undefined) {
   return v == null ? "—" : `${v}%`;
+}
+
+function n(v: number | null) {
+  return v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function yn(v: 0 | 1 | null) {
+  return v == null ? "—" : v === 1 ? "✓" : "—";
+}
+
+function shortDate(d: string) {
+  const dt = new Date(`${d}T00:00:00`);
+  return Number.isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -72,9 +100,10 @@ export default function PublicTrackRecordPage() {
           <h1 className="public-h1" style={{ fontSize: 40, marginBottom: 10 }}>
             Track Record
           </h1>
-          <p className="public-hero-subtitle" style={{ maxWidth: 640 }}>
-            How often each session tagged the levels we published the night before.
-            Measured automatically from daily OHLC — no cherry-picking.
+          <p className="public-hero-subtitle" style={{ maxWidth: 660 }}>
+            How our published levels actually performed — the failed-breakdown win rate,
+            target hits, and every session's call. Scored automatically from the regular
+            session's OHLC the night before, no cherry-picking.
           </p>
         </header>
 
@@ -105,22 +134,79 @@ export default function PublicTrackRecordPage() {
                     : "of levels that flushed, % that reclaimed"
                 }
               />
-              <StatTile label="Magnet hit rate" value={pct(overall.magnetHitRate)} />
+              <StatTile
+                label="Target-hit rate"
+                value={pct(overall.targetHitRate)}
+                sub={
+                  overall.targetSamples
+                    ? `1st target, ${overall.targetSamples} sessions`
+                    : "1st upside target reached"
+                }
+              />
               <StatTile
                 label="Support tag rate"
                 value={pct(overall.supportTagRate ?? null)}
-                sub="all support levels"
+                sub="all support levels held"
               />
               <StatTile
                 label="Resistance tag rate"
                 value={pct(overall.resistanceTagRate ?? null)}
                 sub="all resistance levels"
               />
-              <StatTile
-                label="Sessions counted"
-                value={overall.sessions.toLocaleString()}
-              />
+              <StatTile label="Sessions counted" value={overall.sessions.toLocaleString()} />
             </section>
+
+            {data?.sessions && data.sessions.length > 0 && (
+              <section style={{ marginBottom: 40 }}>
+                <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
+                  Every session — the honest ledger
+                </h2>
+                <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14, maxWidth: 660 }}>
+                  The A+ failed-breakdown level each night, whether price flushed and reclaimed it
+                  (the setup working), and whether the first target hit. Every call, no cherry-picking.
+                </p>
+                <div style={{ overflowX: "auto" }}>
+                  <table
+                    style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}
+                    data-testid="track-record-sessions"
+                  >
+                    <thead>
+                      <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 13 }}>
+                        <th style={{ padding: "8px 10px" }}>Date</th>
+                        <th style={{ padding: "8px 10px" }}>Sym</th>
+                        <th style={{ padding: "8px 10px" }}>A+ level</th>
+                        <th style={{ padding: "8px 10px" }}>Flushed</th>
+                        <th style={{ padding: "8px 10px" }}>Reclaimed</th>
+                        <th style={{ padding: "8px 10px" }}>1st target</th>
+                        <th style={{ padding: "8px 10px" }}>Hit</th>
+                        <th style={{ padding: "8px 10px" }}>Close</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.sessions.map((s, i) => (
+                        <tr
+                          key={`${s.date}-${s.symbol}-${i}`}
+                          style={{ borderTop: "1px solid var(--border, #26262b)", fontSize: 14 }}
+                        >
+                          <td style={{ padding: "10px" }}>{shortDate(s.date)}</td>
+                          <td style={{ padding: "10px", fontWeight: 600 }}>{s.symbol}</td>
+                          <td style={{ padding: "10px" }}>{n(s.aPlus)}</td>
+                          <td style={{ padding: "10px" }}>{s.flushed > 0 ? "✓" : "—"}</td>
+                          <td style={{ padding: "10px", color: s.flushed > 0 ? (s.reclaimed > 0 ? "#4ade80" : "#f87171") : undefined }}>
+                            {s.flushed > 0 ? (s.reclaimed > 0 ? "✓ won" : "✗") : "—"}
+                          </td>
+                          <td style={{ padding: "10px" }}>{n(s.firstTarget)}</td>
+                          <td style={{ padding: "10px", color: s.firstTargetHit === 1 ? "#4ade80" : undefined }}>
+                            {yn(s.firstTargetHit)}
+                          </td>
+                          <td style={{ padding: "10px", opacity: 0.65 }}>{n(s.close)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
 
             {overall.namedTagRates &&
               Object.keys(overall.namedTagRates).length > 0 && (
@@ -167,11 +253,10 @@ export default function PublicTrackRecordPage() {
                       <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 13 }}>
                         <th style={{ padding: "8px 10px" }}>Symbol</th>
                         <th style={{ padding: "8px 10px" }}>Sessions</th>
-                        <th style={{ padding: "8px 10px" }}>Magnet</th>
-                        <th style={{ padding: "8px 10px" }}>R1</th>
-                        <th style={{ padding: "8px 10px" }}>R2</th>
-                        <th style={{ padding: "8px 10px" }}>S1</th>
-                        <th style={{ padding: "8px 10px" }}>S2</th>
+                        <th style={{ padding: "8px 10px" }}>FB win</th>
+                        <th style={{ padding: "8px 10px" }}>Target hit</th>
+                        <th style={{ padding: "8px 10px" }}>Support</th>
+                        <th style={{ padding: "8px 10px" }}>Resistance</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -185,11 +270,10 @@ export default function PublicTrackRecordPage() {
                           >
                             <td style={{ padding: "10px", fontWeight: 600 }}>{sym}</td>
                             <td style={{ padding: "10px" }}>{s.sessions}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.magnetHitRate)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.r1TagRate)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.r2TagRate)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.s1TagRate)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.s2TagRate)}</td>
+                            <td style={{ padding: "10px" }}>{pct(s.failedBreakdownWinRate ?? null)}</td>
+                            <td style={{ padding: "10px" }}>{pct(s.targetHitRate)}</td>
+                            <td style={{ padding: "10px" }}>{pct(s.supportTagRate ?? null)}</td>
+                            <td style={{ padding: "10px" }}>{pct(s.resistanceTagRate ?? null)}</td>
                           </tr>
                         );
                       })}
@@ -200,11 +284,12 @@ export default function PublicTrackRecordPage() {
             )}
 
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 32, maxWidth: 660 }}>
-              A "tag" means price traded to or through that level during the
-              regular session. Magnet hit means the session's range contained the
-              magnet. Failed-breakdown win rate is, of the support levels that
-              flushed below (traded under the line), the share that closed back
-              above it, which is the core setup we trade.
+              <b>Failed-breakdown win rate</b> — of the support levels that flushed
+              below (traded under the line), the share that closed back above it. This is
+              the core setup we trade, so it's the headline number. <b>Target-hit rate</b> —
+              how often the first upside target was reached. A "tag" means price traded to
+              or through a level. (We also track "magnet hit," but price crosses the pivot
+              most sessions, so it's a low-signal stat we don't lead with.)
             </p>
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 12, maxWidth: 660 }}>
               These figures are level-interaction statistics measured

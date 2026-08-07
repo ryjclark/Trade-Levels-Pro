@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v7", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v8", regimeAware: true });
   });
 
   // Ground-truth diagnostic: runs the DEPLOYED generation on live ES data and
@@ -945,6 +945,8 @@ export async function registerRoutes(
         supTotal: 0,
         resTagged: 0,
         resTotal: 0,
+        targetHit: 0,
+        targetTotal: 0,
       });
       type Bucket = ReturnType<typeof emptyBucket>;
       const buckets: Record<string, Bucket> = { ALL: emptyBucket() };
@@ -972,6 +974,10 @@ export async function registerRoutes(
             b.supTotal += lh.supports?.total ?? 0;
             b.resTagged += lh.resistances?.tagged ?? 0;
             b.resTotal += lh.resistances?.total ?? 0;
+            if (lh.firstTarget != null) {
+              b.targetTotal += 1;
+              b.targetHit += lh.firstTargetHit ?? 0;
+            }
           }
         }
       }
@@ -992,6 +998,8 @@ export async function registerRoutes(
         resistanceTagRate: rate(b.resTagged, b.resTotal),
         failedBreakdownWinRate: rate(b.supReclaimed, b.supFlushed),
         failedBreakdownSamples: b.supFlushed,
+        targetHitRate: rate(b.targetHit, b.targetTotal),
+        targetSamples: b.targetTotal,
       });
 
       const bySymbol: Record<string, ReturnType<typeof summarize>> = {};
@@ -1000,7 +1008,27 @@ export async function registerRoutes(
         bySymbol[sym] = summarize(b);
       }
 
-      res.json({ overall: summarize(buckets.ALL), bySymbol });
+      // Transparent per-session log (most recent first) — every call and how it
+      // did, not just aggregates. This is what converts skeptics.
+      const sessions = [...rows]
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+        .slice(0, 40)
+        .map((r) => {
+          const lh = (r as any).levelHits as import("@shared/schema").LevelHits | null;
+          return {
+            date: r.date,
+            symbol: r.symbol,
+            close: r.close ?? null,
+            aPlus: lh?.aPlus ?? null,
+            aPlusReclaimed: lh?.aPlusReclaimed ?? null,
+            flushed: lh?.supports?.flushed ?? 0,
+            reclaimed: lh?.supports?.reclaimed ?? 0,
+            firstTarget: lh?.firstTarget ?? null,
+            firstTargetHit: lh?.firstTargetHit ?? null,
+          };
+        });
+
+      res.json({ overall: summarize(buckets.ALL), bySymbol, sessions });
     } catch (err) {
       console.error("public track-record error:", err);
       res.status(500).json({ error: "Failed to load track record" });
