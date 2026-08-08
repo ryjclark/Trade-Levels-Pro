@@ -41,6 +41,7 @@ export interface ComputedLevels {
     swingSupportPoints?: SwingPoint[];
     swingResistancePoints?: SwingPoint[];
     regime?: "momentum" | "normal";
+    profile?: { poc: number | null; vah: number | null; val: number | null; date: string | null };
   };
 }
 
@@ -165,6 +166,76 @@ export async function fetchRthDailyBars(symbol: SymbolId): Promise<Bar[]> {
   bars.sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : 0));
   if (bars.length < 6) throw new Error(`Not enough RTH bars for ${symbol} (${bars.length})`);
   return bars;
+}
+
+export interface TpoProfile {
+  poc: number | null; // point of control: price with the most time (TPO count)
+  vah: number | null; // value-area high
+  val: number | null; // value-area low
+  date: string | null; // ET session the profile is built from
+}
+
+/**
+ * Market Profile (TPO) for the most recent COMPLETE regular session, carried
+ * forward as next-day reference levels. Built from the 30-minute RTH bars we
+ * already fetch — each 30m bar "prints" across every price row it spans, so the
+ * POC is the price touched by the most brackets and the value area is the ~70%
+ * of TPO count around it. This is TIME-at-price (true volume profile would need
+ * tick data). Display/context only; it does not drive the plan's setups.
+ */
+export function computeTpoProfile(intraday: IntradayBar[], symbol: SymbolId): TpoProfile | null {
+  // Group RTH 30m bars by ET date; keep only complete sessions (reach 15:30 bar).
+  const byDay = new Map<string, { bars: IntradayBar[]; complete: boolean }>();
+  for (const b of intraday) {
+    const { date, minutes } = etHM(b.time);
+    if (minutes < RTH_OPEN || minutes > RTH_LAST_BAR) continue;
+    const cur = byDay.get(date) ?? { bars: [], complete: false };
+    cur.bars.push(b);
+    if (minutes === RTH_LAST_BAR) cur.complete = true;
+    byDay.set(date, cur);
+  }
+  const days = Array.from(byDay.entries())
+    .filter(([, v]) => v.complete && v.bars.length >= 6)
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1)); // newest first
+  if (!days.length) return null;
+  const [date, { bars }] = days[0];
+
+  const hi = Math.max(...bars.map((b) => b.high));
+  const lo = Math.min(...bars.map((b) => b.low));
+  if (!(hi > lo)) return null;
+  const tick = TICK[symbol];
+  // ~40 price rows across the session range, snapped to at least one tick.
+  const rowSize = Math.max(tick, roundToTick((hi - lo) / 40, tick));
+  const rowOf = (p: number) => Math.floor((p - lo) / rowSize);
+  const nRows = rowOf(hi) + 1;
+  const counts = new Array(nRows).fill(0);
+  for (const b of bars) {
+    const from = rowOf(b.low);
+    const to = rowOf(b.high);
+    for (let r = from; r <= to; r++) counts[r] += 1;
+  }
+  const total = counts.reduce((a, c) => a + c, 0);
+  if (total <= 0) return null;
+  // toFixed(6)→Number strips binary-float dust (e.g. 4400.400000000001) that
+  // roundToTick leaves for sub-integer ticks, without losing tick precision.
+  const rowPrice = (r: number) => Number(roundToTick(lo + (r + 0.5) * rowSize, tick).toFixed(6));
+
+  let pocRow = 0;
+  for (let r = 1; r < nRows; r++) if (counts[r] > counts[pocRow]) pocRow = r;
+
+  // Value area: greedy expand from the POC to the higher-count neighbor until
+  // cumulative TPO count reaches ~70% of the session total.
+  const target = total * 0.7;
+  let cum = counts[pocRow];
+  let top = pocRow;
+  let bot = pocRow;
+  while (cum < target && (top < nRows - 1 || bot > 0)) {
+    const up = top < nRows - 1 ? counts[top + 1] : -1;
+    const dn = bot > 0 ? counts[bot - 1] : -1;
+    if (up >= dn) { top += 1; cum += Math.max(up, 0); }
+    else { bot -= 1; cum += Math.max(dn, 0); }
+  }
+  return { poc: rowPrice(pocRow), vah: rowPrice(top), val: rowPrice(bot), date };
 }
 
 export interface StructureLevels {
@@ -755,7 +826,7 @@ export function augmentSwings(
 }
 
 /** Pure, testable core. */
-export function computeLevels(bars: Bar[], symbol: SymbolId, structure: StructureLevels | null = null, swings: SwingLevels | null = null): ComputedLevels {
+export function computeLevels(bars: Bar[], symbol: SymbolId, structure: StructureLevels | null = null, swings: SwingLevels | null = null, profile: TpoProfile | null = null): ComputedLevels {
   const prev = bars[bars.length - 1];
   const { high: H, low: L, close: C } = prev;
   const a = atr(bars, 14);
@@ -831,6 +902,7 @@ export function computeLevels(bars: Bar[], symbol: SymbolId, structure: Structur
       swingSupportPoints: enriched.lowPoints,
       swingResistancePoints: enriched.highPoints,
       regime,
+      profile: profile ?? undefined,
     },
   };
 }
@@ -874,7 +946,16 @@ export async function generateAndPublishLevels(): Promise<void> {
         console.warn(`[levels] ${symbol} RTH/structure unavailable (${rthErr?.message || rthErr}); falling back to daily`);
         bars = await fetchDailyBars(symbol);
       }
-      const levels = computeLevels(bars, symbol, structure, swings);
+      // Prior-session Market Profile (TPO) from the same 30m bars, carried forward
+      // as next-day reference levels (POC + value area). Non-fatal if unavailable.
+      let profile: TpoProfile | null = null;
+      try {
+        const intr30 = await fetchIntradayBars(symbol, "60d", "30m");
+        profile = computeTpoProfile(intr30, symbol);
+      } catch (profErr: any) {
+        console.warn(`[levels] ${symbol} TPO profile unavailable (${profErr?.message || profErr})`);
+      }
+      const levels = computeLevels(bars, symbol, structure, swings, profile);
       await postToIngest(levels);
       console.log(`[levels] published ${symbol} for ${levels.target_date} (magnet ${levels.magnet}, ${levels.bias})`);
     } catch (err: any) {

@@ -57,6 +57,12 @@ interface TerminalData {
     lowPoints?: SwingPt[];
     highPoints?: SwingPt[];
   } | null;
+  profile?: {
+    poc: number | null;
+    vah: number | null;
+    val: number | null;
+    date: string | null;
+  } | null;
 }
 
 type SwingPt = { price: number; prominence: number; tier: "major" | "minor" | "micro" };
@@ -376,6 +382,22 @@ export default function PublicTerminalPage() {
                 <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
                   ★ = major shelf (strongest reactions); <i style={{ color: "#94a3b8" }}>italic grey</i> = round-number reference (filler, not a detected reaction); dimmed = micro shelf. ✓ = tagged this session. Support/resistance are relative to the magnet.
                 </div>
+                {data?.profile && data.profile.poc != null && (
+                  <div style={{ marginTop: 14, borderTop: "1px solid var(--border, #26262b)", paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, opacity: 0.8 }}>
+                      Prior-session profile (reference for today)
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.8 }} data-testid="terminal-profile">
+                      <span style={{ color: "#c084fc", fontWeight: 600 }}>POC</span>{" "}
+                      <b>{n(data.profile.poc)}</b>
+                      <span style={{ opacity: 0.5 }}>{"   ·   "}</span>
+                      Value area <b>{n(data.profile.val)}</b> – <b>{n(data.profile.vah)}</b>
+                    </div>
+                    <div style={{ fontSize: 11, opacity: 0.5, marginTop: 6 }}>
+                      POC = price that traded the most time last session (a magnet; a return to it is a common target). Value area = where ~70% of the session traded — accepting above it favors buyers, below favors sellers. Built from time-at-price (30-min brackets).
+                    </div>
+                  </div>
+                )}
                 <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                   <button
                     onClick={async () => {

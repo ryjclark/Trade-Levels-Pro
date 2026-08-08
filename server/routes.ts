@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v12", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v13", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -914,6 +914,8 @@ export async function registerRoutes(
           .sort((a: any, b: any) => b.price - a.price)[0]?.price ?? null;
       const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
       const label = `Trade Levels Pro ${symbol} ${plan.date}`;
+      const prof: any = lv.profile || null;
+      const hasProf = prof && prof.poc != null;
 
       if (format === "pine") {
         const lines: string[] = [
@@ -923,6 +925,11 @@ export async function registerRoutes(
         ];
         if (dzTop != null) lines.push(`hline(${dzTop}, "DZ top", color=color.new(color.gray, 40), linestyle=hline.style_dashed)`);
         if (dzBot != null) lines.push(`hline(${dzBot}, "DZ bottom", color=color.new(color.gray, 40), linestyle=hline.style_dashed)`);
+        if (hasProf) {
+          lines.push(`hline(${prof.poc}, "POC ${fmt(prof.poc)}", color=color.new(color.purple, 0), linestyle=hline.style_solid)`);
+          if (prof.vah != null) lines.push(`hline(${prof.vah}, "VAH ${fmt(prof.vah)}", color=color.new(color.purple, 55), linestyle=hline.style_dotted)`);
+          if (prof.val != null) lines.push(`hline(${prof.val}, "VAL ${fmt(prof.val)}", color=color.new(color.purple, 55), linestyle=hline.style_dotted)`);
+        }
         for (const r of ress) lines.push(`hline(${r}, "R ${fmt(r)}", color=color.new(color.red, 30))`);
         for (const s of sups)
           lines.push(`hline(${s}, "${s === majorSup ? "A+ " : "S "}${fmt(s)}", color=color.new(color.green, ${s === majorSup ? 0 : 30})${s === majorSup ? ", linewidth=2" : ""})`);
@@ -934,6 +941,7 @@ export async function registerRoutes(
         "",
         `Magnet: ${fmt(magnet)}`,
         dzBot != null && dzTop != null ? `Dynamic Zone: ${fmt(dzBot)} – ${fmt(dzTop)}` : "",
+        hasProf ? `Prior POC: ${fmt(prof.poc)}${prof.val != null && prof.vah != null ? ` (value area ${fmt(prof.val)} – ${fmt(prof.vah)})` : ""}` : "",
         "",
         `Resistances: ${ress.map(fmt).join(", ")}`,
         `Supports: ${sups.map(fmt).join(", ")}`,
@@ -1104,6 +1112,9 @@ export async function registerRoutes(
         structure = computeStructureLevels(bars, symbol);
         swings = detectSwings(bars, symbol);
       }
+      // Prior-session Market Profile (POC + value area). Prefer the value stored
+      // with the plan; else compute live from the fetched 30m bars.
+      const profile = stored?.profile ?? computeTpoProfile(bars, symbol);
       res.json({
         symbol,
         bars,
@@ -1117,6 +1128,7 @@ export async function registerRoutes(
           : null,
         structure,
         swings,
+        profile,
       });
     } catch (err) {
       console.error("public terminal error:", err);

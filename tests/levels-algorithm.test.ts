@@ -1,10 +1,27 @@
 import { describe, it, expect } from "vitest";
 import {
   computeLevels,
+  computeTpoProfile,
   detectSwings,
   type Bar,
   type IntradayBar,
 } from "../server/lib/levels-algorithm";
+
+/** Build one complete RTH session (09:30–16:00 ET) of 30m bars where price spends
+ *  most time around `pocCenter`, so the POC is deterministic. Aug 11 2026 is a
+ *  Tuesday; 13:30 UTC = 09:30 ET (EDT). */
+function makeRthSession(pocCenter: number): IntradayBar[] {
+  const bars: IntradayBar[] = [];
+  const day = Date.UTC(2026, 7, 11, 13, 30, 0) / 1000; // 09:30 ET
+  for (let i = 0; i < 13; i++) {
+    const t = day + i * 1800; // 30-min steps, 09:30 → 15:30
+    // Middle brackets hug pocCenter; open/close brackets stretch away so the POC
+    // is the center, not the extremes.
+    const spread = i >= 4 && i <= 8 ? 2 : 12;
+    bars.push({ time: t, open: pocCenter, high: pocCenter + spread, low: pocCenter - spread, close: pocCenter });
+  }
+  return bars;
+}
 
 /** Build a realistic ~50pt-range daily series ending on a known last bar. */
 function makeBars(): Bar[] {
@@ -300,5 +317,42 @@ describe("mergeSwings", () => {
     // fresh shelves are tagged minor, coarse stays major
     expect(merged.lowPoints.find((p: any) => p.price === 7594).tier).toBe("minor");
     expect(merged.lowPoints.find((p: any) => p.price === 7542.75).tier).toBe("major");
+  });
+});
+
+describe("computeTpoProfile (Market Profile / TPO)", () => {
+  it("returns POC at the most-traded price with a value area around it", () => {
+    const prof = computeTpoProfile(makeRthSession(6000), "ES");
+    expect(prof).not.toBeNull();
+    expect(prof!.poc).toBeGreaterThan(5985);
+    expect(prof!.poc).toBeLessThan(6015);
+    // Value area brackets the POC.
+    expect(prof!.val!).toBeLessThanOrEqual(prof!.poc!);
+    expect(prof!.vah!).toBeGreaterThanOrEqual(prof!.poc!);
+    // Value area is a subset of the full session range (~70%, not the extremes).
+    expect(prof!.vah! - prof!.val!).toBeLessThan(24);
+    expect(prof!.date).toBe("2026-08-11");
+  });
+
+  it("returns null when there is no complete session", () => {
+    // Only two bars, never reaches the 15:30 close bar -> incomplete.
+    const partial = makeRthSession(6000).slice(0, 2);
+    expect(computeTpoProfile(partial, "ES")).toBeNull();
+  });
+
+  it("respects the symbol tick (Crude prices to the cent)", () => {
+    // A clean Crude session centered at 77.50 with ~$1 range.
+    const day = Date.UTC(2026, 7, 11, 13, 30, 0) / 1000;
+    const bars: IntradayBar[] = [];
+    for (let i = 0; i < 13; i++) {
+      const spread = i >= 4 && i <= 8 ? 0.15 : 0.5;
+      bars.push({ time: day + i * 1800, open: 77.5, high: 77.5 + spread, low: 77.5 - spread, close: 77.5 });
+    }
+    const prof = computeTpoProfile(bars, "CL");
+    expect(prof).not.toBeNull();
+    expect(prof!.poc).toBeGreaterThan(77.0);
+    expect(prof!.poc).toBeLessThan(78.0);
+    // POC is aligned to the CL tick (0.01).
+    expect(Math.abs(prof!.poc! * 100 - Math.round(prof!.poc! * 100))).toBeLessThan(1e-6);
   });
 });

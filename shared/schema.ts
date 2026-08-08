@@ -28,6 +28,8 @@ export interface PlanLevels {
   // "momentum" = breakout/parabolic phase (lead with the deep A+, be patient);
   // "normal" = range day (nearest-first ladder). Set by the level generator.
   regime?: "momentum" | "normal";
+  // Prior-session Market Profile (TPO) reference levels carried into the next day.
+  profile?: { poc: number | null; vah: number | null; val: number | null; date: string | null };
 }
 
 export interface SwingPointData {
@@ -89,6 +91,19 @@ export const planLevelsSchema = z.object({
     )
     .optional(),
   regime: z.enum(["momentum", "normal"]).optional(),
+  // Prior-session Market Profile (TPO) reference levels, carried forward to help
+  // next-day trading. POC = most time-at-price; value area = ~70% of the session's
+  // TPO count. Built from the 30m RTH bars we already fetch (time-based, not volume;
+  // true volume profile would need tick data). Display/context only — does NOT drive
+  // the plan's setups.
+  profile: z
+    .object({
+      poc: z.number().nullable(),
+      vah: z.number().nullable(),
+      val: z.number().nullable(),
+      date: z.string().nullable(),
+    })
+    .optional(),
 });
 
 export const levelHitsSchema = z.object({
