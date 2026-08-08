@@ -180,7 +180,7 @@ export type InsertClaudeApiCall = z.infer<typeof insertClaudeApiCallSchema>;
 export type ClaudeApiCall = typeof claudeApiCalls.$inferSelect;
 
 export const ingestLevelsSchema = z.object({
-  symbol: z.enum(["ES", "NQ"]),
+  symbol: z.enum(["ES", "NQ", "GC", "CL", "RTY"]),
   target_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "target_date must be YYYY-MM-DD"),
   current_price: z.number().nullable().optional(),
   dynamic_zone_high: z.number().nullable().optional(),

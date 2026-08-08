@@ -9,7 +9,7 @@ export const ALGORITHM_VERSION = "v1.2";
 export interface Bar { date: string; open: number; high: number; low: number; close: number; }
 
 export interface ComputedLevels {
-  symbol: "ES" | "NQ";
+  symbol: SymbolId;
   target_date: string;
   current_price: number;
   dynamic_zone_high: number;
@@ -44,12 +44,26 @@ export interface ComputedLevels {
   };
 }
 
-const YAHOO_SYMBOL: Record<"ES" | "NQ", string> = { ES: "ES=F", NQ: "NQ=F" };
-const TICK: Record<"ES" | "NQ", number> = { ES: 0.25, NQ: 0.25 };
+// ── Symbol registry ─────────────────────────────────────────────────────────
+// One place to add a ticker. Everything downstream (generation, cron, terminal,
+// Telegram) iterates SYMBOLS, so a new instrument is a config row, not new math.
+// All fed from Yahoo Finance futures continuous contracts — same endpoint as ES/NQ.
+export type SymbolId = "ES" | "NQ" | "GC" | "CL" | "RTY";
+export const SYMBOLS: readonly SymbolId[] = ["ES", "NQ", "GC", "CL", "RTY"];
+export const SYMBOL_LABEL: Record<SymbolId, string> = {
+  ES: "ES", NQ: "NQ", GC: "Gold", CL: "Crude", RTY: "Russell",
+};
+
+const YAHOO_SYMBOL: Record<SymbolId, string> = {
+  ES: "ES=F", NQ: "NQ=F", GC: "GC=F", CL: "CL=F", RTY: "RTY=F",
+};
+const TICK: Record<SymbolId, number> = {
+  ES: 0.25, NQ: 0.25, GC: 0.1, CL: 0.01, RTY: 0.1,
+};
 const roundToTick = (v: number, t: number) => Math.round(v / t) * t;
 
 /** ~3 months of daily bars, oldest -> newest. */
-export async function fetchDailyBars(symbol: "ES" | "NQ"): Promise<Bar[]> {
+export async function fetchDailyBars(symbol: SymbolId): Promise<Bar[]> {
   const y = YAHOO_SYMBOL[symbol];
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=3mo&interval=1d`;
   const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
@@ -76,7 +90,7 @@ export interface IntradayBar { time: number; open: number; high: number; low: nu
  * in seconds (what TradingView Lightweight Charts expects), oldest -> newest.
  */
 export async function fetchIntradayBars(
-  symbol: "ES" | "NQ",
+  symbol: SymbolId,
   range = "1mo",
   interval = "1h",
 ): Promise<IntradayBar[]> {
@@ -120,7 +134,7 @@ const RTH_LAST_BAR = 15 * 60 + 30; // last 30m bar starts 15:30, covers to 16:00
  * Globex daily bar keeps the range (and therefore the pivots) tighter and closer
  * to what ES/NQ traders actually use. Only complete sessions are returned.
  */
-export async function fetchRthDailyBars(symbol: "ES" | "NQ"): Promise<Bar[]> {
+export async function fetchRthDailyBars(symbol: SymbolId): Promise<Bar[]> {
   const intraday = await fetchIntradayBars(symbol, "60d", "30m");
   const byDay = new Map<
     string,
@@ -187,7 +201,7 @@ function weekIndex(dateStr: string): number {
  * preceding that day's open. Needs 30-min bars so the 09:30/15:30 ET session
  * edges line up. Returns null if no complete RTH session is present.
  */
-export function computeStructureLevels(bars: IntradayBar[], symbol: "ES" | "NQ"): StructureLevels | null {
+export function computeStructureLevels(bars: IntradayBar[], symbol: SymbolId): StructureLevels | null {
   if (!bars.length) return null;
   const tick = TICK[symbol];
   const rt = (v: number) => roundToTick(v, tick);
@@ -276,7 +290,7 @@ export interface SwingLevels {
  */
 export function detectSwings(
   bars: IntradayBar[],
-  symbol: "ES" | "NQ",
+  symbol: SymbolId,
   opts?: { window?: number; maxPerSide?: number },
 ): SwingLevels {
   const tick = TICK[symbol];
@@ -356,7 +370,7 @@ function fmtLevel(v: number): string {
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
-export function roundStepFor(symbol: "ES" | "NQ"): number {
+export function roundStepFor(symbol: SymbolId): number {
   return ROUND_STEP[symbol];
 }
 
@@ -670,8 +684,8 @@ export function mergeSwings(coarse: SwingLevels, fine: SwingLevels, refPrice: nu
   };
 }
 
-const ROUND_STEP: Record<"ES" | "NQ", number> = { ES: 25, NQ: 100 };
-const AUGMENT_BAND: Record<"ES" | "NQ", number> = { ES: 125, NQ: 500 };
+const ROUND_STEP: Record<SymbolId, number> = { ES: 25, NQ: 100, GC: 10, CL: 1, RTY: 10 };
+const AUGMENT_BAND: Record<SymbolId, number> = { ES: 125, NQ: 500, GC: 50, CL: 5, RTY: 50 };
 
 /**
  * Enrich the detected swings with structural anchors (prior-day high/low/close,
@@ -687,7 +701,7 @@ export function augmentSwings(
   structure: StructureLevels | null,
   magnet: number,
   price: number,
-  symbol: "ES" | "NQ",
+  symbol: SymbolId,
   upBandMult = 1,
 ): SwingLevels {
   const tick = TICK[symbol];
@@ -741,7 +755,7 @@ export function augmentSwings(
 }
 
 /** Pure, testable core. */
-export function computeLevels(bars: Bar[], symbol: "ES" | "NQ", structure: StructureLevels | null = null, swings: SwingLevels | null = null): ComputedLevels {
+export function computeLevels(bars: Bar[], symbol: SymbolId, structure: StructureLevels | null = null, swings: SwingLevels | null = null): ComputedLevels {
   const prev = bars[bars.length - 1];
   const { high: H, low: L, close: C } = prev;
   const a = atr(bars, 14);
@@ -834,7 +848,7 @@ async function postToIngest(levels: ComputedLevels): Promise<void> {
 }
 
 export async function generateAndPublishLevels(): Promise<void> {
-  for (const symbol of ["ES", "NQ"] as const) {
+  for (const symbol of SYMBOLS) {
     try {
       // Prefer the tighter regular-session (RTH) range; fall back to Yahoo's
       // full-session daily bars if intraday data is unavailable.

@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, ALGORITHM_VERSION } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -661,7 +661,7 @@ export async function registerRoutes(
         if (isNaN(d.getTime())) throw new Error("Invalid date");
         return d.toISOString().slice(0, 10);
       }),
-      symbol: z.enum(["ES", "NQ"]),
+      symbol: z.enum(["ES", "NQ", "GC", "CL", "RTY"]),
       contract: z.string().nullable().optional(),
       tier: z.string().optional(),
       dynamicZoneTop: z.coerce.number().nullable().optional(),
@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v11", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v12", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -896,7 +896,7 @@ export async function registerRoutes(
   app.get("/api/public/levels-export", async (req, res) => {
     try {
       const symParam = String(req.query.symbol || "ES").toUpperCase();
-      const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
+      const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";
       const format = String(req.query.format || "text").toLowerCase();
       const pubs = await storage.listPublicPlans(50);
       const plan: any = pubs.find((p: any) => p.symbol === symbol);
@@ -1063,7 +1063,7 @@ export async function registerRoutes(
   app.get("/api/public/terminal", async (req, res) => {
     try {
       const symParam = String(req.query.symbol || "ES").toUpperCase();
-      const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
+      const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";
       const bars = await fetchIntradayBars(symbol, "1mo", "30m");
       const publicPlans = await storage.listPublicPlans(50);
       const plan = publicPlans.find((p) => p.symbol === symbol) || null;
@@ -1219,7 +1219,7 @@ export async function registerRoutes(
   app.get("/api/member/plan", requireMember, async (req: MemberAuthRequest, res) => {
     try {
       const symParam = String(req.query.symbol || "ES").toUpperCase();
-      const symbol: "ES" | "NQ" = symParam === "NQ" ? "NQ" : "ES";
+      const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";
       const plans = await storage.listPublicPlans(50);
       const plan = plans.find((p) => p.symbol === symbol) || null;
       if (!plan) return res.json({ symbol, plan: null });

@@ -13,6 +13,17 @@ import { useMemberAuth } from "@/hooks/use-member-auth";
 import { keyEventForDate } from "@/lib/key-events";
 import "./public.css";
 
+// Symbol registry for the terminal UI. Mirrors the server SYMBOLS list; a new
+// ticker is one row here (label + round-number grid step for the level display).
+const TERMINAL_SYMBOLS = ["ES", "NQ", "GC", "CL", "RTY"] as const;
+type TermSym = (typeof TERMINAL_SYMBOLS)[number];
+const SYM_LABEL: Record<TermSym, string> = {
+  ES: "ES", NQ: "NQ", GC: "Gold", CL: "Crude", RTY: "Russell",
+};
+const ROUND_STEP_UI: Record<TermSym, number> = {
+  ES: 25, NQ: 100, GC: 10, CL: 1, RTY: 10,
+};
+
 interface MemberPlan {
   date: string;
   bias: string | null;
@@ -90,7 +101,7 @@ function renderSwingRow(points: SwingPt[], step: number, isTagged?: (price: numb
 }
 
 export default function PublicTerminalPage() {
-  const [symbol, setSymbol] = useState<"ES" | "NQ">("ES");
+  const [symbol, setSymbol] = useState<TermSym>("ES");
   const [copiedExport, setCopiedExport] = useState(false);
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
 
@@ -212,7 +223,7 @@ export default function PublicTerminalPage() {
 
         {/* Symbol toggle */}
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          {(["ES", "NQ"] as const).map((s) => (
+          {TERMINAL_SYMBOLS.map((s) => (
             <button
               key={s}
               onClick={() => setSymbol(s)}
@@ -227,7 +238,7 @@ export default function PublicTerminalPage() {
                 cursor: "pointer",
               }}
             >
-              {s}
+              {SYM_LABEL[s]}
             </button>
           ))}
 
@@ -343,11 +354,11 @@ export default function PublicTerminalPage() {
                 <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                   <div>
                     <span style={{ color: "#f87171" }}>Resistance:</span>{" "}
-                    {renderSwingRow(resistancePts, symbol === "NQ" ? 100 : 25, (px) => isTagged(px, "resistance"))}
+                    {renderSwingRow(resistancePts, ROUND_STEP_UI[symbol], (px) => isTagged(px, "resistance"))}
                   </div>
                   <div>
                     <span style={{ color: "#4ade80" }}>Support:</span>{" "}
-                    {renderSwingRow(supportPts, symbol === "NQ" ? 100 : 25, (px) => isTagged(px, "support"))}
+                    {renderSwingRow(supportPts, ROUND_STEP_UI[symbol], (px) => isTagged(px, "support"))}
                   </div>
                 </div>
                 {keySupport && acceptance && (

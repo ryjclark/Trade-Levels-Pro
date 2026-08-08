@@ -1,4 +1,5 @@
 import { storage } from "../storage";
+import { SYMBOLS } from "./levels-algorithm";
 import type { Plan, PlanResult, PlanLevels, LevelHits } from "@shared/schema";
 
 // The Daily Brief is the automated "voice" layer: a plain-English recap of how
@@ -38,7 +39,6 @@ export interface DailyBrief {
   note: string;
 }
 
-const SYMBOLS = ["ES", "NQ"] as const;
 const fmt = (v: number | null | undefined) =>
   v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 

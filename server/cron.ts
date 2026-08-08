@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
-import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import { postToX } from "./lib/twitter";
 import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
 import type { PlanLevels } from "@shared/schema";
@@ -87,7 +87,7 @@ async function fetchAndStoreDailyResults() {
   const rfmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
   const recapLines: string[] = [];
 
-  for (const symbol of ["ES", "NQ"] as const) {
+  for (const symbol of SYMBOLS) {
     try {
       const plan = await storage.getPlanByDateSymbol(today, symbol);
       if (!plan) {
@@ -286,7 +286,7 @@ async function postDailyBriefToTelegram() {
 const proximityAlerted = new Set<string>(); // keys: `${date}-${symbol}-${price}`
 // Wider "approaching" window so range days still ping when price nears a level
 // (3 pts was too tight for ES between 2-min checks).
-const PROXIMITY_THRESHOLD: Record<"ES" | "NQ", number> = { ES: 6, NQ: 24 };
+const PROXIMITY_THRESHOLD: Record<SymbolId, number> = { ES: 6, NQ: 24, GC: 4, CL: 0.5, RTY: 4 };
 
 function isRegularSessionET(): boolean {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -306,7 +306,7 @@ function isRegularSessionET(): boolean {
 
 // Last seen price per symbol, so we can detect a level CROSSING (reclaim / lose /
 // tag) between checks — not just proximity.
-const lastPrice = new Map<"ES" | "NQ", number>();
+const lastPrice = new Map<SymbolId, number>();
 
 async function checkIntradayAlerts() {
   if (process.env.PROXIMITY_ALERTS_ENABLED !== "true") return;
@@ -327,7 +327,7 @@ async function checkIntradayAlerts() {
     }
   };
 
-  for (const symbol of ["ES", "NQ"] as const) {
+  for (const symbol of SYMBOLS) {
     try {
       const plan = await storage.getPlanByDateSymbol(today, symbol);
       if (!plan || plan.magnet == null) continue;
