@@ -1,0 +1,35 @@
+name: Trade Levels cron pinger
+
+# Replit Autoscale can idle the app to zero, which stops the in-process timers.
+# This pings the token-gated /api/cron/:job endpoints on a schedule so the intraday
+# alert loop + the daily results/generate jobs always run (and keeps the app warm).
+#
+# SETUP (one time): add a repo secret CRON_KEY = the value of ALGORITHM_INGEST_API_KEY.
+# For tighter (1–2 min) intraday timing, also point cron-job.org at:
+#   https://tradelevelspro.com/api/cron/intraday?key=YOUR_KEY   (every 2 min, Mon–Fri 9:30–16:00 ET)
+
+on:
+  schedule:
+    - cron: "*/5 13-21 * * 1-5" # intraday alerts, ~cash session (UTC; covers EDT & EST)
+    - cron: "3 21 * * 1-5" # results ~5:03pm ET (EDT)
+    - cron: "3 22 * * 1-5" # results ~5:03pm ET (EST)
+    - cron: "17 21 * * 1-5" # generate next-session levels ~5:17pm ET (EDT)
+    - cron: "17 22 * * 1-5" # generate next-session levels ~5:17pm ET (EST)
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger job
+        env:
+          KEY: ${{ secrets.CRON_KEY }}
+          SCHED: ${{ github.event.schedule }}
+        run: |
+          case "$SCHED" in
+            "17 21 * * 1-5"|"17 22 * * 1-5") JOB=generate ;;
+            "3 21 * * 1-5"|"3 22 * * 1-5") JOB=results ;;
+            *) JOB=intraday ;;
+          esac
+          echo "Triggering $JOB"
+          curl -sS -m 90 "https://tradelevelspro.com/api/cron/$JOB?key=$KEY" || true

@@ -818,7 +818,29 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v8", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v9", regimeAware: true });
+  });
+
+  // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
+  // hits these on a schedule so the alert loop + daily jobs run even when Autoscale
+  // has idled the app. Gated on the ingest key so only the pinger can call them.
+  app.get("/api/cron/:job", async (req, res) => {
+    const key = process.env.ALGORITHM_INGEST_API_KEY;
+    if (!key || String(req.query.key || "") !== key) {
+      return res.status(401).json({ error: "unauthorized" });
+    }
+    const { runIntradayTick, runResultsTick, runGenerateTick } = await import("./cron");
+    try {
+      const job = req.params.job;
+      if (job === "intraday") await runIntradayTick();
+      else if (job === "results") await runResultsTick();
+      else if (job === "generate") await runGenerateTick();
+      else return res.status(400).json({ error: "unknown job" });
+      res.json({ ok: true, job });
+    } catch (err: any) {
+      console.error(`[cron endpoint] ${req.params.job} failed:`, err?.message || err);
+      res.status(500).json({ error: "job failed" });
+    }
   });
 
   // Ground-truth diagnostic: runs the DEPLOYED generation on live ES data and

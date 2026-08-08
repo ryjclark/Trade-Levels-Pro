@@ -284,7 +284,9 @@ async function postDailyBriefToTelegram() {
 // can never spam the channel.
 
 const proximityAlerted = new Set<string>(); // keys: `${date}-${symbol}-${price}`
-const PROXIMITY_THRESHOLD: Record<"ES" | "NQ", number> = { ES: 3, NQ: 12 };
+// Wider "approaching" window so range days still ping when price nears a level
+// (3 pts was too tight for ES between 2-min checks).
+const PROXIMITY_THRESHOLD: Record<"ES" | "NQ", number> = { ES: 6, NQ: 24 };
 
 function isRegularSessionET(): boolean {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -347,12 +349,18 @@ async function checkIntradayAlerts() {
       type Lvl = { price: number; kind: "support" | "resistance" | "magnet" };
       const levels: Lvl[] = [{ price: magnet, kind: "magnet" }];
       if (lv) {
-        for (const p of lv.swingSupportPoints ?? []) {
-          if (p.tier === "major" && p.price < magnet) levels.push({ price: p.price, kind: "support" });
-        }
-        for (const p of lv.swingResistancePoints ?? []) {
-          if (p.tier === "major" && p.price > magnet) levels.push({ price: p.price, kind: "resistance" });
-        }
+        // Watch the nearest ~4 real shelves each side (not just majors), so there's
+        // always something to react to on a range day — deduped so it can't spam.
+        const sup = (lv.swingSupportPoints ?? [])
+          .filter((p) => p.price < magnet && p.tier !== "micro")
+          .sort((a, b) => magnet - a.price - (magnet - b.price))
+          .slice(0, 4);
+        const res = (lv.swingResistancePoints ?? [])
+          .filter((p) => p.price > magnet && p.tier !== "micro")
+          .sort((a, b) => a.price - magnet - (b.price - magnet))
+          .slice(0, 4);
+        for (const p of sup) levels.push({ price: p.price, kind: "support" });
+        for (const p of res) levels.push({ price: p.price, kind: "resistance" });
       }
 
       const threshold = PROXIMITY_THRESHOLD[symbol];
@@ -391,6 +399,20 @@ async function checkIntradayAlerts() {
       console.error(`[cron] intraday ${symbol} failed:`, err?.message || err);
     }
   }
+}
+
+// Externally-triggerable job runners. Replit Autoscale can idle the app to zero,
+// which stops the in-process timers — so an external pinger hits these via
+// /api/cron/:job to guarantee they run (and keeps the app warm).
+export async function runIntradayTick() {
+  await checkIntradayAlerts();
+}
+export async function runResultsTick() {
+  await fetchAndStoreDailyResults();
+}
+export async function runGenerateTick() {
+  await generateAndPublishLevels();
+  await postDailyBriefToTelegram();
 }
 
 export function registerCronJobs() {
