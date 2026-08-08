@@ -818,14 +818,14 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v9", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v10", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
   // hits these on a schedule so the alert loop + daily jobs run even when Autoscale
   // has idled the app. Gated on the ingest key so only the pinger can call them.
   app.get("/api/cron/:job", async (req, res) => {
-    const key = process.env.ALGORITHM_INGEST_API_KEY;
+    const key = process.env.CRON_KEY || process.env.ALGORITHM_INGEST_API_KEY;
     if (!key || String(req.query.key || "") !== key) {
       return res.status(401).json({ error: "unauthorized" });
     }
