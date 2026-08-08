@@ -90,13 +90,19 @@ export function formatAlgorithmPlan(plan: Plan): string {
     L.push("");
     L.push("🟢 Failed-breakdown longs (wait for it to come to you)");
     longPts.forEach((p, i) => {
-      const star = p.tier === "major" ? "⭐ " : "";
-      const aplus = p.tier === "major" ? " (A+)" : "";
-      if (i === 0) L.push(`${medals[0]} ${star}${num(p.price)}${aplus} → flush and reclaim, long the failed breakdown`);
-      else L.push(`${medals[i]} ${star}${num(p.price)}${aplus}`);
+      if (i === 0) L.push(`${medals[0]} ⭐ ${num(p.price)} (A+) → flush and reclaim, long the failed breakdown`);
+      else L.push(`${medals[i]} ${num(p.price)}${p.tier === "major" ? " (deeper backup)" : ""}`);
     });
     if (targets.length) L.push(`Targets: ${targets.join(", ")}`);
     L.push("Shallow dips are chases — no trade unless price flushes a level and reclaims.");
+    // Invalidation = the range low: nearest real support BELOW the near entries.
+    const dzBottom = lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom ?? magnet;
+    const entryFloor = longPts[Math.min(1, longPts.length - 1)].price;
+    const invalid =
+      (lv?.swingSupportPoints ?? [])
+        .filter((p) => p.price < entryFloor && p.tier !== "micro")
+        .sort((a, b) => b.price - a.price)[0]?.price ?? dzBottom;
+    L.push(`Invalidation: below ${num(invalid)} the long is off — breakdown-short territory (size down).`);
     L.push("");
     L.push("🔴 Rejection shorts (not the edge here — scalps only, if at all)");
     if (shortPts.length) shortPts.forEach((p, i) => L.push(`${medals[i]} ${num(p.price)} → reject and fail, small scalp`));
