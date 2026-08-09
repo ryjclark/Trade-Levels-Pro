@@ -8,6 +8,7 @@ import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
 import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, pickSetupLevels, pickMomentumTargets, roundStepFor, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { AUTO_INDICATOR_PINE } from "./lib/auto-indicator-pine";
 import {
   requireMember,
   createLoginToken,
@@ -818,7 +819,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v16", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v17", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1012,6 +1013,12 @@ export async function registerRoutes(
       console.error("levels-export error:", err);
       res.status(500).type("text/plain").send("Export failed.");
     }
+  });
+
+  // The native, self-computing indicator (same for all symbols; recomputes the
+  // plan on the user's chart every session). Copy once into TradingView.
+  app.get("/api/public/auto-indicator.pine", (_req, res) => {
+    res.type("text/plain").send(AUTO_INDICATOR_PINE);
   });
 
   app.get("/api/public/track-record", async (_req, res) => {
