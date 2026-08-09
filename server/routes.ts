@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, pickSetupLevels, pickMomentumTargets, roundStepFor, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v15", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v16", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -906,20 +906,38 @@ export async function registerRoutes(
       const lv: any = plan.levels || {};
       const magnet: number = plan.magnet;
       const dzTop = plan.dynamicZoneTop, dzBot = plan.dynamicZoneBottom;
-      const sups: number[] = (lv.swingSupports ?? []).filter((v: number) => v < magnet).slice(0, 8);
-      const ress: number[] = (lv.swingResistances ?? []).filter((v: number) => v > magnet).slice(0, 8);
-      const majorSup: number | null =
-        (lv.swingSupportPoints ?? [])
-          .filter((p: any) => p.tier === "major" && p.price < magnet)
-          .sort((a: any, b: any) => b.price - a.price)[0]?.price ?? null;
       const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
       const label = `Trade Levels Pro ${symbol} ${plan.date}`;
       const prof: any = lv.profile || null;
       const hasProf = prof && prof.poc != null;
+      const bias: string = plan.bias ? String(plan.bias) : "";
+      const biasCap = bias ? bias.charAt(0).toUpperCase() + bias.slice(1) : "—";
+
+      // Derive the ACTUAL trade the plan calls, using the SAME selection logic as
+      // the Telegram plan (pickSetupLevels / pickMomentumTargets) so the chart and
+      // the alert can never disagree: A+ failed-breakdown long, backups, upside
+      // targets, and the invalidation (range low below the entries).
+      const step = roundStepFor(symbol);
+      const supPts = (lv.swingSupportPoints ?? []) as Array<{ price: number; prominence: number; tier: string }>;
+      const resPts = (lv.swingResistancePoints ?? []) as Array<{ price: number; prominence: number; tier: string }>;
+      const longPts = magnet != null ? (pickSetupLevels(supPts as any, magnet, "below", step) as any[]) : [];
+      const shortPts = magnet != null ? (pickSetupLevels(resPts as any, magnet, "above", step) as any[]) : [];
+      const aplus: number | null = longPts[0]?.price ?? null;
+      const backups: number[] = longPts.slice(1).map((p) => p.price);
+      const priceRef = (plan as any).currentPrice ?? magnet;
+      const targets: number[] =
+        magnet == null ? [] : pickMomentumTargets((lv.swingResistances ?? []) as number[], Math.max(priceRef, magnet), step * 0.8);
+      // Invalidation = nearest non-micro support below the near entries (range low).
+      const entryFloor = longPts.length ? longPts[Math.min(1, longPts.length - 1)].price : magnet;
+      const invalid: number | null =
+        supPts.filter((p) => p.price < entryFloor && p.tier !== "micro").sort((a, b) => b.price - a.price)[0]?.price ??
+        (dzBot ?? null);
+      // Legacy arrays still used by the plain-text export.
+      const sups: number[] = longPts.map((p) => p.price);
+      const ress: number[] = targets.length ? targets : shortPts.map((p) => p.price);
+      const majorSup = aplus;
 
       if (format === "pine") {
-        const bias: string = plan.bias ? String(plan.bias) : "";
-        const biasCap = bias ? bias.charAt(0).toUpperCase() + bias.slice(1) : "—";
         const regime: string = lv.regime === "momentum" ? "Momentum / breakout" : "Range day";
         const title = `TLP ${symbol} · ${plan.date}`;
         // Each level draws a right-extended line with an on-chart label at the right
@@ -948,19 +966,18 @@ export async function registerRoutes(
           L.push(`hB = hline(${pn(dzBot)}, "", color=color.new(color.gray, 100))`);
           L.push(`fill(hT, hB, color=color.new(color.orange, 92), title="Dynamic Zone")`);
         }
-        L.push("", "// --- Key levels ---");
+        L.push("", "// --- The trade (matches the Telegram plan) ---");
         L.push(f(magnet, `◆ Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
-        if (majorSup != null) L.push(f(majorSup, `★ A+ ${fmt(majorSup)}`, "color.new(color.lime, 0)", 2));
+        if (aplus != null) L.push(f(aplus, `🎯 A+ LONG ${fmt(aplus)} — flush & reclaim`, "color.new(color.lime, 0)", 3));
+        backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} (backup) ${fmt(b)}`, "color.new(color.green, 25)", 1)));
+        targets.forEach((t, i) => L.push(f(t, `T${i + 1} target ${fmt(t)}`, "color.new(color.aqua, 0)", 2)));
+        if (invalid != null) L.push(f(invalid, `✕ Invalid < ${fmt(invalid)} (long off)`, "color.new(color.red, 0)", 2, true));
         if (hasProf) {
-          L.push("", "// --- Prior-session profile ---");
+          L.push("", "// --- Prior-session profile (context) ---");
           L.push(f(prof.poc, `POC ${fmt(prof.poc)} (prior)`, "color.new(color.purple, 0)", 2));
           if (prof.vah != null) L.push(f(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true));
           if (prof.val != null) L.push(f(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true));
         }
-        L.push("", "// --- Resistances / upside targets ---");
-        for (const r of ress) L.push(f(r, `R ${fmt(r)}`, "color.new(color.red, 20)", 1));
-        L.push("", "// --- Supports / failed-breakdown longs ---");
-        for (const s of sups) if (s !== majorSup) L.push(f(s, `S ${fmt(s)}`, "color.new(color.green, 20)", 1));
         L.push(
           "",
           "// --- Info panel ---",
@@ -977,13 +994,16 @@ export async function registerRoutes(
       const lines: string[] = [
         label,
         "",
+        `Bias: ${biasCap}${lv.regime === "momentum" ? " (momentum / breakout — be patient)" : ""}`,
         `Magnet: ${fmt(magnet)}`,
         dzBot != null && dzTop != null ? `Dynamic Zone: ${fmt(dzBot)} – ${fmt(dzTop)}` : "",
         hasProf ? `Prior POC: ${fmt(prof.poc)}${prof.val != null && prof.vah != null ? ` (value area ${fmt(prof.val)} – ${fmt(prof.vah)})` : ""}` : "",
         "",
-        `Resistances: ${ress.map(fmt).join(", ")}`,
-        `Supports: ${sups.map(fmt).join(", ")}`,
-        majorSup != null ? `A+ (key failed-breakdown): ${fmt(majorSup)}` : "",
+        "THE TRADE",
+        aplus != null ? `A+ long (flush & reclaim): ${fmt(aplus)}` : "",
+        backups.length ? `Backups: ${backups.map(fmt).join(", ")}` : "",
+        targets.length ? `Targets: ${targets.map(fmt).join(", ")}` : "",
+        invalid != null ? `Invalidation: below ${fmt(invalid)} the long is off` : "",
         "",
         "tradelevelspro.com",
       ].filter(Boolean);
