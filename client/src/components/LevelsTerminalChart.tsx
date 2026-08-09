@@ -71,14 +71,29 @@ export interface SwingLevels {
   highPoints?: SwingPoint[];
 }
 
+export interface PlanTrade {
+  aplus: number | null;
+  backups: number[];
+  targets: number[];
+  invalid: number | null;
+}
+export interface ChartProfile {
+  poc: number | null;
+  vah: number | null;
+  val: number | null;
+  date?: string | null;
+}
+
 type Props = {
   bars: TerminalBar[];
   levels: TerminalLevels | null;
   swings?: SwingLevels | null;
+  trade?: PlanTrade | null;
+  profile?: ChartProfile | null;
   height?: number;
 };
 
-export default function LevelsTerminalChart({ bars, levels, swings, height = 520 }: Props) {
+export default function LevelsTerminalChart({ bars, levels, swings, trade, profile, height = 520 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -182,11 +197,28 @@ export default function LevelsTerminalChart({ bars, levels, swings, height = 520
           // Dynamic Zone — faint dashed band around the magnet.
           if (levels.dynamicZoneTop != null) addLine(levels.dynamicZoneTop, "rgba(148,163,184,0.5)", "", true);
           if (levels.dynamicZoneBottom != null) addLine(levels.dynamicZoneBottom, "rgba(148,163,184,0.5)", "", true);
+          // Prior-session profile (context) — purple POC + dotted value area.
+          if (profile) {
+            if (profile.poc != null) addLine(profile.poc, "#c084fc", "POC", false, 2);
+            if (profile.vah != null) addLine(profile.vah, "rgba(192,132,252,0.6)", "VAH", true);
+            if (profile.val != null) addLine(profile.val, "rgba(192,132,252,0.6)", "VAL", true);
+          }
           // Magnet — the one bright anchor.
           if (levels.magnet != null) addLine(levels.magnet, "#eab308", "Magnet", false, 2);
-          // Nearest supports / resistances only; majors drawn thicker.
-          resistances.forEach((v) => addLine(v, "#ef5350", "R", false, widthFor(v)));
-          supports.forEach((v) => addLine(v, "#26a69a", "S", false, widthFor(v)));
+
+          const hasTrade =
+            trade && (trade.aplus != null || trade.targets.length > 0 || trade.invalid != null);
+          if (hasTrade) {
+            // The exact plan trade — same setup as Telegram, drawn on the chart.
+            trade!.targets.slice(0, 3).forEach((v, i) => addLine(v, "#22d3ee", `T${i + 1}`, false, i === 0 ? 2 : 1));
+            if (trade!.aplus != null) addLine(trade!.aplus, "#4ade80", "A+ LONG", false, 3);
+            trade!.backups.slice(0, 2).forEach((v) => addLine(v, "rgba(74,222,128,0.7)", "Long", false, 1));
+            if (trade!.invalid != null) addLine(trade!.invalid, "#ef4444", "✕ Invalid", true, 2);
+          } else {
+            // Fallback (no plan trade): nearest supports / resistances, majors thicker.
+            resistances.forEach((v) => addLine(v, "#ef5350", "R", false, widthFor(v)));
+            supports.forEach((v) => addLine(v, "#26a69a", "S", false, widthFor(v)));
+          }
         }
 
         // Zoom to the last ~110 bars so candles are readable (not 900 crammed in).
@@ -211,7 +243,7 @@ export default function LevelsTerminalChart({ bars, levels, swings, height = 520
       if (ro) ro.disconnect();
       if (chart) chart.remove();
     };
-  }, [bars, levels, swings, height]);
+  }, [bars, levels, swings, trade, profile, height]);
 
   return (
     <div

@@ -63,6 +63,12 @@ interface TerminalData {
     val: number | null;
     date: string | null;
   } | null;
+  trade?: {
+    aplus: number | null;
+    backups: number[];
+    targets: number[];
+    invalid: number | null;
+  } | null;
 }
 
 type SwingPt = { price: number; prominence: number; tier: "major" | "minor" | "micro" };
@@ -109,7 +115,6 @@ function renderSwingRow(points: SwingPt[], step: number, isTagged?: (price: numb
 export default function PublicTerminalPage() {
   const [symbol, setSymbol] = useState<TermSym>("ES");
   const [copiedExport, setCopiedExport] = useState(false);
-  const [copiedAuto, setCopiedAuto] = useState(false);
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
 
   const { data, isLoading } = useQuery<TerminalData>({
@@ -300,7 +305,7 @@ export default function PublicTerminalPage() {
               Chart data unavailable right now.
             </div>
           ) : (
-            <LevelsTerminalChart bars={data.bars} levels={chartLevels} swings={swings} height={520} />
+            <LevelsTerminalChart bars={data.bars} levels={chartLevels} swings={swings} trade={data.trade} profile={data.profile} height={520} />
           )}
           <div style={{ fontSize: 12, opacity: 0.5, marginTop: 8 }}>
             {symbol} · levels for {plan?.date ?? "the next session"} · chart data may be delayed.
@@ -426,44 +431,6 @@ export default function PublicTerminalPage() {
                   >
                     TradingView Pine script →
                   </a>
-                </div>
-                {/* Auto-updating indicator: add once, recomputes every day. */}
-                <div style={{ marginTop: 14, borderTop: "1px solid var(--border, #26262b)", paddingTop: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, opacity: 0.85 }}>
-                    Auto-updating indicator (add once, never re-paste)
-                  </div>
-                  <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 8 }}>
-                    Computes the levels on your chart and refreshes every session on its own. A close
-                    approximation of the daily plan; use the exact export above for precision.
-                  </div>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const r = await fetch(`/api/public/auto-indicator.pine`);
-                          await navigator.clipboard.writeText(await r.text());
-                          setCopiedAuto(true);
-                          setTimeout(() => setCopiedAuto(false), 2000);
-                        } catch {}
-                      }}
-                      data-testid="button-copy-auto-indicator"
-                      style={{
-                        fontSize: 12, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                        border: "1px solid var(--border, #26262b)", background: "var(--card, rgba(255,255,255,0.03))",
-                        color: "inherit",
-                      }}
-                    >
-                      {copiedAuto ? "✓ Copied — paste into TradingView Pine Editor" : "⚡ Copy auto-updating indicator"}
-                    </button>
-                    <a
-                      href={`/api/public/auto-indicator.pine`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ fontSize: 12, color: "var(--teal, #5EEAD4)" }}
-                    >
-                      View script →
-                    </a>
-                  </div>
                 </div>
               </div>
             )}

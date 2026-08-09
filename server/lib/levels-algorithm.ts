@@ -520,6 +520,42 @@ export function pickMomentumTargets(highs: number[], price: number, minGap: numb
   return out;
 }
 
+export interface PlanTrade {
+  aplus: number | null;
+  backups: number[];
+  targets: number[];
+  invalid: number | null;
+}
+
+/** The actual trade the plan calls — A+ failed-breakdown long, backups, upside
+ *  targets, and the invalidation (range low below the entries). Single source of
+ *  truth shared by the Telegram plan, the chart export, and the terminal chart so
+ *  they can never disagree. `lv` is a plan's stored levels object. */
+export function computePlanTrade(
+  lv: {
+    swingSupportPoints?: SwingPoint[];
+    swingResistances?: number[];
+    dynamicZoneBottom?: number | null;
+  },
+  magnet: number | null,
+  symbol: SymbolId,
+  currentPrice?: number | null,
+): PlanTrade {
+  if (magnet == null) return { aplus: null, backups: [], targets: [], invalid: null };
+  const step = roundStepFor(symbol);
+  const supPts = lv.swingSupportPoints ?? [];
+  const longPts = pickSetupLevels(supPts, magnet, "below", step);
+  const aplus = longPts[0]?.price ?? null;
+  const backups = longPts.slice(1).map((p) => p.price);
+  const priceRef = currentPrice ?? magnet;
+  const targets = pickMomentumTargets(lv.swingResistances ?? [], Math.max(priceRef, magnet), step * 0.8);
+  const entryFloor = longPts.length ? longPts[Math.min(1, longPts.length - 1)].price : magnet;
+  const invalid =
+    supPts.filter((p) => p.price < entryFloor && p.tier !== "micro").sort((a, b) => b.price - a.price)[0]?.price ??
+    (lv.dynamicZoneBottom ?? null);
+  return { aplus, backups, targets, invalid };
+}
+
 /** Plain-English quality tag for a chosen setup level, distinguishing real
  *  detected shelves from round-number references. */
 export function levelTag(p: SwingPoint, side: "support" | "resistance", step: number): string {

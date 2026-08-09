@@ -7,8 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, pickSetupLevels, pickMomentumTargets, roundStepFor, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
-import { AUTO_INDICATOR_PINE } from "./lib/auto-indicator-pine";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, computePlanTrade, roundStepFor, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import {
   requireMember,
   createLoginToken,
@@ -819,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v17", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v18", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -914,29 +913,10 @@ export async function registerRoutes(
       const bias: string = plan.bias ? String(plan.bias) : "";
       const biasCap = bias ? bias.charAt(0).toUpperCase() + bias.slice(1) : "—";
 
-      // Derive the ACTUAL trade the plan calls, using the SAME selection logic as
-      // the Telegram plan (pickSetupLevels / pickMomentumTargets) so the chart and
-      // the alert can never disagree: A+ failed-breakdown long, backups, upside
-      // targets, and the invalidation (range low below the entries).
-      const step = roundStepFor(symbol);
-      const supPts = (lv.swingSupportPoints ?? []) as Array<{ price: number; prominence: number; tier: string }>;
-      const resPts = (lv.swingResistancePoints ?? []) as Array<{ price: number; prominence: number; tier: string }>;
-      const longPts = magnet != null ? (pickSetupLevels(supPts as any, magnet, "below", step) as any[]) : [];
-      const shortPts = magnet != null ? (pickSetupLevels(resPts as any, magnet, "above", step) as any[]) : [];
-      const aplus: number | null = longPts[0]?.price ?? null;
-      const backups: number[] = longPts.slice(1).map((p) => p.price);
-      const priceRef = (plan as any).currentPrice ?? magnet;
-      const targets: number[] =
-        magnet == null ? [] : pickMomentumTargets((lv.swingResistances ?? []) as number[], Math.max(priceRef, magnet), step * 0.8);
-      // Invalidation = nearest non-micro support below the near entries (range low).
-      const entryFloor = longPts.length ? longPts[Math.min(1, longPts.length - 1)].price : magnet;
-      const invalid: number | null =
-        supPts.filter((p) => p.price < entryFloor && p.tier !== "micro").sort((a, b) => b.price - a.price)[0]?.price ??
-        (dzBot ?? null);
-      // Legacy arrays still used by the plain-text export.
-      const sups: number[] = longPts.map((p) => p.price);
-      const ress: number[] = targets.length ? targets : shortPts.map((p) => p.price);
-      const majorSup = aplus;
+      // Derive the ACTUAL trade the plan calls (shared with the Telegram plan and
+      // the terminal chart, so they can never disagree): A+ failed-breakdown long,
+      // backups, upside targets, and the invalidation (range low below the entries).
+      const { aplus, backups, targets, invalid } = computePlanTrade(lv, magnet, symbol, (plan as any).currentPrice);
 
       if (format === "pine") {
         const regime: string = lv.regime === "momentum" ? "Momentum / breakout" : "Range day";
@@ -1013,12 +993,6 @@ export async function registerRoutes(
       console.error("levels-export error:", err);
       res.status(500).type("text/plain").send("Export failed.");
     }
-  });
-
-  // The native, self-computing indicator (same for all symbols; recomputes the
-  // plan on the user's chart every session). Copy once into TradingView.
-  app.get("/api/public/auto-indicator.pine", (_req, res) => {
-    res.type("text/plain").send(AUTO_INDICATOR_PINE);
   });
 
   app.get("/api/public/track-record", async (_req, res) => {
@@ -1180,6 +1154,17 @@ export async function registerRoutes(
       // Prior-session Market Profile (POC + value area). Prefer the value stored
       // with the plan; else compute live from the fetched 30m bars.
       const profile = stored?.profile ?? computeTpoProfile(bars, symbol);
+      // The exact plan trade (A+ / backups / targets / invalidation), drawn on the
+      // chart so the terminal shows the same setup as Telegram — auto-updating.
+      const trade =
+        plan && plan.magnet != null
+          ? computePlanTrade(
+              { swingSupportPoints: swings.lowPoints, swingResistances: stored?.swingResistances ?? swings.highs, dynamicZoneBottom: plan.dynamicZoneBottom },
+              plan.magnet,
+              symbol,
+              (plan as any).currentPrice ?? bars[bars.length - 1]?.close,
+            )
+          : null;
       res.json({
         symbol,
         bars,
@@ -1194,6 +1179,7 @@ export async function registerRoutes(
         structure,
         swings,
         profile,
+        trade,
       });
     } catch (err) {
       console.error("public terminal error:", err);
