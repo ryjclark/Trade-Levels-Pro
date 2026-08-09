@@ -918,22 +918,58 @@ export async function registerRoutes(
       const hasProf = prof && prof.poc != null;
 
       if (format === "pine") {
-        const lines: string[] = [
+        const bias: string = plan.bias ? String(plan.bias) : "";
+        const biasCap = bias ? bias.charAt(0).toUpperCase() + bias.slice(1) : "—";
+        const regime: string = lv.regime === "momentum" ? "Momentum / breakout" : "Range day";
+        const title = `TLP ${symbol} · ${plan.date}`;
+        // Each level draws a right-extended line with an on-chart label at the right
+        // edge, color-coded by role. f(price, text, color, width, dotted).
+        const f = (price: number, text: string, color: string, width: number, dotted = false) =>
+          `f(${price}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
+        const L: string[] = [
           "//@version=5",
-          `indicator(${JSON.stringify(label)}, overlay=true)`,
-          `hline(${magnet}, "Magnet ${fmt(magnet)}", color=color.new(color.yellow, 0), linestyle=hline.style_solid, linewidth=2)`,
+          `indicator(${JSON.stringify(title)}, ${JSON.stringify(`TLP ${symbol}`)}, overlay=true, max_lines_count=200, max_labels_count=200)`,
+          `// Trade Levels Pro — tradelevelspro.com. Levels for ${symbol} ${plan.date}.`,
+          "// Static daily snapshot: recopy each morning (TradingView can't auto-fetch).",
+          "",
+          'LB = input.int(60, "Line length (bars back)", minval=10)',
+          "",
+          "f(float p, string t, color c, int w, bool dot) =>",
+          "    if barstate.islast and not na(p)",
+          "        line.new(bar_index - LB, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
+          "        label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small)",
+          "",
+          "// --- Dynamic Zone (shaded fair-value band) ---",
         ];
-        if (dzTop != null) lines.push(`hline(${dzTop}, "DZ top", color=color.new(color.gray, 40), linestyle=hline.style_dashed)`);
-        if (dzBot != null) lines.push(`hline(${dzBot}, "DZ bottom", color=color.new(color.gray, 40), linestyle=hline.style_dashed)`);
-        if (hasProf) {
-          lines.push(`hline(${prof.poc}, "POC ${fmt(prof.poc)}", color=color.new(color.purple, 0), linestyle=hline.style_solid)`);
-          if (prof.vah != null) lines.push(`hline(${prof.vah}, "VAH ${fmt(prof.vah)}", color=color.new(color.purple, 55), linestyle=hline.style_dotted)`);
-          if (prof.val != null) lines.push(`hline(${prof.val}, "VAL ${fmt(prof.val)}", color=color.new(color.purple, 55), linestyle=hline.style_dotted)`);
+        if (dzTop != null && dzBot != null) {
+          L.push(`hT = hline(${dzTop}, "", color=color.new(color.gray, 100))`);
+          L.push(`hB = hline(${dzBot}, "", color=color.new(color.gray, 100))`);
+          L.push(`fill(hT, hB, color=color.new(color.orange, 92), title="Dynamic Zone")`);
         }
-        for (const r of ress) lines.push(`hline(${r}, "R ${fmt(r)}", color=color.new(color.red, 30))`);
-        for (const s of sups)
-          lines.push(`hline(${s}, "${s === majorSup ? "A+ " : "S "}${fmt(s)}", color=color.new(color.green, ${s === majorSup ? 0 : 30})${s === majorSup ? ", linewidth=2" : ""})`);
-        return res.type("text/plain").send(lines.join("\n"));
+        L.push("", "// --- Key levels ---");
+        L.push(f(magnet, `◆ Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
+        if (majorSup != null) L.push(f(majorSup, `★ A+ ${fmt(majorSup)}`, "color.new(color.lime, 0)", 2));
+        if (hasProf) {
+          L.push("", "// --- Prior-session profile ---");
+          L.push(f(prof.poc, `POC ${fmt(prof.poc)} (prior)`, "color.new(color.purple, 0)", 2));
+          if (prof.vah != null) L.push(f(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true));
+          if (prof.val != null) L.push(f(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true));
+        }
+        L.push("", "// --- Resistances / upside targets ---");
+        for (const r of ress) L.push(f(r, `R ${fmt(r)}`, "color.new(color.red, 20)", 1));
+        L.push("", "// --- Supports / failed-breakdown longs ---");
+        for (const s of sups) if (s !== majorSup) L.push(f(s, `S ${fmt(s)}`, "color.new(color.green, 20)", 1));
+        L.push(
+          "",
+          "// --- Info panel ---",
+          "var table tb = table.new(position.top_right, 1, 4, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)",
+          "if barstate.islast",
+          `    table.cell(tb, 0, 0, ${JSON.stringify(`Trade Levels Pro — ${symbol}`)}, text_color=color.white, bgcolor=color.new(color.blue, 10), text_size=size.small)`,
+          `    table.cell(tb, 0, 1, ${JSON.stringify(plan.date)}, text_color=color.gray, text_size=size.small)`,
+          `    table.cell(tb, 0, 2, ${JSON.stringify(`Bias: ${biasCap}`)}, text_color=${bias === "bullish" ? "color.lime" : bias === "bearish" ? "color.red" : "color.gray"}, text_size=size.small)`,
+          `    table.cell(tb, 0, 3, ${JSON.stringify(regime)}, text_color=color.orange, text_size=size.small)`,
+        );
+        return res.type("text/plain").send(L.join("\n"));
       }
 
       const lines: string[] = [
