@@ -184,13 +184,52 @@ async function fetchAndStoreDailyResults() {
           firstTargetHit,
         };
 
-        // End-of-day recap line for this symbol (posted to Telegram below).
-        recapLines.push(
-          `${symbol}: close ${rfmt(close)}${hitMagnet ? " · magnet tagged ✅" : " · magnet not tagged"}\n` +
-            `Supports ${supTagged}/${sups.length} tested` +
-            (flushed > 0 ? ` · ${reclaimed}/${flushed} failed-breakdown${flushed === 1 ? "" : "s"} reclaimed` : "") +
-            ` · Resistances ${resTagged}/${res.length} tagged`,
-        );
+        // End-of-day recap line — a DIRECTIONAL plan grade, not raw support
+        // coverage. On a trending day price shouldn't revisit its supports, so
+        // "X/13 supports tested" reads as a loss when the call was actually right.
+        // Lead with the bias call + the objective IN THE CALLED DIRECTION
+        // (upside targets on a bull day, downside on a bear day), then the A+
+        // failed-breakdown outcome and the magnet. supTagged/resTagged still get
+        // stored above for the track record; they just don't headline the recap.
+        const dayChange = close - open;
+        const changeStr = `${dayChange >= 0 ? "+" : ""}${rfmt(dayChange)}`;
+        const biasStr = (plan.bias || "").toLowerCase();
+        const biasCap = biasStr ? biasStr.charAt(0).toUpperCase() + biasStr.slice(1) : "";
+        const mg = plan.magnet;
+
+        let headline: string;
+        if (biasStr === "bullish" || biasStr === "bearish") {
+          const callRight = biasStr === "bullish" ? close >= open : close <= open;
+          headline = `${symbol}: ${biasCap} call ${callRight ? "✅" : "✗"} · closed ${rfmt(close)} (${changeStr})`;
+        } else {
+          headline = `${symbol}: Range day · closed ${rfmt(close)} (${changeStr})`;
+        }
+
+        // Targets in the realized/called direction.
+        const dirUp = biasStr === "bullish" || (biasStr !== "bearish" && close >= open);
+        const tgts =
+          mg == null ? [] :
+          dirUp ? res.filter((r) => r > mg).sort((a, b) => a - b)
+                : sups.filter((s) => s < mg).sort((a, b) => b - a);
+        const tgtHit = dirUp ? tgts.filter((r) => high >= r) : tgts.filter((s) => low <= s);
+
+        // A+ failed-breakdown outcome — "held above" (trend ran) is a WIN, not a miss.
+        let aLine = "";
+        if (aPlus != null) {
+          if (aPlusReclaimed) aLine = `A+ ${rfmt(aPlus)}: flushed & reclaimed ✅ — the failed-breakdown worked`;
+          else if (low > aPlus) aLine = `A+ ${rfmt(aPlus)}: held above all session — trend ran, no dip to buy`;
+          else aLine = `A+ ${rfmt(aPlus)}: flushed but didn't reclaim by the close`;
+        }
+
+        const parts = [headline];
+        if (tgts.length)
+          parts.push(
+            `Targets ${dirUp ? "up" : "down"}: ${tgtHit.length}/${tgts.length} hit` +
+              (tgtHit.length ? ` (${tgtHit.slice(0, 3).map(rfmt).join(", ")})` : ""),
+          );
+        if (aLine) parts.push(aLine);
+        if (mg != null) parts.push(`Magnet ${rfmt(mg)} ${hitMagnet ? "tagged ✅" : "not tagged"}`);
+        recapLines.push(parts.join("\n"));
       }
 
       await storage.insertPlanResult({

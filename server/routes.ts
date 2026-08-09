@@ -818,7 +818,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v14", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v15", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -923,9 +923,11 @@ export async function registerRoutes(
         const regime: string = lv.regime === "momentum" ? "Momentum / breakout" : "Range day";
         const title = `TLP ${symbol} · ${plan.date}`;
         // Each level draws a right-extended line with an on-chart label at the right
-        // edge, color-coded by role. f(price, text, color, width, dotted).
+        // edge, color-coded by role. f(price, text, color, width, dotted). pn strips
+        // binary-float dust (e.g. 4386.900000000001) from the emitted Pine numbers.
+        const pn = (v: number) => Number(v.toFixed(6));
         const f = (price: number, text: string, color: string, width: number, dotted = false) =>
-          `f(${price}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
+          `f(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
         const L: string[] = [
           "//@version=5",
           `indicator(${JSON.stringify(title)}, ${JSON.stringify(`TLP ${symbol}`)}, overlay=true, max_lines_count=200, max_labels_count=200)`,
@@ -942,8 +944,8 @@ export async function registerRoutes(
           "// --- Dynamic Zone (shaded fair-value band) ---",
         ];
         if (dzTop != null && dzBot != null) {
-          L.push(`hT = hline(${dzTop}, "", color=color.new(color.gray, 100))`);
-          L.push(`hB = hline(${dzBot}, "", color=color.new(color.gray, 100))`);
+          L.push(`hT = hline(${pn(dzTop)}, "", color=color.new(color.gray, 100))`);
+          L.push(`hB = hline(${pn(dzBot)}, "", color=color.new(color.gray, 100))`);
           L.push(`fill(hT, hB, color=color.new(color.orange, 92), title="Dynamic Zone")`);
         }
         L.push("", "// --- Key levels ---");

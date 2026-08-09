@@ -106,14 +106,28 @@ export async function buildDailyBrief(): Promise<DailyBrief> {
     const resistancesTagged = lh?.resistances.tagged ?? 0;
     const resistancesTotal = lh?.resistances.total ?? 0;
     const magnetHit = !!r.hitMagnet;
-    const fbLine =
-      flushed > 0
-        ? `${reclaimed} of ${flushed} flushes below support reclaimed (the failed-breakdown trade)`
-        : `no support flushed and reclaimed`;
-    const line =
-      `${sym}: the magnet ${magnetHit ? "was tagged" : "was not tagged"}, ` +
-      `${supportsTagged}/${supportsTotal} supports held, ${resistancesTagged}/${resistancesTotal} resistances tagged, ` +
-      `${fbLine}. Close ${fmt(r.close)}.`;
+    // Directional grade (not raw support coverage): the day's move, whether the
+    // upside target hit, and how the A+ failed-breakdown resolved — where "held
+    // above" is a trend-day WIN, not a miss.
+    const dayChange = r.close != null && r.open != null ? r.close - r.open : null;
+    const changeStr = dayChange != null ? `${dayChange >= 0 ? "+" : ""}${fmt(dayChange)}` : "";
+    const aPlus = lh?.aPlus ?? null;
+    const aReclaimed = lh?.aPlusReclaimed ?? 0;
+    const firstTarget = lh?.firstTarget ?? null;
+    const firstTargetHit = lh?.firstTargetHit ?? 0;
+    const heldAbove = aPlus != null && r.low != null && r.low > aPlus;
+    const aTxt =
+      aPlus == null ? "" :
+      aReclaimed ? `The A+ failed-breakdown at ${fmt(aPlus)} flushed and reclaimed — the setup worked.` :
+      heldAbove ? `Price held above the A+ at ${fmt(aPlus)} all session (trend ran, no dip to buy).` :
+      `The A+ at ${fmt(aPlus)} flushed but didn't reclaim by the close.`;
+    const tgtTxt =
+      firstTarget == null ? "" :
+      firstTargetHit ? `First upside target ${fmt(firstTarget)} was hit.` :
+      `First upside target ${fmt(firstTarget)} wasn't reached.`;
+    const line = `${sym}: closed ${fmt(r.close)} (${changeStr}). ${tgtTxt} ${aTxt} Magnet ${magnetHit ? "tagged" : "not tagged"}.`
+      .replace(/\s+/g, " ")
+      .trim();
     recap.push({
       symbol: sym,
       date: r.date,
