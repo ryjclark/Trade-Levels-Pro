@@ -69,6 +69,7 @@ interface TerminalData {
     targets: number[];
     invalid: number | null;
   } | null;
+  botUsername?: string;
 }
 
 type SwingPt = { price: number; prominence: number; tier: "major" | "minor" | "micro" };
@@ -285,6 +286,49 @@ export default function PublicTerminalPage() {
             {keyEvent.note}
           </div>
         )}
+
+        {/* Get alerts on Telegram — one-click deep link opens the bot + starts it */}
+        <div
+          data-testid="terminal-alerts-cta"
+          style={{
+            border: "1px solid var(--border-teal-strong, rgba(94,234,212,0.35))",
+            background: "rgba(94,234,212,0.06)",
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 16,
+            display: "flex",
+            gap: 16,
+            alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ fontSize: 13, lineHeight: 1.55, maxWidth: 560 }}>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>📲 Get the plan + alerts on Telegram</div>
+            <div style={{ opacity: 0.75 }}>
+              Tap below → press <b>Start</b> → choose your tickers (ES, NQ, Gold, Crude, Russell) and which
+              alerts you want (daily plan, intraday level hits, recap). You'll only get DMs for what you pick.
+            </div>
+          </div>
+          <a
+            href={`https://t.me/${data?.botUsername ?? "TradeLevelsProbot"}?start=alerts`}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="button-open-alerts-bot"
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              padding: "10px 20px",
+              borderRadius: 8,
+              background: "var(--teal, #5EEAD4)",
+              color: "#050810",
+              textDecoration: "none",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Open alerts bot →
+          </a>
+        </div>
 
         {/* Chart */}
         <div

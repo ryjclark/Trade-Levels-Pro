@@ -55,7 +55,18 @@ export async function handleTelegramUpdate(update: any, token: string): Promise<
     const username: string | null = update.message.chat.username ?? update.message.from?.username ?? null;
     const text = String(update.message.text).trim().toLowerCase();
     if (/^\/(start|alerts|settings|prefs)/.test(text)) {
+      const existed = await storage.getTelegramSubscriber(chatId);
       const sub = await storage.upsertTelegramSubscriber(chatId, username);
+      if (!existed) {
+        await tg(token, "sendMessage", {
+          chat_id: chatId,
+          text:
+            "👋 Welcome to Trade Levels Pro alerts.\n\n" +
+            "You control exactly what you receive. Below, tap to turn tickers and alert types on/off, " +
+            "then press Done. You'll only get DMs for what's checked — nothing else.\n\n" +
+            "Change it anytime by sending /alerts.",
+        });
+      }
       await tg(token, "sendMessage", { chat_id: chatId, text: prefsText(sub), reply_markup: keyboard(sub) });
     } else {
       await tg(token, "sendMessage", {

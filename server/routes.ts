@@ -819,7 +819,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v21", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v22", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1217,6 +1217,7 @@ export async function registerRoutes(
         swings,
         profile,
         trade,
+        botUsername: process.env.TELEGRAM_BOT_USERNAME || "TradeLevelsProbot",
       });
     } catch (err) {
       console.error("public terminal error:", err);
