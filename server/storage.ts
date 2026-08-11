@@ -1,6 +1,6 @@
 import { eq, and, desc, lte, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, members, planResults, claudeApiCalls, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
 import { PUBLIC_PLAN_SOURCES } from "@shared/constants";
 
 export interface IStorage {
@@ -362,6 +362,40 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return this.getSettings();
+  }
+
+  // ===== Telegram preference-bot subscribers =====
+  async getTelegramSubscriber(chatId: string): Promise<TelegramSubscriber | undefined> {
+    const r = await db.select().from(telegramSubscribers).where(eq(telegramSubscribers.chatId, chatId)).limit(1);
+    return r[0];
+  }
+
+  async upsertTelegramSubscriber(chatId: string, username?: string | null): Promise<TelegramSubscriber> {
+    const existing = await this.getTelegramSubscriber(chatId);
+    if (existing) {
+      if (username && username !== existing.username) {
+        const r = await db.update(telegramSubscribers).set({ username, updatedAt: new Date() }).where(eq(telegramSubscribers.chatId, chatId)).returning();
+        return r[0];
+      }
+      return existing;
+    }
+    const r = await db.insert(telegramSubscribers).values({ chatId, username: username ?? null }).returning();
+    return r[0];
+  }
+
+  async updateTelegramSubscriber(
+    chatId: string,
+    patch: Partial<Pick<TelegramSubscriber, "symbols" | "alertDaily" | "alertIntraday" | "alertRecap">>,
+  ): Promise<TelegramSubscriber> {
+    const r = await db.update(telegramSubscribers).set({ ...patch, updatedAt: new Date() }).where(eq(telegramSubscribers.chatId, chatId)).returning();
+    return r[0];
+  }
+
+  /** Subscribers who opted into a given symbol AND a given alert type. */
+  async listTelegramSubscribersFor(symbol: string, type: "daily" | "intraday" | "recap"): Promise<TelegramSubscriber[]> {
+    const typeCol = type === "daily" ? telegramSubscribers.alertDaily : type === "intraday" ? telegramSubscribers.alertIntraday : telegramSubscribers.alertRecap;
+    const rows = await db.select().from(telegramSubscribers).where(eq(typeCol, true));
+    return rows.filter((s) => Array.isArray(s.symbols) && s.symbols.includes(symbol));
   }
 }
 

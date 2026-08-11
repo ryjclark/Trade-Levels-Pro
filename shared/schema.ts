@@ -265,6 +265,24 @@ export const memberSessions = pgTable("member_sessions", {
 export type MemberLoginToken = typeof memberLoginTokens.$inferSelect;
 export type MemberSession = typeof memberSessions.$inferSelect;
 
+// ===== Telegram preference bot: per-user alert subscriptions =====
+// Each person who DMs the bot gets a row here. They pick which tickers and which
+// alert types they want, and delivery DMs them only those — so one user can get
+// ES/NQ intraday while another gets Gold recaps only. Defaults to ES+NQ, all types.
+export const telegramSubscribers = pgTable("telegram_subscribers", {
+  id: serial("id").primaryKey(),
+  chatId: text("chat_id").notNull().unique(),
+  username: text("username"),
+  symbols: jsonb("symbols").$type<string[]>().notNull().default(sql`'["ES","NQ"]'::jsonb`),
+  alertDaily: boolean("alert_daily").notNull().default(true),
+  alertIntraday: boolean("alert_intraday").notNull().default(true),
+  alertRecap: boolean("alert_recap").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type TelegramSubscriber = typeof telegramSubscribers.$inferSelect;
+export type InsertTelegramSubscriber = typeof telegramSubscribers.$inferInsert;
+
 export type AdminCredential = typeof adminCredentials.$inferSelect;
 export type AdminSession = typeof adminSessions.$inferSelect;
 

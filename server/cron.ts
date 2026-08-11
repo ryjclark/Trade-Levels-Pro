@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
 import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { deliverToSubscribers } from "./lib/telegram-bot";
 import { postToX } from "./lib/twitter";
 import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
 import type { PlanLevels } from "@shared/schema";
@@ -86,6 +87,7 @@ async function fetchAndStoreDailyResults() {
   const today = nyToday();
   const rfmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
   const recapLines: string[] = [];
+  const recapBySymbol: Partial<Record<SymbolId, string>> = {};
 
   for (const symbol of SYMBOLS) {
     try {
@@ -230,6 +232,7 @@ async function fetchAndStoreDailyResults() {
         if (aLine) parts.push(aLine);
         if (mg != null) parts.push(`Magnet ${rfmt(mg)} ${hitMagnet ? "tagged ✅" : "not tagged"}`);
         recapLines.push(parts.join("\n"));
+        recapBySymbol[symbol] = parts.join("\n");
       }
 
       await storage.insertPlanResult({
@@ -300,6 +303,11 @@ async function fetchAndStoreDailyResults() {
     } catch (err: any) {
       console.error("[cron] session recap post failed:", err?.message || err);
     }
+    // Per-user delivery: DM each bot subscriber just their tickers' recap lines.
+    for (const [sym, line] of Object.entries(recapBySymbol)) {
+      const dm = `📊 ${sym} recap · ${dateLabel}\n\n${line}\n\ntradelevelspro.com/track-record`;
+      deliverToSubscribers(sym as SymbolId, "recap", dm, TELEGRAM_BOT_TOKEN).catch(() => {});
+    }
   }
 }
 
@@ -367,18 +375,22 @@ async function checkIntradayAlerts() {
   const today = nyToday();
   const fmt = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
+  let currentSymbol: SymbolId = INTRADAY_ALERT_SYMBOLS[0] ?? "ES";
   const send = async (key: string, text: string) => {
     if (proximityAlerted.has(key)) return;
     try {
       await sendTelegramMessage({ token: TELEGRAM_BOT_TOKEN!, chatId: TELEGRAM_CHAT_ID!, text, parseMode: "none" });
       proximityAlerted.add(key);
       console.log(`[cron] intraday alert: ${text.slice(0, 60)}`);
+      // Per-user delivery: DM bot subscribers who chose this ticker + intraday.
+      deliverToSubscribers(currentSymbol, "intraday", text, TELEGRAM_BOT_TOKEN!).catch(() => {});
     } catch (sendErr: any) {
       console.error(`[cron] intraday alert send failed:`, sendErr?.message || sendErr);
     }
   };
 
   for (const symbol of INTRADAY_ALERT_SYMBOLS) {
+    currentSymbol = symbol;
     try {
       const plan = await storage.getPlanByDateSymbol(today, symbol);
       if (!plan || plan.magnet == null) continue;

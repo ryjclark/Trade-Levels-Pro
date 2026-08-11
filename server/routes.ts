@@ -8,6 +8,7 @@ import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
 import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, computePlanTrade, roundStepFor, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { handleTelegramUpdate, deliverToSubscribers } from "./lib/telegram-bot";
 import {
   requireMember,
   createLoginToken,
@@ -818,7 +819,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v19", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v20", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -993,6 +994,42 @@ export async function registerRoutes(
       console.error("levels-export error:", err);
       res.status(500).type("text/plain").send("Export failed.");
     }
+  });
+
+  // Telegram preference-bot webhook. Telegram POSTs updates here; the path secret
+  // gates it. Each update is an inbound HTTP request, which also wakes the app on
+  // Autoscale, so button taps work even when the app has idled.
+  app.post("/api/telegram/webhook/:secret", async (req, res) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET || token;
+    if (!token || !secret || req.params.secret !== secret) return res.status(403).json({ error: "forbidden" });
+    if (process.env.TELEGRAM_WEBHOOK_SECRET) {
+      const h = req.header("X-Telegram-Bot-Api-Secret-Token");
+      if (h && h !== process.env.TELEGRAM_WEBHOOK_SECRET) return res.status(403).json({ error: "forbidden" });
+    }
+    try {
+      await handleTelegramUpdate(req.body, token);
+    } catch (e) {
+      console.error("[tg-bot] update error:", e);
+    }
+    res.json({ ok: true });
+  });
+
+  // One-time: point the Telegram bot's webhook at us. Admin-gated.
+  app.post("/api/admin/telegram/set-webhook", requireAdmin, async (_req, res) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" });
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET || token;
+    const base = process.env.PUBLIC_BASE_URL || "https://tradelevelspro.com";
+    const url = `${base}/api/telegram/webhook/${secret}`;
+    const body: Record<string, unknown> = { url, allowed_updates: ["message", "callback_query"] };
+    if (process.env.TELEGRAM_WEBHOOK_SECRET) body.secret_token = process.env.TELEGRAM_WEBHOOK_SECRET;
+    const r = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    res.json(await r.json());
   });
 
   app.get("/api/public/track-record", async (_req, res) => {
@@ -1624,6 +1661,8 @@ export async function registerRoutes(
           parseMode: "none",
         });
         const messageId = resp.result?.message_id?.toString() || "";
+        // Per-user delivery: DM bot subscribers who chose this ticker + daily plan.
+        deliverToSubscribers(plan.symbol as SymbolId, "daily", text, TELEGRAM_BOT_TOKEN).catch(() => {});
         plan = await storage.upsertPlan({
           ...plan,
           status: "published",
