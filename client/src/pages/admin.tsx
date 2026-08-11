@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { formatXPost } from "@/lib/formatter";
+import { formatXPost, composePlanTweet } from "@/lib/formatter";
 import { apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import AlgorithmLevelsPanel from "@/components/AlgorithmLevelsPanel";
@@ -28,9 +28,19 @@ export default function AdminPage() {
   const { toast } = useToast();
 
   const [copied, setCopied] = useState<"xPost" | null>(null);
+  // Editable override for the X post (null = use the auto-composed draft).
+  const [xEdit, setXEdit] = useState<string | null>(null);
 
   const { data: latestPublished } = useQuery<Plan | null>({
     queryKey: ['/api/plans/latest-published'],
+  });
+
+  // Pull the exact published trade (A+/targets/invalidation) for the tweet draft.
+  const { data: terminalData } = useQuery<{
+    trade?: { aplus: number | null; targets: number[]; invalid: number | null } | null;
+  }>({
+    queryKey: [`/api/public/terminal?symbol=${latestPublished?.symbol ?? "ES"}`],
+    enabled: !!latestPublished,
   });
 
   const testTelegramMutation = useMutation({
@@ -62,13 +72,17 @@ export default function AdminPage() {
     setLocation("/login");
   };
 
-  const xPostText = latestPublished ? formatXPost(latestPublished) : "";
+  // Auto-composed draft from the exact trade; falls back to the basic post if the
+  // trade isn't loaded yet. xEdit lets you tweak it (or write "whatever") before posting.
+  const xDraft = latestPublished
+    ? composePlanTweet(latestPublished.symbol, latestPublished.date, latestPublished.bias, terminalData?.trade)
+    : "";
+  const xPostText = xEdit ?? xDraft;
   const xPostLength = xPostText.length;
 
   const handleCopy = async () => {
     if (!latestPublished) return;
-    const text = formatXPost(latestPublished);
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(xPostText);
     setCopied("xPost");
     setTimeout(() => setCopied(null), 2000);
     toast({
@@ -205,21 +219,37 @@ export default function AdminPage() {
               <CardContent>
                 {latestPublished ? (
                   <>
-                    <pre className={`text-xs font-mono whitespace-pre-wrap p-3 rounded-lg max-h-48 overflow-auto ${xPostLength > 280 ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted'}`} data-testid="preview-xpost">
-                      {xPostText}
-                    </pre>
-                    {xPostLength > 280 && (
-                      <p className="text-xs text-destructive mt-2" data-testid="text-xpost-warning">Over the 280 character limit by {xPostLength - 280} characters</p>
-                    )}
+                    <textarea
+                      value={xPostText}
+                      onChange={(e) => setXEdit(e.target.value)}
+                      rows={8}
+                      spellCheck={false}
+                      data-testid="preview-xpost"
+                      className={`w-full text-xs font-mono whitespace-pre-wrap p-3 rounded-lg resize-y outline-none ${xPostLength > 280 ? 'bg-destructive/10 border border-destructive/30' : 'bg-muted border border-white/10'}`}
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      {xPostLength > 280 ? (
+                        <p className="text-xs text-destructive" data-testid="text-xpost-warning">Over 280 by {xPostLength - 280}</p>
+                      ) : <span className="text-xs text-muted-foreground">Edit freely before posting</span>}
+                      {xEdit !== null && (
+                        <button
+                          onClick={() => setXEdit(null)}
+                          className="text-xs text-white/60 hover:text-white/90 underline"
+                          data-testid="button-reset-xpost"
+                        >
+                          Reset to plan
+                        </button>
+                      )}
+                    </div>
                     <a
                       href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(xPostText)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center justify-center w-full rounded-md border border-white/15 px-3 py-2 text-sm text-white/90 hover:bg-white/5"
+                      className="mt-3 inline-flex items-center justify-center w-full rounded-md bg-white text-black px-3 py-2 text-sm font-semibold hover:bg-white/90"
                       data-testid="link-open-x"
                     >
                       <Send className="w-4 h-4 mr-2" />
-                      Open X with this post
+                      Open X to post (review + hit Post)
                     </a>
                   </>
                 ) : (

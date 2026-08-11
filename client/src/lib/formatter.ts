@@ -172,6 +172,26 @@ export function formatMiddayUpdate(plan: Plan): string {
   return lines.join('\n');
 }
 
+/** A ready-to-post plan tweet composed from the exact published trade (A+ /
+ *  targets / invalidation). Editable in admin before posting. Kept under 280. */
+export function composePlanTweet(
+  symbol: string,
+  date: string,
+  bias: string | null | undefined,
+  trade: { aplus: number | null; targets: number[]; invalid: number | null } | null | undefined,
+  ctaUrl = "tradelevelspro.com",
+): string {
+  const d = formatDateTelegram(date);
+  const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const L: string[] = [`$${symbol} plan — ${d}`, ""];
+  if (bias) L.push(`Bias: ${cap(bias)}`);
+  if (trade?.aplus != null) L.push(`A+ long: ${formatNumber(trade.aplus)} (flush & reclaim)`);
+  if (trade?.targets?.length) L.push(`Targets: ${trade.targets.slice(0, 3).map(formatNumber).join(" / ")}`);
+  if (trade?.invalid != null) L.push(`Invalid < ${formatNumber(trade.invalid)}`);
+  L.push("", `Full plan + live chart 👉 ${ctaUrl}`);
+  return L.join("\n");
+}
+
 export function formatXPost(plan: Plan, ctaUrl?: string): string {
   const datePart = formatDateTelegram(plan.date);
   const url = ctaUrl || 'https://tradelevelspro.com';
