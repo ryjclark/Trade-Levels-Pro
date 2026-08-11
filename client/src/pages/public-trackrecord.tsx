@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
@@ -91,6 +92,13 @@ export default function PublicTrackRecordPage() {
 
   const overall = data?.overall;
   const symbols = data ? Object.keys(data.bySymbol).sort() : [];
+  // Instrument filter: "all" (combined) or a single ticker's stats + ledger.
+  const [symFilter, setSymFilter] = useState<string>("all");
+  const view: Summary | undefined =
+    symFilter !== "all" ? data?.bySymbol[symFilter] ?? overall : overall;
+  const shownSessions = (data?.sessions ?? []).filter(
+    (s) => symFilter === "all" || s.symbol === symFilter,
+  );
 
   return (
     <div className="public-page">
@@ -116,6 +124,30 @@ export default function PublicTrackRecordPage() {
           </div>
         ) : (
           <>
+            {/* Instrument filter — view the record combined or per ticker. */}
+            {symbols.length > 1 && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }} data-testid="track-record-filter">
+                {["all", ...symbols].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSymFilter(s)}
+                    data-testid={`track-record-filter-${s}`}
+                    style={{
+                      padding: "6px 16px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border-teal-strong, rgba(94,234,212,0.4))",
+                      background: symFilter === s ? "var(--teal, #5EEAD4)" : "transparent",
+                      color: symFilter === s ? "#050810" : "inherit",
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {s === "all" ? "All" : s}
+                  </button>
+                ))}
+              </div>
+            )}
             <section
               style={{
                 display: "grid",
@@ -127,39 +159,39 @@ export default function PublicTrackRecordPage() {
             >
               <StatTile
                 label="Failed-breakdown win rate"
-                value={pct(overall.failedBreakdownWinRate ?? null)}
+                value={pct(view?.failedBreakdownWinRate ?? null)}
                 sub={
-                  overall.failedBreakdownSamples
-                    ? `${overall.failedBreakdownSamples} flushes reclaimed`
+                  view?.failedBreakdownSamples
+                    ? `${view.failedBreakdownSamples} flushes reclaimed`
                     : "of levels that flushed, % that reclaimed"
                 }
               />
               <StatTile
                 label="Target-hit rate"
-                value={pct(overall.targetHitRate)}
+                value={pct(view?.targetHitRate ?? null)}
                 sub={
-                  overall.targetSamples
-                    ? `1st target, ${overall.targetSamples} sessions`
+                  view?.targetSamples
+                    ? `1st target, ${view.targetSamples} sessions`
                     : "1st upside target reached"
                 }
               />
               <StatTile
                 label="Support tag rate"
-                value={pct(overall.supportTagRate ?? null)}
+                value={pct(view?.supportTagRate ?? null)}
                 sub="all support levels held"
               />
               <StatTile
                 label="Resistance tag rate"
-                value={pct(overall.resistanceTagRate ?? null)}
+                value={pct(view?.resistanceTagRate ?? null)}
                 sub="all resistance levels"
               />
-              <StatTile label="Sessions counted" value={overall.sessions.toLocaleString()} />
+              <StatTile label="Sessions counted" value={(view?.sessions ?? 0).toLocaleString()} />
             </section>
 
-            {data?.sessions && data.sessions.length > 0 && (
+            {shownSessions.length > 0 && (
               <section style={{ marginBottom: 40 }}>
                 <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
-                  Every session — the honest ledger
+                  Every session — the honest ledger{symFilter !== "all" ? ` · ${symFilter}` : ""}
                 </h2>
                 <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14, maxWidth: 660 }}>
                   The A+ failed-breakdown level each night, whether price flushed and reclaimed it
@@ -183,7 +215,7 @@ export default function PublicTrackRecordPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.sessions.map((s, i) => (
+                      {shownSessions.map((s, i) => (
                         <tr
                           key={`${s.date}-${s.symbol}-${i}`}
                           style={{ borderTop: "1px solid var(--border, #26262b)", fontSize: 14 }}
