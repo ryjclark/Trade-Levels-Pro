@@ -509,15 +509,29 @@ export function pickSetupLevels(
 
 /** Momentum upside targets: distinct resistances above current price, spaced out
  *  (skip anything closer than minGap to price or to the last pick) so we get real
- *  objectives (e.g. 7,786 / 7,825 / 7,850), not three levels bunched at price. */
+ *  objectives, not three levels bunched at price. T1/T2 stay nearest-spaced; the
+ *  3rd (runner) target is STRETCHED to the next major objective ~a full leg beyond
+ *  T2 — blind validation showed our top target consistently stopped ~1 level short
+ *  of the newsletter's 3rd target (e.g. ours ~7,850 vs his 7,893, 3/3 sessions). */
 export function pickMomentumTargets(highs: number[], price: number, minGap: number): number[] {
-  const out: number[] = [];
-  for (const v of highs.filter((h) => h >= price + minGap).sort((a, b) => a - b)) {
-    if (out.length && v - out[out.length - 1] < minGap) continue;
-    out.push(v);
-    if (out.length >= 3) break;
-  }
-  return out;
+  const sorted = highs.filter((h) => h >= price + minGap).sort((a, b) => a - b);
+  const pick = (runnerGap: number): number[] => {
+    const out: number[] = [];
+    for (const v of sorted) {
+      if (out.length === 0) { out.push(v); continue; }
+      // T2 keeps nearest spacing; the 3rd pick must clear a bigger gap so it lands
+      // on the next real objective rather than a level right on top of T2.
+      const need = out.length >= 2 ? runnerGap : minGap;
+      if (v - out[out.length - 1] < need) continue;
+      out.push(v);
+      if (out.length >= 3) break;
+    }
+    return out;
+  };
+  // Stretch the runner; if the data doesn't reach that far, fall back to nearest
+  // spacing so we still surface three targets on lower-volatility days.
+  const stretched = pick(minGap * 3);
+  return stretched.length >= 3 ? stretched : pick(minGap);
 }
 
 export interface PlanTrade {
