@@ -172,8 +172,52 @@ export function formatMiddayUpdate(plan: Plan): string {
   return lines.join('\n');
 }
 
-/** A ready-to-post plan tweet composed from the exact published trade (A+ /
- *  targets / invalidation). Editable in admin before posting. Kept under 280. */
+/** TEASER tweet — the framing, NO exact levels. Safe daily funnel content that
+ *  drives clicks without giving the paid trade away. */
+export function composeTeaserTweet(
+  symbol: string,
+  date: string,
+  bias: string | null | undefined,
+  regime?: string | null,
+  ctaUrl = "tradelevelspro.com",
+): string {
+  const d = formatDateTelegram(date);
+  const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const biasLine = bias ? `${cap(bias)}${regime === "momentum" ? ", momentum" : ""}.` : "";
+  return [
+    `$${symbol} plan is live — ${d}`,
+    "",
+    biasLine ? `Read: ${biasLine}` : "",
+    "The A+ failed-breakdown long, targets, and invalidation are set for members.",
+    "",
+    `Full plan + live auto-updating chart 👉 ${ctaUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** RECAP tweet — PROOF from a scored session (already happened, safe to post).
+ *  Shows the failed-breakdown working + target hit, links to the track record. */
+export function composeRecapTweet(
+  symbol: string,
+  s: { date: string; aPlus: number | null; flushed: number; reclaimed: number; firstTarget: number | null; firstTargetHit: 0 | 1 | null; close: number | null },
+  ctaUrl = "tradelevelspro.com/track-record",
+): string {
+  const d = formatDateTelegram(s.date);
+  const L: string[] = [`$${symbol} recap — ${d}`, ""];
+  if (s.aPlus != null) {
+    if (s.flushed > 0 && s.reclaimed > 0) L.push(`A+ ${formatNumber(s.aPlus)}: flushed & reclaimed ✓ — the failed-breakdown worked`);
+    else if (s.flushed === 0) L.push(`A+ ${formatNumber(s.aPlus)}: held above all session — trend ran`);
+    else L.push(`A+ ${formatNumber(s.aPlus)}: flushed, didn't reclaim`);
+  }
+  if (s.firstTarget != null) L.push(`First target ${formatNumber(s.firstTarget)}: ${s.firstTargetHit === 1 ? "hit ✓" : "not reached"}`);
+  if (s.close != null) L.push(`Closed ${formatNumber(s.close)}`);
+  L.push("", `Every call logged, no cherry-picking 👉 ${ctaUrl}`);
+  return L.join("\n");
+}
+
+/** FULL plan tweet composed from the exact published trade (A+ / targets /
+ *  invalidation). Use SPARINGLY — this gives the trade away. Editable in admin. */
 export function composePlanTweet(
   symbol: string,
   date: string,

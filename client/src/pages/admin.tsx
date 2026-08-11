@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { formatXPost, composePlanTweet } from "@/lib/formatter";
+import { formatXPost, composePlanTweet, composeTeaserTweet, composeRecapTweet } from "@/lib/formatter";
 import { apiRequest } from "@/lib/queryClient";
 import type { Plan } from "@shared/schema";
 import AlgorithmLevelsPanel from "@/components/AlgorithmLevelsPanel";
@@ -30,18 +30,27 @@ export default function AdminPage() {
   const [copied, setCopied] = useState<"xPost" | null>(null);
   // Editable override for the X post (null = use the auto-composed draft).
   const [xEdit, setXEdit] = useState<string | null>(null);
+  // Which kind of tweet — teaser (safe daily default), recap (proof), or the full
+  // plan (gives the trade away; use sparingly). Changing mode clears the edit.
+  const [xMode, setXMode] = useState<"teaser" | "recap" | "plan">("teaser");
 
   const { data: latestPublished } = useQuery<Plan | null>({
     queryKey: ['/api/plans/latest-published'],
   });
 
-  // Pull the exact published trade (A+/targets/invalidation) for the tweet draft.
+  // Pull the exact published trade (A+/targets/invalidation) + regime for drafts.
   const { data: terminalData } = useQuery<{
+    plan?: { magnet: number | null } | null;
     trade?: { aplus: number | null; targets: number[]; invalid: number | null } | null;
   }>({
     queryKey: [`/api/public/terminal?symbol=${latestPublished?.symbol ?? "ES"}`],
     enabled: !!latestPublished,
   });
+
+  // Most recent scored session (for the recap/proof tweet).
+  const { data: trackRecord } = useQuery<{
+    sessions?: Array<{ date: string; symbol: string; aPlus: number | null; flushed: number; reclaimed: number; firstTarget: number | null; firstTargetHit: 0 | 1 | null; close: number | null }>;
+  }>({ queryKey: ["/api/public/track-record"], enabled: !!latestPublished });
 
   const testTelegramMutation = useMutation({
     mutationFn: async () => {
@@ -72,11 +81,16 @@ export default function AdminPage() {
     setLocation("/login");
   };
 
-  // Auto-composed draft from the exact trade; falls back to the basic post if the
-  // trade isn't loaded yet. xEdit lets you tweak it (or write "whatever") before posting.
-  const xDraft = latestPublished
-    ? composePlanTweet(latestPublished.symbol, latestPublished.date, latestPublished.bias, terminalData?.trade)
-    : "";
+  // Auto-composed draft depends on the chosen mode. xEdit lets you tweak it (or
+  // write anything) before posting; switching mode resets to the fresh draft.
+  const recapSession = trackRecord?.sessions?.find((s) => s.symbol === latestPublished?.symbol) ?? trackRecord?.sessions?.[0];
+  const xDraft = !latestPublished
+    ? ""
+    : xMode === "teaser"
+      ? composeTeaserTweet(latestPublished.symbol, latestPublished.date, latestPublished.bias, (latestPublished as any).levels?.regime)
+      : xMode === "recap"
+        ? (recapSession ? composeRecapTweet(latestPublished.symbol, recapSession) : "No scored session yet for a recap.")
+        : composePlanTweet(latestPublished.symbol, latestPublished.date, latestPublished.bias, terminalData?.trade);
   const xPostText = xEdit ?? xDraft;
   const xPostLength = xPostText.length;
 
@@ -219,6 +233,27 @@ export default function AdminPage() {
               <CardContent>
                 {latestPublished ? (
                   <>
+                    <div className="flex gap-1.5 mb-3" data-testid="xpost-mode">
+                      {([
+                        { k: "teaser", label: "Teaser" },
+                        { k: "recap", label: "Recap (proof)" },
+                        { k: "plan", label: "Full plan" },
+                      ] as const).map((m) => (
+                        <button
+                          key={m.k}
+                          onClick={() => { setXMode(m.k); setXEdit(null); }}
+                          data-testid={`xpost-mode-${m.k}`}
+                          className={`text-xs px-3 py-1.5 rounded-md border ${xMode === m.k ? "bg-white text-black border-white" : "border-white/15 text-white/70 hover:bg-white/5"}`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                    {xMode === "plan" && (
+                      <p className="text-xs text-amber-400/90 mb-2" data-testid="xpost-plan-warning">
+                        ⚠️ This posts the exact trade — gives the paid plan away. Use sparingly (occasional free sample). Daily, prefer Teaser or Recap.
+                      </p>
+                    )}
                     <textarea
                       value={xPostText}
                       onChange={(e) => setXEdit(e.target.value)}
