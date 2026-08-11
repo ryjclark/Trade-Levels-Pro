@@ -28,9 +28,11 @@ Marker frozen at: `momentum-v11`
   If either recurs a 3rd time, the likely fix: anchor invalidation to the range-low major
   (bottom of the dynamic-zone / lowest major support cluster), and/or blend the magnet with
   the multi-day range midpoint on low-volatility/consolidation regime.
-- TARGET top-end conservative now **3/3** (8/10 7,850, 8/11 7,875, 8/12 7,850 — all vs his 7,893).
-  CONFIRMED systematic gap. Fix (pending Ryan's go): stretch the momentum upper target band to
-  reach the next major round/extension so the 3rd target lands ~his 7,893 instead of stopping ~7,850.
+- TARGET top-end conservative was **3/3** (8/10 7,850, 8/11 7,875, 8/12 7,850 — all vs his 7,893).
+  ✅ FIXED & DEPLOYED (marker v21, Aug 9 2026): pickMomentumTargets now stretches the 3rd (runner)
+  target a full leg past T2 to the next real objective. Verified live 8/12 ES: 3rd target 7,850 → 7,900
+  (≈ his 7,893); T1/T2/A+/invalidation unchanged. This is the ONLY rule changed during the window —
+  everything else stays frozen. Keep logging to confirm the stretch tracks his 3rd target going forward.
 - 8/12: magnet centered perfectly (7,760.25 = mid of his 7,751/7,767) and A+ = his #1 entry (7,744).
   So 8/11's magnet-drift + A+-on-weak-level was a ONE-OFF, not systematic. Invalidation now 1 match
   (8/10) / 1 shallow-miss (8/11) / 1 near (8/12) — inconclusive, keep watching, do NOT fix yet.
