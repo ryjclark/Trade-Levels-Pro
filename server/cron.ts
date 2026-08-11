@@ -327,6 +327,18 @@ const proximityAlerted = new Set<string>(); // keys: `${date}-${symbol}-${price}
 // (3 pts was too tight for ES between 2-min checks).
 const PROXIMITY_THRESHOLD: Record<SymbolId, number> = { ES: 6, NQ: 24, GC: 4, CL: 0.5, RTY: 4 };
 
+// Which symbols fire INTRADAY alerts (the all-day level-hit pings). Defaults to
+// ES + NQ so the broadcast channel isn't a firehose of five tickers; the once-a-day
+// plans + recap still cover every symbol. Override with INTRADAY_ALERT_SYMBOLS
+// (comma-separated, e.g. "ES,NQ,GC"). Per-user control comes from the preference bot.
+const INTRADAY_ALERT_SYMBOLS: SymbolId[] = (() => {
+  const raw = (process.env.INTRADAY_ALERT_SYMBOLS ?? "ES,NQ")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s): s is SymbolId => (SYMBOLS as readonly string[]).includes(s));
+  return raw.length ? raw : (["ES", "NQ"] as SymbolId[]);
+})();
+
 function isRegularSessionET(): boolean {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -366,7 +378,7 @@ async function checkIntradayAlerts() {
     }
   };
 
-  for (const symbol of SYMBOLS) {
+  for (const symbol of INTRADAY_ALERT_SYMBOLS) {
     try {
       const plan = await storage.getPlanByDateSymbol(today, symbol);
       if (!plan || plan.magnet == null) continue;
