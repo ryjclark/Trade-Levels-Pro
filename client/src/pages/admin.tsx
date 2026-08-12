@@ -33,24 +33,27 @@ export default function AdminPage() {
   // Which kind of tweet — teaser (safe daily default), recap (proof), or the full
   // plan (gives the trade away; use sparingly). Changing mode clears the edit.
   const [xMode, setXMode] = useState<"teaser" | "recap" | "plan">("teaser");
+  // Which instrument to compose for. The X card runs entirely off the PUBLIC plan
+  // data below, so it works even if the admin session is stale.
+  const [xSymbol, setXSymbol] = useState<string>("ES");
 
   const { data: latestPublished } = useQuery<Plan | null>({
     queryKey: ['/api/plans/latest-published'],
   });
 
-  // Pull the exact published trade (A+/targets/invalidation) + regime for drafts.
+  // Public plan + exact trade (A+/targets/invalidation) + bias/regime for the draft.
+  // No admin session needed — same source the terminal uses.
   const { data: terminalData } = useQuery<{
-    plan?: { magnet: number | null } | null;
+    plan?: { date: string; bias: string | null; regime: string | null; magnet: number | null } | null;
     trade?: { aplus: number | null; targets: number[]; invalid: number | null } | null;
   }>({
-    queryKey: [`/api/public/terminal?symbol=${latestPublished?.symbol ?? "ES"}`],
-    enabled: !!latestPublished,
+    queryKey: [`/api/public/terminal?symbol=${xSymbol}`],
   });
 
-  // Most recent scored session (for the recap/proof tweet).
+  // Most recent scored session (for the recap/proof tweet). Public.
   const { data: trackRecord } = useQuery<{
     sessions?: Array<{ date: string; symbol: string; aPlus: number | null; flushed: number; reclaimed: number; firstTarget: number | null; firstTargetHit: 0 | 1 | null; close: number | null }>;
-  }>({ queryKey: ["/api/public/track-record"], enabled: !!latestPublished });
+  }>({ queryKey: ["/api/public/track-record"] });
 
   const testTelegramMutation = useMutation({
     mutationFn: async () => {
@@ -83,19 +86,20 @@ export default function AdminPage() {
 
   // Auto-composed draft depends on the chosen mode. xEdit lets you tweak it (or
   // write anything) before posting; switching mode resets to the fresh draft.
-  const recapSession = trackRecord?.sessions?.find((s) => s.symbol === latestPublished?.symbol) ?? trackRecord?.sessions?.[0];
-  const xDraft = !latestPublished
+  const xPlan = terminalData?.plan;
+  const recapSession = trackRecord?.sessions?.find((s) => s.symbol === xSymbol) ?? trackRecord?.sessions?.[0];
+  const xDraft = !xPlan
     ? ""
     : xMode === "teaser"
-      ? composeTeaserTweet(latestPublished.symbol, latestPublished.date, latestPublished.bias, (latestPublished as any).levels?.regime)
+      ? composeTeaserTweet(xSymbol, xPlan.date, xPlan.bias, xPlan.regime)
       : xMode === "recap"
-        ? (recapSession ? composeRecapTweet(latestPublished.symbol, recapSession) : "No scored session yet for a recap.")
-        : composePlanTweet(latestPublished.symbol, latestPublished.date, latestPublished.bias, terminalData?.trade);
+        ? (recapSession ? composeRecapTweet(xSymbol, recapSession) : "No scored session yet for a recap.")
+        : composePlanTweet(xSymbol, xPlan.date, xPlan.bias, terminalData?.trade);
   const xPostText = xEdit ?? xDraft;
   const xPostLength = xPostText.length;
 
   const handleCopy = async () => {
-    if (!latestPublished) return;
+    if (!xPlan) return;
     await navigator.clipboard.writeText(xPostText);
     setCopied("xPost");
     setTimeout(() => setCopied(null), 2000);
@@ -209,7 +213,7 @@ export default function AdminPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">X (Twitter) Post</CardTitle>
-                  {latestPublished && (
+                  {xPlan && (
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-mono ${xPostLength > 280 ? 'text-destructive font-semibold' : 'text-muted-foreground'}`} data-testid="text-xpost-count">
                         {xPostLength}/280
@@ -231,8 +235,20 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {latestPublished ? (
+                {xPlan ? (
                   <>
+                    <div className="flex gap-1.5 mb-3 flex-wrap" data-testid="xpost-symbol">
+                      {["ES", "NQ", "GC", "CL", "RTY"].map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => { setXSymbol(s); setXEdit(null); }}
+                          data-testid={`xpost-symbol-${s}`}
+                          className={`text-xs px-3 py-1.5 rounded-md border ${xSymbol === s ? "bg-emerald-400 text-black border-emerald-400" : "border-white/15 text-white/70 hover:bg-white/5"}`}
+                        >
+                          {s === "GC" ? "Gold" : s === "CL" ? "Crude" : s === "RTY" ? "Russell" : s}
+                        </button>
+                      ))}
+                    </div>
                     <div className="flex gap-1.5 mb-3" data-testid="xpost-mode">
                       {([
                         { k: "teaser", label: "Teaser" },
@@ -289,7 +305,7 @@ export default function AdminPage() {
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground" data-testid="text-xpost-empty">
-                    No published plan yet — hit Generate first.
+                    Loading {xSymbol} plan…
                   </p>
                 )}
               </CardContent>
