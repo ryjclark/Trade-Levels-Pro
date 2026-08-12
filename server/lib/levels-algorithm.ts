@@ -55,6 +55,18 @@ export const SYMBOL_LABEL: Record<SymbolId, string> = {
   ES: "ES", NQ: "NQ", GC: "Gold", CL: "Crude", RTY: "Russell",
 };
 
+/** Which symbols broadcast to the shared Telegram CHANNEL (daily plan + recap +
+ *  intraday). Defaults to ES+NQ so the channel isn't a 5-ticker firehose; the
+ *  other symbols still generate, show on the site, and reach BOT subscribers who
+ *  opt into them. Override with CHANNEL_SYMBOLS (comma-separated). */
+export function channelSymbols(): SymbolId[] {
+  const raw = (process.env.CHANNEL_SYMBOLS ?? "ES,NQ")
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter((s): s is SymbolId => (SYMBOLS as readonly string[]).includes(s));
+  return raw.length ? raw : (["ES", "NQ"] as SymbolId[]);
+}
+
 const YAHOO_SYMBOL: Record<SymbolId, string> = {
   ES: "ES=F", NQ: "NQ=F", GC: "GC=F", CL: "CL=F", RTY: "RTY=F",
 };

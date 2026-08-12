@@ -7,7 +7,7 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
 import { parseNewsletter, ClaudeApiKeyMissingError } from "./lib/claude";
-import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, computePlanTrade, roundStepFor, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, detectSwings, computeTpoProfile, computePlanTrade, roundStepFor, channelSymbols, ALGORITHM_VERSION, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import { handleTelegramUpdate, deliverToSubscribers } from "./lib/telegram-bot";
 import {
   requireMember,
@@ -819,7 +819,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v26", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v27", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1657,13 +1657,20 @@ export async function registerRoutes(
       }
 
       try {
-        const resp = await sendTelegramMessage({
-          token: TELEGRAM_BOT_TOKEN,
-          chatId: TELEGRAM_CHAT_ID,
-          text,
-          parseMode: "none",
-        });
-        const messageId = resp.result?.message_id?.toString() || "";
+        // Broadcast to the shared channel only for the channel symbols (ES/NQ by
+        // default) so it isn't a 5-ticker firehose. Every symbol still publishes
+        // (site) and still DMs bot subscribers who opted into it.
+        const broadcast = channelSymbols().includes(plan.symbol as SymbolId);
+        let messageId = "";
+        if (broadcast) {
+          const resp = await sendTelegramMessage({
+            token: TELEGRAM_BOT_TOKEN,
+            chatId: TELEGRAM_CHAT_ID,
+            text,
+            parseMode: "none",
+          });
+          messageId = resp.result?.message_id?.toString() || "";
+        }
         // Per-user delivery: DM bot subscribers who chose this ticker + daily plan.
         deliverToSubscribers(plan.symbol as SymbolId, "daily", text, TELEGRAM_BOT_TOKEN).catch(() => {});
         plan = await storage.upsertPlan({
@@ -1681,7 +1688,7 @@ export async function registerRoutes(
           status: "success",
           responsePayload: JSON.stringify({ messageId }),
         });
-        return res.status(200).json({ ok: true, plan, telegramSent: true });
+        return res.status(200).json({ ok: true, plan, telegramSent: broadcast });
       } catch (sendErr: any) {
         plan = await storage.upsertPlan({
           ...plan,

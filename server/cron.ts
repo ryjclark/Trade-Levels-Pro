@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { storage } from "./storage";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
-import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
+import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars, channelSymbols, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import { deliverToSubscribers } from "./lib/telegram-bot";
 import { postToX } from "./lib/twitter";
 import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
@@ -231,7 +231,9 @@ async function fetchAndStoreDailyResults() {
           );
         if (aLine) parts.push(aLine);
         if (mg != null) parts.push(`Magnet ${rfmt(mg)} ${hitMagnet ? "tagged ✅" : "not tagged"}`);
-        recapLines.push(parts.join("\n"));
+        // Channel recap only lists the channel symbols (ES/NQ); the per-symbol
+        // recapBySymbol still feeds bot subscribers for EVERY ticker they chose.
+        if (channelSymbols().includes(symbol)) recapLines.push(parts.join("\n"));
         recapBySymbol[symbol] = parts.join("\n");
       }
 
