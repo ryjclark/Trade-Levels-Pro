@@ -15,6 +15,8 @@ Marker frozen at: `momentum-v11`
 
 | 8/13 | ES  | 7,759.25 / 7,743.5 / 7,631.75 | 7,725 | 7,794 / 7,820.25 / 7,900 | 7,738 primary / 7,750 / 7,724 / 7,632 | 7,726 | 7,820 / 7,845 / 7,879 | ✅ STRONG + TOP-TARGET FIX VALIDATED. Invalid 7,725 = his 7,726 (exact); T1/T2 (7,794/7,820.25) = his 7,794/7,820 (exact); deep 7,631.75 = his 7,632; our backup 7,743.5 = his PRIMARY 7,738. Top target 7,900 now in his 7,879/7,894 zone (was 7,850 undershoot → now ~20 OVERshoot to the round 100). A+ 7,759.25 ~15-20 HIGH vs his primary 7,738 (magnet-creep, mild, 2nd occurrence). |
 
+| 8/14 | ES  | 7,797.75 / 7,778 / 7,631.75 | 7,769.75 | 7,850 / 7,875 / 7,950 | 7,777 (flush 7,767) / 7,756 / 7,738 / 7,632 | ~7,726 / 7,695 | 7,836 / 7,856 / 7,898 | ⚠️ WEAKER — ran HIGH across the board on a breakout/rally day. A+ 7,797.75 = his 7,794 backtest (the one he "won't buy"); his real A+ is 7,777/7,756. Our BACKUP 7,778 = his PRIMARY 7,777 (magnet-creep, 3RD occurrence → CONFIRMED). Invalidation 7,769.75 shallow vs his 7,726/7,695. Deep 7,631.75 = his 7,632 exact. Top target 7,950 overshoots his 7,898 by ~52 (2nd overshoot; stretch jumps to round-50). |
+
 ## Notes
 - 8/10: A+ near-shelf and invalidation (7,725.5 vs his 7,724) matched independently.
   Only gap: upper target band runs ~conservative (7,850 vs his 7,893). NOT tuned —
