@@ -17,6 +17,8 @@ Marker frozen at: `momentum-v11`
 
 | 8/14 | ES  | 7,797.75 / 7,778 / 7,631.75 | 7,769.75 | 7,850 / 7,875 / 7,950 | 7,777 (flush 7,767) / 7,756 / 7,738 / 7,632 | ~7,726 / 7,695 | 7,836 / 7,856 / 7,898 | ⚠️ WEAKER — ran HIGH across the board on a breakout/rally day. A+ 7,797.75 = his 7,794 backtest (the one he "won't buy"); his real A+ is 7,777/7,756. Our BACKUP 7,778 = his PRIMARY 7,777 (magnet-creep, 3RD occurrence → CONFIRMED). Invalidation 7,769.75 shallow vs his 7,726/7,695. Deep 7,631.75 = his 7,632 exact. Top target 7,950 overshoots his 7,898 by ~52 (2nd overshoot; stretch jumps to round-50). |
 
+| 8/17 | ES  | 7,797.75 / 7,778 / 7,631.75 | 7,769.75 | 7,838.5 / 7,875 / 7,950 | 7,797 (recover) / 7,777 / 7,756 / 7,738 / 7,632 | ~7,726 (7,767 major) | 7,835 / 7,854 / 7,903 | ✅ STRONG — A+ 7,797.75 = his PRIMARY 7,797 EXACT. The "magnet-creep" from 8/14 SELF-CORRECTED: our A+ led his discretionary structure by a session; his 7,797 became actionable Monday = our level. VALIDATES not dampening the magnet. Backups 7,778/7,631.75 = his 7,777/7,632. T1 7,838.5 = his 7,835. Invalidation 7,769.75 at his 7,767 major (bit shallow vs his 7,726). Top target 7,950 overshoots his 7,903 (~47, 3rd overshoot). |
+
 ## Notes
 - 8/10: A+ near-shelf and invalidation (7,725.5 vs his 7,724) matched independently.
   Only gap: upper target band runs ~conservative (7,850 vs his 7,893). NOT tuned —
@@ -44,8 +46,15 @@ Marker frozen at: `momentum-v11`
 - 8/13: TOP-TARGET FIX confirmed live & working (T3 7,900 in his 7,879/7,894 zone vs old 7,850 undershoot).
   Now slight OVERshoot (stretch jumps to round 100). Watch: if it consistently overshoots, cap the runner
   nearer the next MAJOR resistance rather than always the round 100. One data point — don't tune yet.
-- MAGNET-CREEP pattern now 2 occurrences (8/11 strong, 8/13 mild): our A+/magnet runs ~15-30 high in tight
-  consolidation because the floor pivot floats up as price closes higher, while his range-center pivot stays put.
-  Tell: our BACKUP keeps equaling his PRIMARY A+ (8/13: our 7,743.5 = his 7,738). If it recurs a 3rd time, the
-  fix is to bias the A+ toward the deeper "yesterday's-low" shelf in consolidation regime (or blend magnet with
-  the multi-day range midpoint). NOT tuned yet — frozen pending a 3rd clean recurrence.
+- MAGNET-CREEP: RESOLVED as a NON-ISSUE (decision: do NOT change the magnet). Looked like a bug 8/11/8/13/8/14
+  (our A+ ran high vs his primary, our backup = his A+). But 8/17 proved it's our systematic pivot LEADING his
+  discretionary structure by ~1 session: our 8/14 A+ 7,797.75 (then "high") = his PRIMARY A+ 7,797 by Monday.
+  Dampening the magnet to match his stale anchor would have made us WRONG going forward. Magnet stays as-is.
+  Reasoning: changing it = high blast radius (drives zone/pivots/targets/regime), overfits his discretionary
+  anchor from few samples, and the plan already CONTAINS his entry every session (as A+ or backup). Pre-launch
+  stability > chasing a 1-notch ranking match.
+- TOP-TARGET now OVERSHOOTS 3x (8/13 +21, 8/14 +52, 8/17 +47): the v21 runner stretch (minGap*3) jumps to the
+  round-50/100 above his major-resistance top target (his 7,879/7,898/7,903). Low HARM (overshoot = aspirational
+  runner, trader still exits at his level below ours), so not urgent. If we ever refine: dial the runner stretch
+  back (~minGap*2) or cap at nearest round-25 / detected major rather than the round-50/100. Optional, low-risk,
+  isolated to pickMomentumTargets. Watching.
