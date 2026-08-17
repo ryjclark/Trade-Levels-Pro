@@ -10,6 +10,39 @@ export interface ArticleMeta {
 
 export const ARTICLES: ArticleMeta[] = [
   {
+    slug: "what-is-the-dynamic-zone",
+    title: "What Is the Dynamic Zone in ES and NQ Futures?",
+    excerpt:
+      "The Magnet tells you where. The Dynamic Zone tells you when the market is done deciding. Here's the volatility-scaled band we watch for acceptance and rejection, and exactly how we trade its edges.",
+    description:
+      "The Dynamic Zone is a volatility-scaled band around the Magnet that frames fair value for the session. Here's what it is, why a band beats a single line, and how we trade acceptance and rejection at its edges on ES and NQ.",
+    date: "August 14, 2026",
+    dateISO: "2026-08-14",
+    readMinutes: 9,
+  },
+  {
+    slug: "es-vs-nq-which-to-trade",
+    title: "ES vs NQ: Which Futures Contract Should You Trade?",
+    excerpt:
+      "They look similar and often move together, but ES and NQ reward different temperaments and punish different mistakes. Tick value, volatility, sizing, and which one fits how you actually trade.",
+    description:
+      "ES vs NQ compared for level traders: what each tracks, tick size and dollar value, volatility and range, sizing, trading both at once, the micros, and which contract fits your temperament.",
+    date: "August 11, 2026",
+    dateISO: "2026-08-11",
+    readMinutes: 10,
+  },
+  {
+    slug: "the-rejection-short-setup",
+    title: "The Rejection Short: Our Secondary Setup Explained",
+    excerpt:
+      "When the day is heavy and the failed-breakdown long isn't presenting, the rejection short carries the plan. What it is, why it's secondary, and how we frame it as a reaction, not a bearish opinion.",
+    description:
+      "The rejection short is our secondary setup: price pushes into a defined resistance level, fails to accept above it, and rolls over. Here's why it ranks below the failed-breakdown long and exactly how we trade it on ES and NQ.",
+    date: "August 7, 2026",
+    dateISO: "2026-08-07",
+    readMinutes: 9,
+  },
+  {
     slug: "how-to-trade-the-daily-plan",
     title: "How to Trade the Daily Plan (Start Here)",
     excerpt:

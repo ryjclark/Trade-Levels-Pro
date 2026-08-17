@@ -15,8 +15,14 @@ import { ArticleDailyTemplate } from "@/articles/daily-template";
 import { ArticleFailedBreakdown } from "@/articles/the-failed-breakdown-setup";
 import { ArticleAcceptance } from "@/articles/acceptance-and-level-to-level";
 import { ArticleHowToTradeThePlan } from "@/articles/how-to-trade-the-plan";
+import { ArticleDynamicZone } from "@/articles/what-is-the-dynamic-zone";
+import { ArticleEsVsNq } from "@/articles/es-vs-nq-which-to-trade";
+import { ArticleRejectionShort } from "@/articles/the-rejection-short-setup";
 
 const BODY_MAP: Record<string, () => JSX.Element> = {
+  "what-is-the-dynamic-zone": ArticleDynamicZone,
+  "es-vs-nq-which-to-trade": ArticleEsVsNq,
+  "the-rejection-short-setup": ArticleRejectionShort,
   "how-to-trade-the-daily-plan": ArticleHowToTradeThePlan,
   "the-failed-breakdown-setup": ArticleFailedBreakdown,
   "acceptance-and-level-to-level": ArticleAcceptance,
