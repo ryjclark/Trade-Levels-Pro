@@ -5,7 +5,7 @@ import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
 import { useSeo } from "@/hooks/use-seo";
 import { ARTICLES } from "@/lib/articles";
-import { CTA_TEXT, CTA_MAILTO, SITE_NAME } from "@/lib/constants";
+import { CTA_TEXT, SITE_NAME } from "@/lib/constants";
 
 export default function PublicLearnPage() {
   useSeo({
@@ -60,9 +60,9 @@ export default function PublicLearnPage() {
             <div className="cta-orb-b" />
           </div>
           <h2 className="public-section-title">Want the daily plan, not just the theory?</h2>
-          <a href={CTA_MAILTO} className="btn-primary" data-testid="button-cta-learn">
+          <Link href="/pricing" className="btn-primary" data-testid="button-cta-learn">
             {CTA_TEXT} →
-          </a>
+          </Link>
         </section>
 
         <PublicFooter />

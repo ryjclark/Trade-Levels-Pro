@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Eye, Crosshair, Layers, Compass, Send } from "lucide-react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
@@ -5,7 +6,7 @@ import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
 import SectionDivider from "@/components/section-divider";
 import { useSeo } from "@/hooks/use-seo";
-import { CTA_TEXT, CTA_MAILTO, SITE_NAME } from "@/lib/constants";
+import { CTA_TEXT, SITE_NAME } from "@/lib/constants";
 
 const METHOD = [
   { icon: Eye, title: "Map the Dynamic Zone", body: "Define the reactive band where price is most likely to consolidate or reverse." },
@@ -183,9 +184,9 @@ export default function PublicHowItWorksPage() {
             <div className="cta-orb-b" />
           </div>
           <h2 className="public-section-title">Trade with structure tomorrow.</h2>
-          <a href={CTA_MAILTO} className="btn-primary" data-testid="button-cta-how">
+          <Link href="/pricing" className="btn-primary" data-testid="button-cta-how">
             {CTA_TEXT} →
-          </a>
+          </Link>
         </section>
 
         <PublicFooter />

@@ -1,9 +1,10 @@
+import { Link } from "wouter";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
 import { useSeo } from "@/hooks/use-seo";
-import { CTA_TEXT, CTA_MAILTO, PROP_FIRMS, SITE_NAME } from "@/lib/constants";
+import { CTA_TEXT, PROP_FIRMS, SITE_NAME } from "@/lib/constants";
 
 export default function PublicPropFirmsPage() {
   useSeo({
@@ -87,9 +88,9 @@ export default function PublicPropFirmsPage() {
             Get the same ES levels every trading day — and trade your evaluation
             with structure.
           </p>
-          <a href={CTA_MAILTO} className="btn-primary" data-testid="button-cta-prop-firms">
+          <Link href="/pricing" className="btn-primary" data-testid="button-cta-prop-firms">
             {CTA_TEXT} →
-          </a>
+          </Link>
         </section>
 
         <div className="affiliate-disclosure" style={{ marginTop: 24 }}>

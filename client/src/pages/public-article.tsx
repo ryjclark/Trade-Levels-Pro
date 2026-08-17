@@ -6,7 +6,7 @@ import PublicFooter from "@/components/public-footer";
 import { useSeo } from "@/hooks/use-seo";
 import { ARTICLES, getArticle } from "@/lib/articles";
 import {
-  CTA_TEXT, CTA_MAILTO, SITE_NAME, SITE_URL, OG_DEFAULT_IMAGE,
+  CTA_TEXT, SITE_NAME, SITE_URL, OG_DEFAULT_IMAGE,
 } from "@/lib/constants";
 import NotFound from "@/pages/not-found";
 import { ArticleMagnet } from "@/articles/magnet-level";
@@ -38,7 +38,7 @@ function MidCta() {
       <p>Trade Levels Pro publishes the full ES and NQ plan to Telegram after each close.</p>
       <div className="article-cta-row">
         <Link href="/sample" className="btn-secondary" data-testid="article-link-sample">See a sample</Link>
-        <a href={CTA_MAILTO} className="btn-primary" data-testid="article-link-pricing">{CTA_TEXT} →</a>
+        <Link href="/pricing" className="btn-primary" data-testid="article-link-pricing">{CTA_TEXT} →</Link>
       </div>
     </div>
   );
@@ -51,7 +51,7 @@ function EndCta() {
       <p>The same Magnet, Dynamic Zone, structure levels, and ranked setups, delivered to Telegram every evening for ES and NQ.</p>
       <div className="article-cta-row">
         <Link href="/pricing" className="btn-secondary" data-testid="article-link-pricing-end">View pricing</Link>
-        <a href={CTA_MAILTO} className="btn-primary" data-testid="article-link-cta-end">{CTA_TEXT} →</a>
+        <Link href="/pricing" className="btn-primary" data-testid="article-link-cta-end">{CTA_TEXT} →</Link>
       </div>
     </div>
   );
