@@ -53,6 +53,32 @@ export default function PublicPricingPage() {
   const price = isAnnual ? PRICE_ANNUAL : PRICE;
   const period = isAnnual ? "per year" : "per month";
   const ctaHref = isAnnual ? CTA_MAILTO_ANNUAL : CTA_MAILTO;
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+
+  // Start Stripe Checkout for the selected plan. Falls back to the email CTA if
+  // Stripe isn't configured yet (503) so the page is never a dead end.
+  async function startCheckout() {
+    if (checkoutBusy) return;
+    setCheckoutBusy(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: isAnnual ? "annual" : "monthly" }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      // Not activated yet — fall back to the email CTA.
+      window.location.href = ctaHref;
+    } catch {
+      window.location.href = ctaHref;
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }
 
   return (
     <div className="public-page">
@@ -112,15 +138,20 @@ export default function PublicPricingPage() {
                     </div>
                   ))}
                 </div>
-                <a href={ctaHref} className="subscribe-button" data-testid="button-cta-pricing">
-                  {CTA_TEXT} →
-                </a>
+                <button
+                  onClick={startCheckout}
+                  disabled={checkoutBusy}
+                  className="subscribe-button"
+                  data-testid="button-cta-pricing"
+                  style={{ cursor: checkoutBusy ? "wait" : "pointer", width: "100%", border: "none" }}
+                >
+                  {checkoutBusy ? "Starting checkout…" : `${CTA_TEXT} →`}
+                </button>
                 <p className="subscribe-onboard-text">
-                  Founding-member access. Email to subscribe and we'll send your
-                  payment link and Telegram invite (usually within 24 hours).
+                  Secure checkout via Stripe. Right after payment you'll get your
+                  single-use invite to the private Telegram channel.
                 </p>
                 <p className="subscribe-secure-text">No contracts. Cancel anytime.</p>
-                <p className="subscribe-secure-text">Cancel anytime to stop future billing.</p>
               </div>
             </div>
           </section>
@@ -144,9 +175,15 @@ export default function PublicPricingPage() {
             <div className="cta-orb-b" />
           </div>
           <h2 className="public-section-title">Ready to start?</h2>
-          <a href={ctaHref} className="btn-primary" data-testid="button-cta-pricing-final">
-            {CTA_TEXT} →
-          </a>
+          <button
+            onClick={startCheckout}
+            disabled={checkoutBusy}
+            className="btn-primary"
+            data-testid="button-cta-pricing-final"
+            style={{ cursor: checkoutBusy ? "wait" : "pointer", border: "none" }}
+          >
+            {checkoutBusy ? "Starting checkout…" : `${CTA_TEXT} →`}
+          </button>
         </section>
 
         <PublicFooter />

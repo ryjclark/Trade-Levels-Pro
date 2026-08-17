@@ -6,6 +6,7 @@ import { sendWelcomeEmail } from "./email";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
+const STRIPE_PRICE_ID_ANNUAL = process.env.STRIPE_PRICE_ID_ANNUAL;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -114,9 +115,12 @@ export function registerStripeRoutes(app: Express): void {
     }
     try {
       const email = typeof req.body?.email === "string" ? req.body.email : undefined;
+      // Annual if requested and an annual price is configured; else monthly.
+      const plan = req.body?.plan === "annual" ? "annual" : "monthly";
+      const priceId = plan === "annual" && STRIPE_PRICE_ID_ANNUAL ? STRIPE_PRICE_ID_ANNUAL : STRIPE_PRICE_ID;
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
-        line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
+        line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${APP_BASE_URL}/welcome?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${APP_BASE_URL}/pricing`,
         customer_email: email,
