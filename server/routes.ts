@@ -165,11 +165,13 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/plans/:id", requireAdmin, async (req, res) => {
+  app.get("/api/plans/:id", requireAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid plan ID" });
+        // Non-numeric (e.g. "latest-published", "copy-previous") — let the more
+        // specific routes registered later handle it instead of 400-ing here.
+        return next();
       }
       const plan = await storage.getPlanById(id);
       if (!plan) {
@@ -819,7 +821,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v28", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v29", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)

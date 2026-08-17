@@ -21,6 +21,28 @@ async function tg(token: string, method: string, body: Record<string, unknown>):
   return r.json();
 }
 
+const CHANNEL_ID = process.env.TELEGRAM_CHAT_ID;
+
+/** True if the Telegram user is a member of the paid private channel (they paid via
+ *  Stripe and joined with their single-use invite). This is the paywall for the bot:
+ *  channel membership = active subscription. Owner/admins count. Fails CLOSED on any
+ *  error so the bot never leaks alerts to a non-member. */
+async function isChannelMember(userId: string, token: string): Promise<boolean> {
+  if (!CHANNEL_ID) return false;
+  try {
+    const r = await tg(token, "getChatMember", { chat_id: CHANNEL_ID, user_id: Number(userId) });
+    const status = r?.result?.status;
+    return status === "creator" || status === "administrator" || status === "member" || status === "restricted";
+  } catch {
+    return false;
+  }
+}
+
+const MEMBERS_ONLY_MSG =
+  "🔒 Trade Levels Pro alerts are for members.\n\n" +
+  "Subscribe at tradelevelspro.com/pricing — you'll get a private-channel invite, and this bot " +
+  "unlocks automatically once you've joined the channel.";
+
 function typeOn(sub: TelegramSubscriber, t: AlertType): boolean {
   return t === "daily" ? sub.alertDaily : t === "intraday" ? sub.alertIntraday : sub.alertRecap;
 }
@@ -55,6 +77,11 @@ export async function handleTelegramUpdate(update: any, token: string): Promise<
     const username: string | null = update.message.chat.username ?? update.message.from?.username ?? null;
     const text = String(update.message.text).trim().toLowerCase();
     if (/^\/(start|alerts|settings|prefs)/.test(text)) {
+      // Paywall: only paying members (present in the private channel) can use the bot.
+      if (!(await isChannelMember(chatId, token))) {
+        await tg(token, "sendMessage", { chat_id: chatId, text: MEMBERS_ONLY_MSG });
+        return;
+      }
       const existed = await storage.getTelegramSubscriber(chatId);
       const sub = await storage.upsertTelegramSubscriber(chatId, username);
       if (!existed) {
@@ -83,6 +110,11 @@ export async function handleTelegramUpdate(update: any, token: string): Promise<
     const chatId = String(cq.message.chat.id);
     const messageId = cq.message.message_id;
     const data = String(cq.data || "");
+    // Paywall on toggles too (in case a lapsed member left the channel).
+    if (!(await isChannelMember(chatId, token))) {
+      await tg(token, "answerCallbackQuery", { callback_query_id: cq.id, text: "Members only — subscribe at tradelevelspro.com/pricing" });
+      return;
+    }
     let sub = (await storage.getTelegramSubscriber(chatId)) ?? (await storage.upsertTelegramSubscriber(chatId, cq.from?.username ?? null));
 
     if (data === "done") {
@@ -125,6 +157,9 @@ export async function deliverToSubscribers(symbol: SymbolId, type: AlertType, te
   let sent = 0;
   for (const sub of subs) {
     try {
+      // Only deliver to current channel members — this auto-revokes anyone who
+      // cancelled and left the channel, with no cancellation plumbing needed.
+      if (!(await isChannelMember(sub.chatId, token))) continue;
       const r = await tg(token, "sendMessage", { chat_id: sub.chatId, text, disable_web_page_preview: true });
       if (r?.ok) sent++;
     } catch {
