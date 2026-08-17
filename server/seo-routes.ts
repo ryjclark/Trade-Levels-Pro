@@ -9,7 +9,6 @@ const STATIC_PATHS: Array<{ path: string; changefreq: string; priority: number }
   { path: "/how-it-works", changefreq: "monthly", priority: 0.8 },
   { path: "/pricing", changefreq: "monthly", priority: 0.9 },
   { path: "/prop-firms", changefreq: "weekly", priority: 0.8 },
-  { path: "/indicator", changefreq: "monthly", priority: 0.8 },
   { path: "/learn", changefreq: "weekly", priority: 0.8 },
   { path: "/learn/what-is-the-dynamic-zone", changefreq: "monthly", priority: 0.7 },
   { path: "/learn/es-vs-nq-which-to-trade", changefreq: "monthly", priority: 0.7 },

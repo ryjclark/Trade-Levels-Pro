@@ -18,7 +18,6 @@ export default function PublicFooter() {
           <Link href="/sample" className="public-footer-link" data-testid="footer-link-sample">Sample</Link>
           <Link href="/how-it-works" className="public-footer-link" data-testid="footer-link-how">How It Works</Link>
           <Link href="/pricing" className="public-footer-link" data-testid="footer-link-pricing">Pricing</Link>
-          <Link href="/indicator" className="public-footer-link" data-testid="footer-link-indicator">Indicator (waitlist)</Link>
         </div>
         <div className="public-footer-col">
           <div className="public-footer-heading">Resources</div>

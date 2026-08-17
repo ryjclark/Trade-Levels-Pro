@@ -3,15 +3,12 @@ export const PRICE_PER_MONTH = "$49/month";
 export const PRICE_ANNUAL = "$490";
 export const PRICE_ANNUAL_PER_YEAR = "$490/year";
 export const ANNUAL_SAVINGS_LABEL = "Save $98 · 2 months free";
-export const INDICATOR_PRICE = "$297";
 
 export const CTA_TEXT = "Subscribe";
 export const CTA_MAILTO =
   "mailto:contact@tradelevelspro.com?subject=Founding%20Member%20Signup";
 export const CTA_MAILTO_ANNUAL =
   "mailto:contact@tradelevelspro.com?subject=Founding%20Member%20Annual%20Signup";
-export const CTA_INDICATOR_MAILTO =
-  "mailto:contact@tradelevelspro.com?subject=Indicator%20Purchase";
 
 export const CONTACT_EMAIL = "contact@tradelevelspro.com";
 export const TAGLINE = "Trade Smarter. React to Price. No Predictions.";

@@ -24,7 +24,6 @@ import PublicHowItWorksPage from "@/pages/public-how-it-works";
 import PublicLegalPage from "@/pages/public-legal";
 import PublicWelcomePage from "@/pages/public-welcome";
 import PublicPropFirmsPage from "@/pages/public-prop-firms";
-import PublicIndicatorPage from "@/pages/public-indicator";
 import PublicLearnPage from "@/pages/public-learn";
 import PublicArticlePage from "@/pages/public-article";
 import PublicArchivePage from "@/pages/public-archive";
@@ -85,7 +84,7 @@ function Router() {
       <Route path="/how-it-works" component={PublicHowItWorksPage} />
       <Route path="/pricing" component={PublicPricingPage} />
       <Route path="/prop-firms" component={PublicPropFirmsPage} />
-      <Route path="/indicator" component={PublicIndicatorPage} />
+      <Route path="/indicator">{() => <Redirect to="/" />}</Route>
       <Route path="/learn" component={PublicLearnPage} />
       <Route path="/learn/:slug" component={PublicArticlePage} />
       <Route path="/about" component={PublicAboutPage} />
