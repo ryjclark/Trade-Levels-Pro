@@ -22,22 +22,40 @@ export default function PublicWelcomePage() {
       setLoading(false);
       return;
     }
+    let cancelled = false;
+    const MAX_ATTEMPTS = 8; // ~20s of polling in case provisioning lags
+
     (async () => {
-      try {
-        const res = await fetch(
-          `/api/checkout/session?session_id=${encodeURIComponent(sessionId)}`
-        );
-        if (!res.ok) {
-          setError("We couldn't load your subscription details yet.");
-          return;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS && !cancelled; attempt++) {
+        try {
+          const res = await fetch(
+            `/api/checkout/session?session_id=${encodeURIComponent(sessionId)}`
+          );
+          if (res.ok) {
+            const data: SessionInfo = await res.json();
+            if (cancelled) return;
+            setInfo(data);
+            // Got the invite — stop polling and show it.
+            if (data.telegramInviteLink) {
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {
+          /* transient — keep trying */
         }
-        setInfo(await res.json());
-      } catch {
-        setError("Network error. Please refresh.");
-      } finally {
-        setLoading(false);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 2500));
+        }
       }
+      // Exhausted retries without an invite link — show whatever we have and
+      // let the fallback UI guide them (email + member login).
+      if (!cancelled) setLoading(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -93,14 +111,15 @@ export default function PublicWelcomePage() {
 
             {!loading && !error && info && !info.telegramInviteLink && (
               <>
-                <h3 className="capture-title">We're setting up your access</h3>
+                <h3 className="capture-title">Your subscription is active</h3>
                 <p className="capture-sub">
-                  Your invite link will arrive by email shortly. If you don't
-                  see it within a few minutes, contact{" "}
+                  We're finishing your private Telegram access. If your invite
+                  link doesn't appear here in a moment, email{" "}
                   <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: "#2dd4bf" }}>
                     {CONTACT_EMAIL}
-                  </a>
-                  .
+                  </a>{" "}
+                  and we'll send it within minutes. Your payment is safe and your
+                  subscription is active.
                 </p>
               </>
             )}
@@ -109,9 +128,12 @@ export default function PublicWelcomePage() {
               <>
                 <h3 className="capture-title">Thanks for subscribing</h3>
                 <p className="capture-sub">
-                  Check your inbox for a welcome email with your private
-                  Telegram invite link. Daily ES and NQ plans are posted to the
-                  channel after the cash close.
+                  Your subscription is active and we're setting up your Telegram
+                  access. If your invite doesn't appear here shortly, email{" "}
+                  <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: "#2dd4bf" }}>
+                    {CONTACT_EMAIL}
+                  </a>{" "}
+                  and we'll get you in right away.
                 </p>
               </>
             )}

@@ -2,6 +2,8 @@ import type { Member, Plan } from "@shared/schema";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM || "Trade Levels Pro <noreply@tradelevelspro.com>";
+// Where "new signup" alerts go. Defaults to the support inbox; override with OWNER_EMAIL.
+const OWNER_EMAIL = process.env.OWNER_EMAIL || "contact@tradelevelspro.com";
 
 interface EmailPayload {
   to: string | string[];
@@ -45,6 +47,25 @@ export async function sendMemberLoginLink(email: string, loginUrl: string): Prom
         <p style="color:#666;font-size:13px;">If you didn't request this, you can ignore this email.</p>
       </div>`,
     text: `Log in to Trade Levels Pro: ${loginUrl}\n(Expires in 20 minutes, single use.)`,
+  });
+}
+
+// Alert the owner that someone subscribed. Best-effort; callers should catch.
+export async function notifyOwnerOfSignup(
+  customerEmail: string,
+  inviteCreated: boolean
+): Promise<void> {
+  await sendEmail({
+    to: OWNER_EMAIL,
+    subject: `New Trade Levels Pro subscriber: ${customerEmail}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
+        <h2>New subscriber 🎉</h2>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+        <p><strong>Telegram invite generated:</strong> ${inviteCreated ? "yes" : "NO — check the bot's channel admin/invite permission"}</p>
+        <p style="color:#666;font-size:13px;">Trade Levels Pro automated notification.</p>
+      </div>`,
+    text: `New Trade Levels Pro subscriber: ${customerEmail}. Invite generated: ${inviteCreated ? "yes" : "NO (check bot permissions)"}.`,
   });
 }
 

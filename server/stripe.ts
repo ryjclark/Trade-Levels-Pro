@@ -2,7 +2,8 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { sendWelcomeEmail } from "./email";
+import { sendWelcomeEmail, notifyOwnerOfSignup } from "./email";
+import type { Member } from "@shared/schema";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
@@ -32,13 +33,58 @@ async function createTelegramInvite(): Promise<string | null> {
         name: `tlp-${Date.now()}`,
       }),
     });
-    const data = (await res.json()) as { ok: boolean; result?: { invite_link: string } };
-    if (!data.ok || !data.result) return null;
+    const data = (await res.json()) as {
+      ok: boolean;
+      result?: { invite_link: string };
+      description?: string;
+    };
+    if (!data.ok || !data.result) {
+      // Most common cause: the bot is not an admin of the channel with the
+      // "invite users via link" permission. The description says exactly why.
+      console.error("Telegram createChatInviteLink failed:", data.description || data);
+      return null;
+    }
     return data.result.invite_link;
   } catch (err) {
     console.error("Telegram invite link error:", err);
     return null;
   }
+}
+
+/** Ensure a paid customer has an active member record WITH a Telegram invite.
+ *  Idempotent and safe to call from both the webhook and the /welcome page:
+ *  creates the member if missing, and generates + persists an invite if one
+ *  isn't there yet. Returns the member and whether an invite was just created. */
+async function provisionMemberAccess(args: {
+  email: string;
+  customerId: string | null;
+  subscriptionId: string | null;
+}): Promise<{ member: Member; inviteCreatedNow: boolean }> {
+  const email = args.email.toLowerCase();
+  let member = await storage.getMemberByEmail(email);
+
+  if (!member) {
+    const inviteLink = await createTelegramInvite();
+    member = await storage.upsertMember({
+      email,
+      stripeCustomerId: args.customerId,
+      stripeSubscriptionId: args.subscriptionId,
+      status: "active",
+      telegramInviteLink: inviteLink,
+      telegramJoinedAt: null,
+    });
+    return { member, inviteCreatedNow: !!inviteLink };
+  }
+
+  // Member exists but never got an invite — heal it without clobbering fields.
+  if (!member.telegramInviteLink) {
+    const inviteLink = await createTelegramInvite();
+    if (inviteLink) {
+      const healed = await storage.setMemberInvite(email, inviteLink);
+      return { member: healed ?? member, inviteCreatedNow: true };
+    }
+  }
+  return { member, inviteCreatedNow: false };
 }
 
 export function registerStripeRoutes(app: Express): void {
@@ -76,20 +122,23 @@ export function registerStripeRoutes(app: Express): void {
               : session.subscription?.id || null;
 
           if (email) {
-            const inviteLink = await createTelegramInvite();
-            const member = await storage.upsertMember({
-              email: email.toLowerCase(),
-              stripeCustomerId: customerId,
-              stripeSubscriptionId: subscriptionId,
-              status: "active",
-              telegramInviteLink: inviteLink,
-              telegramJoinedAt: null,
+            const { member } = await provisionMemberAccess({
+              email,
+              customerId,
+              subscriptionId,
             });
 
+            // Best-effort notifications — a failure here must never fail the
+            // webhook (which would make Stripe retry and double-provision).
             try {
-              await sendWelcomeEmail(member, inviteLink);
+              await sendWelcomeEmail(member, member.telegramInviteLink);
             } catch (err) {
               console.error("sendWelcomeEmail failed:", err);
+            }
+            try {
+              await notifyOwnerOfSignup(member.email, !!member.telegramInviteLink);
+            } catch (err) {
+              console.error("notifyOwnerOfSignup failed:", err);
             }
           }
         } else if (event.type === "customer.subscription.deleted") {
@@ -145,6 +194,34 @@ export function registerStripeRoutes(app: Express): void {
         session.customer_details?.email ||
         "";
       if (!email) return res.json({ email: null, telegramInviteLink: null });
+
+      // For a genuinely paid checkout, provision access right here rather than
+      // waiting on the async webhook. This makes the welcome page the reliable
+      // delivery path: the member + invite are ensured and the link is returned
+      // for on-screen display, even if the webhook is slow or its invite failed.
+      const isPaid =
+        session.payment_status === "paid" || session.status === "complete";
+      if (isPaid) {
+        const customerId =
+          typeof session.customer === "string"
+            ? session.customer
+            : session.customer?.id || null;
+        const subscriptionId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription?.id || null;
+        const { member } = await provisionMemberAccess({
+          email,
+          customerId,
+          subscriptionId,
+        });
+        return res.json({
+          email,
+          status: member.status,
+          telegramInviteLink: member.telegramInviteLink ?? null,
+        });
+      }
+
       const member = await storage.getMemberByEmail(email.toLowerCase());
       res.json({
         email,

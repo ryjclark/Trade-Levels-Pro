@@ -17,6 +17,7 @@ export interface IStorage {
   getLatestPublishedPlan(): Promise<Plan | undefined>;
   upsertMember(data: InsertMember): Promise<Member>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
+  setMemberInvite(email: string, inviteLink: string): Promise<Member | undefined>;
   markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
   listMembers(limit?: number): Promise<Member[]>;
   listDueScheduledPlans(now: Date): Promise<Plan[]>;
@@ -226,6 +227,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(members.email, email))
       .limit(1);
     return result[0];
+  }
+
+  // Set the Telegram invite link (and keep the member active) WITHOUT touching
+  // stripe ids or other fields — used to heal a member whose invite never
+  // generated, so we never clobber existing data the way a full upsert would.
+  async setMemberInvite(email: string, inviteLink: string): Promise<Member | undefined> {
+    const [row] = await db
+      .update(members)
+      .set({ telegramInviteLink: inviteLink, status: "active" })
+      .where(eq(members.email, email))
+      .returning();
+    return row;
   }
 
   async listMembers(limit: number = 200): Promise<Member[]> {
