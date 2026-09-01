@@ -120,3 +120,18 @@ export async function requireMember(
   req.memberEmail = session.email;
   next();
 }
+
+/** Like requireMember but NEVER rejects: returns the active member's email if a
+ *  valid Bearer token is present, else null. Lets an endpoint stay public (a
+ *  teaser for guests) while serving the full paid payload to logged-in members. */
+export async function optionalMember(req: MemberAuthRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.substring(7);
+  const session = await getMemberSessionByToken(token);
+  if (!session || session.expiresAt.getTime() <= Date.now()) return null;
+  const member = await storage.getMemberByEmail(session.email);
+  if (!member || member.status !== "active") return null;
+  touchMemberSession(token).catch(() => {});
+  return session.email;
+}

@@ -11,6 +11,7 @@ import { generateAndPublishLevels, fetchIntradayBars, computeStructureLevels, de
 import { handleTelegramUpdate, deliverToSubscribers } from "./lib/telegram-bot";
 import {
   requireMember,
+  optionalMember,
   createLoginToken,
   consumeLoginToken,
   createMemberSession,
@@ -821,7 +822,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v33", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v34", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -898,6 +899,15 @@ export async function registerRoutes(
   // makes the levels sticky (traders plot them on their own chart).
   app.get("/api/public/levels-export", async (req, res) => {
     try {
+      // Members only — this hands over the full daily trade (A+/targets/invalidation)
+      // as text or as a ready-to-import TradingView indicator.
+      const memberEmail = await optionalMember(req as MemberAuthRequest);
+      if (!memberEmail) {
+        return res
+          .status(401)
+          .type("text/plain")
+          .send("Members only. Subscribe at tradelevelspro.com/pricing to get the daily levels and the TradingView indicator.");
+      }
       const symParam = String(req.query.symbol || "ES").toUpperCase();
       const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";
       const format = String(req.query.format || "text").toLowerCase();
@@ -1148,6 +1158,10 @@ export async function registerRoutes(
   // only — bias & setups stay members-only.
   app.get("/api/public/terminal", async (req, res) => {
     try {
+      // Members get the full plan (bias + the A+ trade + profile); guests get a
+      // teaser (chart, structure levels, swings, Magnet + Dynamic Zone) so the
+      // actionable setup stays behind the paywall.
+      const isMbr = !!(await optionalMember(req as MemberAuthRequest));
       const symParam = String(req.query.symbol || "ES").toUpperCase();
       const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";
       const bars = await fetchIntradayBars(symbol, "1mo", "30m");
@@ -1213,14 +1227,18 @@ export async function registerRoutes(
               magnet: plan.magnet,
               dynamicZoneTop: plan.dynamicZoneTop,
               dynamicZoneBottom: plan.dynamicZoneBottom,
-              bias: plan.bias ?? null,
-              regime: stored?.regime ?? null,
+              // Bias is part of the paid plan — members only.
+              bias: isMbr ? plan.bias ?? null : null,
+              regime: isMbr ? stored?.regime ?? null : null,
             }
           : null,
         structure,
         swings,
-        profile,
-        trade,
+        // The A+ trade (entry/targets/invalidation) and prior-session profile are
+        // the paid setup — gated to members. Guests get null (teaser only).
+        profile: isMbr ? profile : null,
+        trade: isMbr ? trade : null,
+        gated: !isMbr,
         botUsername: process.env.TELEGRAM_BOT_USERNAME || "TradeLevelsProbot",
       });
     } catch (err) {

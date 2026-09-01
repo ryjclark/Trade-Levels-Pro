@@ -119,9 +119,13 @@ export default function PublicTerminalPage() {
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
 
   const { data, isLoading } = useQuery<TerminalData>({
-    queryKey: ["/api/public/terminal", symbol],
+    queryKey: ["/api/public/terminal", symbol, memberToken],
     queryFn: async () => {
-      const res = await fetch(`/api/public/terminal?symbol=${symbol}`);
+      // Send the member token when logged in so the API returns the full plan
+      // (bias + A+ trade + profile). Guests get the teaser.
+      const res = await fetch(`/api/public/terminal?symbol=${symbol}`, {
+        headers: isMember && memberToken ? { authorization: `Bearer ${memberToken}` } : {},
+      });
       if (!res.ok) throw new Error("Failed to load terminal");
       return res.json();
     },
@@ -230,7 +234,8 @@ export default function PublicTerminalPage() {
           </h1>
           <p className="public-hero-subtitle" style={{ maxWidth: 640 }}>
             Magnet, Dynamic Zone, and the key structure levels — prior-day high/low/close
-            and overnight range — drawn straight on the chart. Bias and setups unlock for members.
+            and overnight range — drawn straight on the chart. Bias, the ranked setups, and a
+            one-click TradingView indicator unlock for members.
           </p>
         </header>
 
@@ -449,33 +454,86 @@ export default function PublicTerminalPage() {
                   </div>
                 )}
                 <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const r = await fetch(`/api/public/levels-export?symbol=${symbol}`);
-                        await navigator.clipboard.writeText(await r.text());
-                        setCopiedExport(true);
-                        setTimeout(() => setCopiedExport(false), 2000);
-                      } catch {}
-                    }}
-                    data-testid="button-copy-levels"
-                    style={{
-                      fontSize: 12, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
-                      border: "1px solid var(--border, #26262b)", background: "var(--card, rgba(255,255,255,0.03))",
-                      color: "inherit",
-                    }}
-                  >
-                    {copiedExport ? "✓ Copied" : "📋 Copy levels for your chart"}
-                  </button>
-                  <a
-                    href={`/api/public/levels-export?symbol=${symbol}&format=pine`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontSize: 12, color: "var(--teal, #5EEAD4)" }}
-                  >
-                    TradingView Pine script →
-                  </a>
+                  {isMember ? (
+                    <>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const r = await fetch(`/api/public/levels-export?symbol=${symbol}`, {
+                              headers: { authorization: `Bearer ${memberToken}` },
+                            });
+                            if (!r.ok) return;
+                            await navigator.clipboard.writeText(await r.text());
+                            setCopiedExport(true);
+                            setTimeout(() => setCopiedExport(false), 2000);
+                          } catch {}
+                        }}
+                        data-testid="button-copy-levels"
+                        style={{
+                          fontSize: 12, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                          border: "1px solid var(--border, #26262b)", background: "var(--card, rgba(255,255,255,0.03))",
+                          color: "inherit",
+                        }}
+                      >
+                        {copiedExport ? "✓ Copied" : "📋 Copy levels for your chart"}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const r = await fetch(`/api/public/levels-export?symbol=${symbol}&format=pine`, {
+                              headers: { authorization: `Bearer ${memberToken}` },
+                            });
+                            if (!r.ok) return;
+                            const text = await r.text();
+                            const blob = new Blob([text], { type: "text/plain" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `TradeLevelsPro-${symbol}-indicator.pine`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            URL.revokeObjectURL(url);
+                          } catch {}
+                        }}
+                        data-testid="button-pine"
+                        style={{
+                          fontSize: 12, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                          border: "1px solid var(--teal, #5EEAD4)", background: "transparent",
+                          color: "var(--teal, #5EEAD4)",
+                        }}
+                      >
+                        📈 Download TradingView indicator
+                      </button>
+                      <a href="#tv-howto" style={{ fontSize: 12, color: "var(--text-mute, #94a3b8)" }}>
+                        How to use it →
+                      </a>
+                    </>
+                  ) : (
+                    <a
+                      href="/pricing"
+                      data-testid="link-unlock-indicator"
+                      style={{
+                        fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                        border: "1px solid var(--teal, #5EEAD4)", color: "var(--teal, #5EEAD4)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      🔒 Subscribe to copy the levels + download the TradingView indicator →
+                    </a>
+                  )}
                 </div>
+                {isMember && (
+                  <div id="tv-howto" style={{ marginTop: 12, fontSize: 12, lineHeight: 1.7, opacity: 0.75 }}>
+                    <b style={{ opacity: 0.9 }}>TradingView indicator — how to use it:</b>
+                    <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
+                      <li>Click <b>Download TradingView indicator</b> above (saves a .pine file), or use <b>Copy levels</b> to grab the script text.</li>
+                      <li>In TradingView, open <b>Pine Editor</b> (bottom panel) → paste the script → <b>Add to chart</b>.</li>
+                      <li>Your Magnet, Dynamic Zone, A+ entry, targets, and invalidation draw right on the chart.</li>
+                      <li>Re-copy each morning after the new plan posts (TradingView can’t auto-refresh a daily snapshot).</li>
+                    </ol>
+                  </div>
+                )}
               </div>
             )}
           </div>

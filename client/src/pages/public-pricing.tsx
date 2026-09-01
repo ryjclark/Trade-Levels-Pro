@@ -17,6 +17,7 @@ const FAQ = [
   { q: "Is this an alerts service?", a: "No. It is a daily plan with the key levels and ranked setups. You learn to navigate the levels and make your own decisions." },
   { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ session." },
   { q: "What do I get each day?", a: "The Magnet and Dynamic Zone, the key structure and reaction levels, a daily bias, and ranked failed-breakdown longs plus secondary rejection shorts, for both ES and NQ." },
+  { q: "Is there a TradingView indicator?", a: "Yes. Members can download the daily plan as a TradingView Pine indicator (or copy the levels to any charting platform) right from the on-site terminal. It draws the Magnet, Dynamic Zone, A+ entry, targets, and invalidation directly on your chart. Refresh it each morning after the new plan posts." },
   { q: "When are plans posted?", a: "By 5:30 PM ET each trading day, for the next session, to Telegram and the on-site terminal." },
   { q: "Is the market data live?", a: "No. Price data shown on the site is delayed about a minute and is not a live trading feed. The levels are set after the cash close." },
   { q: "Can I cancel anytime?", a: "Yes. Email support to cancel and we will stop future billing. There are no contracts and no long-term commitment." },
@@ -27,6 +28,7 @@ const FEATURES = [
   "Daily ES and NQ levels and trade plan",
   "Magnet, Dynamic Zone, and ranked reaction levels",
   "Ranked failed-breakdown longs plus rejection shorts",
+  "One-click TradingView indicator — your daily levels drawn on your chart",
   "Posted by 5:30 PM ET via Telegram and the on-site terminal",
   "Cancel anytime",
 ];
