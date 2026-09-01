@@ -822,7 +822,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v34", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v35", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1034,7 +1034,7 @@ export async function registerRoutes(
     const secret = process.env.TELEGRAM_WEBHOOK_SECRET || token;
     const base = process.env.PUBLIC_BASE_URL || "https://tradelevelspro.com";
     const url = `${base}/api/telegram/webhook/${secret}`;
-    const body: Record<string, unknown> = { url, allowed_updates: ["message", "callback_query"] };
+    const body: Record<string, unknown> = { url, allowed_updates: ["message", "callback_query", "chat_member"] };
     if (process.env.TELEGRAM_WEBHOOK_SECRET) body.secret_token = process.env.TELEGRAM_WEBHOOK_SECRET;
     const r = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: "POST",

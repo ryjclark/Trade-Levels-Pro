@@ -2,6 +2,7 @@
 // want via inline buttons, and delivery DMs each person only what they chose — so
 // the broadcast channel's one-size-fits-all firehose becomes per-user control.
 import { storage } from "../storage";
+import { notifyOwnerOfJoin } from "../email";
 import { SYMBOLS, SYMBOL_LABEL, type SymbolId } from "./levels-algorithm";
 import type { TelegramSubscriber } from "@shared/schema";
 
@@ -69,8 +70,38 @@ function prefsText(sub: TelegramSubscriber): string {
   return `⚙️ Your Trade Levels Pro alerts\n\nTickers: ${syms}\nTypes: ${types}\n\nTap to toggle — you'll get DMs only for what's checked.`;
 }
 
-/** Handle one incoming Telegram update (message or button press). */
+/** Handle one incoming Telegram update (message, button press, or membership change). */
 export async function handleTelegramUpdate(update: any, token: string): Promise<void> {
+  // Membership change in the channel. Telegram only sends these when the webhook
+  // subscribed to "chat_member" updates and the bot is a channel admin. When a
+  // paying member uses their single-use invite, record the join and alert the
+  // owner. We map the join to the member via the invite link Telegram reports.
+  if (update.chat_member) {
+    try {
+      const cm = update.chat_member;
+      const oldStatus: string | undefined = cm.old_chat_member?.status;
+      const newStatus: string | undefined = cm.new_chat_member?.status;
+      const isNowIn =
+        newStatus === "member" || newStatus === "restricted" ||
+        newStatus === "administrator" || newStatus === "creator";
+      const wasOut = oldStatus == null || oldStatus === "left" || oldStatus === "kicked";
+      const inviteLink: string | undefined = cm.invite_link?.invite_link;
+      if (isNowIn && wasOut && inviteLink) {
+        const member = await storage.markMemberJoinedByInvite(inviteLink);
+        if (member) {
+          try {
+            await notifyOwnerOfJoin(member.email);
+          } catch (err) {
+            console.error("notifyOwnerOfJoin failed:", err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("chat_member handling error:", err);
+    }
+    return;
+  }
+
   // Slash commands / plain messages.
   if (update.message?.text) {
     const chatId = String(update.message.chat.id);

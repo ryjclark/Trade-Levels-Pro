@@ -69,6 +69,22 @@ export async function notifyOwnerOfSignup(
   });
 }
 
+// Alert the owner that a subscriber actually joined the Telegram channel.
+// Best-effort; callers should catch.
+export async function notifyOwnerOfJoin(customerEmail: string): Promise<void> {
+  await sendEmail({
+    to: OWNER_EMAIL,
+    subject: `Joined the channel: ${customerEmail}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
+        <h2>Member joined ✅</h2>
+        <p><strong>${customerEmail}</strong> just used their invite and joined the private Telegram channel.</p>
+        <p style="color:#666;font-size:13px;">Trade Levels Pro automated notification.</p>
+      </div>`,
+    text: `${customerEmail} joined the private Telegram channel.`,
+  });
+}
+
 export async function sendWelcomeEmail(
   member: Member,
   telegramInviteUrl: string | null

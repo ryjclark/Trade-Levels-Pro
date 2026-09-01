@@ -18,6 +18,7 @@ export interface IStorage {
   upsertMember(data: InsertMember): Promise<Member>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
   setMemberInvite(email: string, inviteLink: string): Promise<Member | undefined>;
+  markMemberJoinedByInvite(inviteLink: string): Promise<Member | undefined>;
   markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
   listMembers(limit?: number): Promise<Member[]>;
   listDueScheduledPlans(now: Date): Promise<Plan[]>;
@@ -237,6 +238,17 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ telegramInviteLink: inviteLink, status: "active" })
       .where(eq(members.email, email))
+      .returning();
+    return row;
+  }
+
+  // Stamp telegram_joined_at when a user joins via their single-use invite link.
+  // We map the join back to the member by the invite link Telegram reports.
+  async markMemberJoinedByInvite(inviteLink: string): Promise<Member | undefined> {
+    const [row] = await db
+      .update(members)
+      .set({ telegramJoinedAt: new Date() })
+      .where(eq(members.telegramInviteLink, inviteLink))
       .returning();
     return row;
   }
