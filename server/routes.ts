@@ -24,6 +24,7 @@ import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@sha
 import { z } from "zod";
 import {
   requireAdmin,
+  optionalAdmin,
   createSession,
   deleteSessionByToken,
   verifyLogin,
@@ -822,7 +823,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v35", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v36", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -901,8 +902,10 @@ export async function registerRoutes(
     try {
       // Members only — this hands over the full daily trade (A+/targets/invalidation)
       // as text or as a ready-to-import TradingView indicator.
-      const memberEmail = await optionalMember(req as MemberAuthRequest);
-      if (!memberEmail) {
+      const allowed =
+        !!(await optionalMember(req as MemberAuthRequest)) ||
+        (await optionalAdmin(req as AdminAuthRequest));
+      if (!allowed) {
         return res
           .status(401)
           .type("text/plain")
@@ -1161,7 +1164,9 @@ export async function registerRoutes(
       // Members get the full plan (bias + the A+ trade + profile); guests get a
       // teaser (chart, structure levels, swings, Magnet + Dynamic Zone) so the
       // actionable setup stays behind the paywall.
-      const isMbr = !!(await optionalMember(req as MemberAuthRequest));
+      const isMbr =
+        !!(await optionalMember(req as MemberAuthRequest)) ||
+        (await optionalAdmin(req as AdminAuthRequest));
       const symParam = String(req.query.symbol || "ES").toUpperCase();
       const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";
       const bars = await fetchIntradayBars(symbol, "1mo", "30m");
@@ -1339,7 +1344,11 @@ export async function registerRoutes(
   });
 
   // Full plan for members: levels PLUS bias reasoning + top long/short setups.
-  app.get("/api/member/plan", requireMember, async (req: MemberAuthRequest, res) => {
+  app.get("/api/member/plan", async (req: MemberAuthRequest, res) => {
+    // Members OR the logged-in admin (owner preview) may load the full plan.
+    const ok =
+      !!(await optionalMember(req)) || (await optionalAdmin(req as AdminAuthRequest));
+    if (!ok) return res.status(401).json({ error: "Unauthorized" });
     try {
       const symParam = String(req.query.symbol || "ES").toUpperCase();
       const symbol: SymbolId = (SYMBOLS as readonly string[]).includes(symParam) ? (symParam as SymbolId) : "ES";

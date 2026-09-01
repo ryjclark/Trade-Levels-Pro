@@ -10,6 +10,7 @@ import LevelsTerminalChart, {
   type TerminalLevels,
 } from "@/components/LevelsTerminalChart";
 import { useMemberAuth } from "@/hooks/use-member-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { keyEventForDate } from "@/lib/key-events";
 import "./public.css";
 
@@ -117,14 +118,20 @@ export default function PublicTerminalPage() {
   const [symbol, setSymbol] = useState<TermSym>("ES");
   const [copiedExport, setCopiedExport] = useState(false);
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
+  // The owner, logged into /admin, can preview the full plan too (no magic link).
+  const { isAuthenticated: isAdmin, getToken: getAdminToken } = useAuth();
+  const adminToken = isAdmin ? getAdminToken() : null;
+  const unlocked = isMember || !!isAdmin;
+  const unlockToken = memberToken || adminToken;
+  const viewingAs = isMember ? "Member" : isAdmin ? "Admin (preview)" : "Guest";
 
   const { data, isLoading } = useQuery<TerminalData>({
-    queryKey: ["/api/public/terminal", symbol, memberToken],
+    queryKey: ["/api/public/terminal", symbol, unlockToken],
     queryFn: async () => {
-      // Send the member token when logged in so the API returns the full plan
-      // (bias + A+ trade + profile). Guests get the teaser.
+      // Send the member (or admin) token when logged in so the API returns the
+      // full plan (bias + A+ trade + profile). Guests get the teaser.
       const res = await fetch(`/api/public/terminal?symbol=${symbol}`, {
-        headers: isMember && memberToken ? { authorization: `Bearer ${memberToken}` } : {},
+        headers: unlocked && unlockToken ? { authorization: `Bearer ${unlockToken}` } : {},
       });
       if (!res.ok) throw new Error("Failed to load terminal");
       return res.json();
@@ -141,11 +148,11 @@ export default function PublicTerminalPage() {
   const up = (change ?? 0) >= 0;
 
   const { data: memberData } = useQuery<{ plan: MemberPlan | null }>({
-    queryKey: ["/api/member/plan", symbol, memberToken],
-    enabled: isMember && !!memberToken,
+    queryKey: ["/api/member/plan", symbol, unlockToken],
+    enabled: unlocked && !!unlockToken,
     queryFn: async () => {
       const res = await fetch(`/api/member/plan?symbol=${symbol}`, {
-        headers: { authorization: `Bearer ${memberToken}` },
+        headers: { authorization: `Bearer ${unlockToken}` },
       });
       if (!res.ok) throw new Error("Failed to load member plan");
       return res.json();
@@ -237,6 +244,27 @@ export default function PublicTerminalPage() {
             and overnight range — drawn straight on the chart. Bias, the ranked setups, and a
             one-click TradingView indicator unlock for members.
           </p>
+          <div
+            data-testid="terminal-viewing-as"
+            style={{
+              marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8,
+              fontSize: 12, padding: "5px 12px", borderRadius: 999,
+              border: "1px solid var(--border, #26262b)", background: "var(--card, rgba(255,255,255,0.03))",
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: 999, background: unlocked ? "#4ade80" : "#94a3b8" }} />
+            Viewing as <b>{viewingAs}</b>
+            {unlocked ? (
+              <span style={{ opacity: 0.6 }}>· full plan unlocked</span>
+            ) : (
+              <>
+                <span style={{ opacity: 0.6 }}>· teaser only</span>
+                <a href="/member-login" style={{ color: "var(--teal, #5EEAD4)" }}>member login</a>
+                <span style={{ opacity: 0.4 }}>·</span>
+                <a href="/login" style={{ color: "var(--teal, #5EEAD4)" }}>admin</a>
+              </>
+            )}
+          </div>
         </header>
 
         {/* Symbol toggle */}
@@ -454,13 +482,13 @@ export default function PublicTerminalPage() {
                   </div>
                 )}
                 <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                  {isMember ? (
+                  {unlocked ? (
                     <>
                       <button
                         onClick={async () => {
                           try {
                             const r = await fetch(`/api/public/levels-export?symbol=${symbol}`, {
-                              headers: { authorization: `Bearer ${memberToken}` },
+                              headers: { authorization: `Bearer ${unlockToken}` },
                             });
                             if (!r.ok) return;
                             await navigator.clipboard.writeText(await r.text());
@@ -481,7 +509,7 @@ export default function PublicTerminalPage() {
                         onClick={async () => {
                           try {
                             const r = await fetch(`/api/public/levels-export?symbol=${symbol}&format=pine`, {
-                              headers: { authorization: `Bearer ${memberToken}` },
+                              headers: { authorization: `Bearer ${unlockToken}` },
                             });
                             if (!r.ok) return;
                             const text = await r.text();
@@ -523,7 +551,7 @@ export default function PublicTerminalPage() {
                     </a>
                   )}
                 </div>
-                {isMember && (
+                {unlocked && (
                   <div id="tv-howto" style={{ marginTop: 12, fontSize: 12, lineHeight: 1.7, opacity: 0.75 }}>
                     <b style={{ opacity: 0.9 }}>TradingView indicator — how to use it:</b>
                     <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
@@ -549,7 +577,7 @@ export default function PublicTerminalPage() {
               flexDirection: "column",
             }}
           >
-            {isMember && memberPlan ? (
+            {unlocked && memberPlan ? (
               <div data-testid="terminal-member-plan">
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>
                   Trade Plan {memberPlan.date ? `· ${memberPlan.date}` : ""}

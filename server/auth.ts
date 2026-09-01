@@ -138,3 +138,16 @@ export async function requireAdmin(
   req.session = session;
   next();
 }
+
+/** Like requireAdmin but NEVER rejects: returns true if a valid admin session
+ *  token is present. Lets the owner preview member-gated content (the terminal)
+ *  while logged into /admin, without needing the member magic link. */
+export async function optionalAdmin(req: AdminAuthRequest): Promise<boolean> {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) return false;
+  const token = authHeader.substring(7);
+  const session = await getSessionByToken(token);
+  if (!session || session.expiresAt.getTime() <= Date.now()) return false;
+  touchSession(token).catch(() => {});
+  return true;
+}
