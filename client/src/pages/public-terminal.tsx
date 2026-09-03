@@ -269,7 +269,7 @@ export default function PublicTerminalPage() {
         </header>
 
         {/* Symbol toggle */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
           {TERMINAL_SYMBOLS.map((s) => (
             <button
               key={s}

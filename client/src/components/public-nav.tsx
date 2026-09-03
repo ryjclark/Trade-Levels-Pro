@@ -16,6 +16,7 @@ const NAV_ITEMS = [
 export default function PublicNav() {
   const [location] = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);
@@ -23,6 +24,11 @@ export default function PublicNav() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Close the mobile menu whenever the route changes.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location]);
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/";
@@ -42,11 +48,22 @@ export default function PublicNav() {
             Trade Levels<span className="brand-pro">Pro</span>
           </span>
         </Link>
-        <div className="public-nav-links">
+        <button
+          type="button"
+          className="public-nav-toggle"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+          data-testid="button-nav-toggle"
+        >
+          {menuOpen ? "✕" : "☰"}
+        </button>
+        <div className={`public-nav-links ${menuOpen ? "open" : ""}`}>
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMenuOpen(false)}
               className={
                 isActive(item.href)
                   ? "public-link public-link-active"
