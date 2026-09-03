@@ -117,6 +117,7 @@ function renderSwingRow(points: SwingPt[], step: number, isTagged?: (price: numb
 export default function PublicTerminalPage() {
   const [symbol, setSymbol] = useState<TermSym>("ES");
   const [copiedExport, setCopiedExport] = useState(false);
+  const [copiedPine, setCopiedPine] = useState(false);
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
   // The owner, logged into /admin, can preview the full plan too (no magic link).
   const { isAuthenticated: isAdmin, getToken: getAdminToken } = useAuth();
@@ -512,16 +513,9 @@ export default function PublicTerminalPage() {
                               headers: { authorization: `Bearer ${unlockToken}` },
                             });
                             if (!r.ok) return;
-                            const text = await r.text();
-                            const blob = new Blob([text], { type: "text/plain" });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `TradeLevelsPro-${symbol}-indicator.pine`;
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            URL.revokeObjectURL(url);
+                            await navigator.clipboard.writeText(await r.text());
+                            setCopiedPine(true);
+                            setTimeout(() => setCopiedPine(false), 2000);
                           } catch {}
                         }}
                         data-testid="button-pine"
@@ -531,7 +525,7 @@ export default function PublicTerminalPage() {
                           color: "var(--teal, #5EEAD4)",
                         }}
                       >
-                        📈 Download TradingView indicator
+                        {copiedPine ? "✓ Copied — paste into Pine Editor" : "📈 Copy TradingView indicator code"}
                       </button>
                       <a href="#tv-howto" style={{ fontSize: 12, color: "var(--text-mute, #94a3b8)" }}>
                         How to use it →
@@ -547,7 +541,7 @@ export default function PublicTerminalPage() {
                         textDecoration: "none",
                       }}
                     >
-                      🔒 Subscribe to copy the levels + download the TradingView indicator →
+                      🔒 Subscribe to copy the levels + the TradingView indicator code →
                     </a>
                   )}
                 </div>
@@ -555,7 +549,7 @@ export default function PublicTerminalPage() {
                   <div id="tv-howto" style={{ marginTop: 12, fontSize: 12, lineHeight: 1.7, opacity: 0.75 }}>
                     <b style={{ opacity: 0.9 }}>TradingView indicator — how to use it:</b>
                     <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
-                      <li>Click <b>Download TradingView indicator</b> above (saves a .pine file), or use <b>Copy levels</b> to grab the script text.</li>
+                      <li>Click <b>Copy TradingView indicator code</b> above (copies the full Pine script to your clipboard).</li>
                       <li>In TradingView, open <b>Pine Editor</b> (bottom panel) → paste the script → <b>Add to chart</b>.</li>
                       <li>Your Magnet, Dynamic Zone, A+ entry, targets, and invalidation draw right on the chart.</li>
                       <li>Re-copy each morning after the new plan posts (TradingView can’t auto-refresh a daily snapshot).</li>
