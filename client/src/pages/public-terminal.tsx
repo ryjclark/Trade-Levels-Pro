@@ -248,8 +248,9 @@ export default function PublicTerminalPage() {
           <div
             data-testid="terminal-viewing-as"
             style={{
-              marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8,
-              fontSize: 12, padding: "5px 12px", borderRadius: 999,
+              marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center",
+              gap: "4px 8px", maxWidth: "100%",
+              fontSize: 12, padding: "7px 12px", borderRadius: 12,
               border: "1px solid var(--border, #26262b)", background: "var(--card, rgba(255,255,255,0.03))",
             }}
           >
