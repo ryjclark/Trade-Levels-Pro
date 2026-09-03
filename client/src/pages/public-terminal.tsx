@@ -509,15 +509,30 @@ export default function PublicTerminalPage() {
                       </button>
                       <button
                         onClick={async () => {
+                          // Open a tab synchronously (avoids popup blocking), then
+                          // fill it with the Pine code so you can select-all + copy
+                          // into TradingView's Pine Editor — the old workflow.
+                          const w = window.open("", "_blank");
                           try {
                             const r = await fetch(`/api/public/levels-export?symbol=${symbol}&format=pine`, {
                               headers: { authorization: `Bearer ${unlockToken}` },
                             });
-                            if (!r.ok) return;
-                            await navigator.clipboard.writeText(await r.text());
-                            setCopiedPine(true);
-                            setTimeout(() => setCopiedPine(false), 2000);
-                          } catch {}
+                            if (!r.ok) { if (w) w.close(); return; }
+                            const text = await r.text();
+                            if (w) {
+                              const esc = text.replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"));
+                              w.document.write(
+                                `<title>Trade Levels Pro ${symbol} indicator</title>` +
+                                `<body style="margin:0;background:#0b0e14"><pre style="white-space:pre-wrap;word-break:break-word;font:13px/1.6 ui-monospace,Menlo,monospace;padding:16px;color:#e6edf3">${esc}</pre></body>`
+                              );
+                              w.document.close();
+                            } else {
+                              // Popup blocked — fall back to clipboard copy.
+                              await navigator.clipboard.writeText(text);
+                              setCopiedPine(true);
+                              setTimeout(() => setCopiedPine(false), 2000);
+                            }
+                          } catch { if (w) w.close(); }
                         }}
                         data-testid="button-pine"
                         style={{
@@ -526,7 +541,7 @@ export default function PublicTerminalPage() {
                           color: "var(--teal, #5EEAD4)",
                         }}
                       >
-                        {copiedPine ? "✓ Copied — paste into Pine Editor" : "📈 Copy TradingView indicator code"}
+                        {copiedPine ? "✓ Copied" : "📈 Open TradingView indicator code →"}
                       </button>
                       <a href="#tv-howto" style={{ fontSize: 12, color: "var(--text-mute, #94a3b8)" }}>
                         How to use it →
@@ -550,7 +565,7 @@ export default function PublicTerminalPage() {
                   <div id="tv-howto" style={{ marginTop: 12, fontSize: 12, lineHeight: 1.7, opacity: 0.75 }}>
                     <b style={{ opacity: 0.9 }}>TradingView indicator — how to use it:</b>
                     <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
-                      <li>Click <b>Copy TradingView indicator code</b> above (copies the full Pine script to your clipboard).</li>
+                      <li>Click <b>Open TradingView indicator code</b> above — the Pine script opens in a new tab. Select all (Cmd/Ctrl+A) and copy it.</li>
                       <li>In TradingView, open <b>Pine Editor</b> (bottom panel) → paste the script → <b>Add to chart</b>.</li>
                       <li>Your Magnet, Dynamic Zone, A+ entry, targets, and invalidation draw right on the chart.</li>
                       <li>Re-copy each morning after the new plan posts (TradingView can’t auto-refresh a daily snapshot).</li>
