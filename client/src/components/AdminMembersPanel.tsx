@@ -39,7 +39,7 @@ export default function AdminMembersPanel() {
   const [lastInvite, setLastInvite] = useState<{ email: string; link: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const authHeaders = () => {
+  const authHeaders = (): Record<string, string> => {
     const token = getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
@@ -139,7 +139,7 @@ export default function AdminMembersPanel() {
               <span className="flex items-center gap-2"><HealthDot ok={health.resendKey} /> Email sending (Resend)</span>
               <span className="flex items-center gap-2"><HealthDot ok={!!health.telegramChannelReachable} /> Telegram channel</span>
               <span className="flex items-center gap-2"><HealthDot ok={health.stripeWebhookSecret} /> Stripe webhook</span>
-              <span className="flex items-center gap-2"><HealthDot ok={health.ownerEmail?.includes("@")} /> Signup alert email</span>
+              <span className="flex items-center gap-2"><HealthDot ok={!!health.ownerEmail?.includes("@")} /> Signup alert email</span>
               <span className="flex items-center gap-2"><HealthDot ok={health.ownerTelegram} /> Signup alert Telegram</span>
               <span className="text-white/50">Channel members: {String(health.telegramMemberCount ?? "?")}</span>
             </div>
