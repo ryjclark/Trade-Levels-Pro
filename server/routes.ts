@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v43", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v44", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1406,6 +1406,40 @@ export async function registerRoutes(
       await deleteMemberSessionByToken(auth.substring(7)).catch(() => {});
     }
     res.json({ ok: true });
+  });
+
+  // Logged-in member's account details for the /account page.
+  app.get("/api/member/account", requireMember, async (req: MemberAuthRequest, res) => {
+    try {
+      const member = await storage.getMemberByEmail((req.memberEmail || "").toLowerCase());
+      if (!member) return res.status(404).json({ error: "Not found" });
+      res.json({
+        email: member.email,
+        status: member.status,
+        createdAt: member.createdAt,
+        telegramInviteLink: member.telegramInviteLink ?? null,
+        telegramJoinedAt: member.telegramJoinedAt ?? null,
+      });
+    } catch (err) {
+      console.error("member account error:", err);
+      res.status(500).json({ error: "Could not load account" });
+    }
+  });
+
+  // Member mints (or re-mints) their own fresh single-use Telegram invite, e.g.
+  // to (re)join the channel if their original link was used or expired.
+  app.post("/api/member/telegram-invite", requireMember, async (req: MemberAuthRequest, res) => {
+    try {
+      const email = (req.memberEmail || "").toLowerCase();
+      const inviteLink = await regenerateMemberInvite(email);
+      if (!inviteLink) {
+        return res.status(502).json({ error: "Could not create an invite right now. Please contact support." });
+      }
+      res.json({ inviteLink });
+    } catch (err) {
+      console.error("member telegram-invite error:", err);
+      res.status(500).json({ error: "Could not create invite" });
+    }
   });
 
   // Full plan for members: levels PLUS bias reasoning + top long/short setups.

@@ -1,22 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useMemberAuth } from "@/hooks/use-member-auth";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: "/", label: "Home" },
-  { href: "/terminal", label: "Terminal" },
+  { href: "/terminal", label: "Today's Plan" },
   { href: "/sample", label: "Sample" },
   { href: "/track-record", label: "Track Record" },
   { href: "/how-it-works", label: "How It Works" },
   { href: "/prop-firms", label: "Prop Firms" },
   { href: "/learn", label: "Learn" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/member-login", label: "Members" },
 ];
 
 export default function PublicNav() {
   const [location] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isMember } = useMemberAuth();
+
+  // Last nav item is account-aware: "Account" for signed-in members, else "Log in".
+  const NAV_ITEMS = [
+    ...BASE_NAV_ITEMS,
+    isMember
+      ? { href: "/account", label: "Account" }
+      : { href: "/member-login", label: "Log in" },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100);

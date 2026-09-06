@@ -23,6 +23,7 @@ import MemberAuthPage from "@/pages/member-auth";
 import PublicHowItWorksPage from "@/pages/public-how-it-works";
 import PublicLegalPage from "@/pages/public-legal";
 import PublicWelcomePage from "@/pages/public-welcome";
+import PublicAccountPage from "@/pages/public-account";
 import PublicPropFirmsPage from "@/pages/public-prop-firms";
 import PublicLearnPage from "@/pages/public-learn";
 import PublicArticlePage from "@/pages/public-article";
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/terminal" component={PublicTerminalPage} />
       <Route path="/member-login" component={MemberLoginPage} />
       <Route path="/member-auth" component={MemberAuthPage} />
+      <Route path="/account" component={PublicAccountPage} />
       <Route path="/p/:id" component={PublicPlanDetailPage} />
       <Route path="/subscribe">{() => <Redirect to="/pricing" />}</Route>
       <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>
