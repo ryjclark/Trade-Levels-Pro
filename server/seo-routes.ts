@@ -23,6 +23,7 @@ const STATIC_PATHS: Array<{ path: string; changefreq: string; priority: number }
   { path: "/terms", changefreq: "yearly", priority: 0.3 },
   { path: "/privacy", changefreq: "yearly", priority: 0.3 },
   { path: "/risk", changefreq: "yearly", priority: 0.3 },
+  { path: "/refund", changefreq: "yearly", priority: 0.3 },
 ];
 
 export function registerSeoRoutes(app: Express): void {

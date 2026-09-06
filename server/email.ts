@@ -1,9 +1,30 @@
 import type { Member, Plan } from "@shared/schema";
+import { sendTelegramMessage } from "./telegram";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM || "Trade Levels Pro <noreply@tradelevelspro.com>";
 // Where "new signup" alerts go. Defaults to the support inbox; override with OWNER_EMAIL.
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "contact@tradelevelspro.com";
+// Optional: DM the owner in Telegram too. Set OWNER_TELEGRAM_CHAT_ID to your own
+// chat id with the bot (message the bot once, then set this). Belt-and-suspenders
+// so a signup alert never depends solely on email deliverability.
+const OWNER_TELEGRAM_CHAT_ID = process.env.OWNER_TELEGRAM_CHAT_ID;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+/** Best-effort owner Telegram DM. No-ops if not configured; never throws. */
+async function notifyOwnerTelegram(text: string): Promise<void> {
+  if (!OWNER_TELEGRAM_CHAT_ID || !TELEGRAM_BOT_TOKEN) return;
+  try {
+    await sendTelegramMessage({
+      token: TELEGRAM_BOT_TOKEN,
+      chatId: OWNER_TELEGRAM_CHAT_ID,
+      text,
+      parseMode: "none",
+    });
+  } catch (err) {
+    console.error("notifyOwnerTelegram failed:", err);
+  }
+}
 
 interface EmailPayload {
   to: string | string[];
@@ -67,6 +88,9 @@ export async function notifyOwnerOfSignup(
       </div>`,
     text: `New Trade Levels Pro subscriber: ${customerEmail}. Invite generated: ${inviteCreated ? "yes" : "NO (check bot permissions)"}.`,
   });
+  await notifyOwnerTelegram(
+    `🎉 New Trade Levels Pro subscriber: ${customerEmail}\nInvite generated: ${inviteCreated ? "yes" : "NO — check bot channel-admin/invite permission"}`,
+  );
 }
 
 // Alert the owner that a subscriber actually joined the Telegram channel.
@@ -82,6 +106,29 @@ export async function notifyOwnerOfJoin(customerEmail: string): Promise<void> {
         <p style="color:#666;font-size:13px;">Trade Levels Pro automated notification.</p>
       </div>`,
     text: `${customerEmail} joined the private Telegram channel.`,
+  });
+  await notifyOwnerTelegram(`✅ ${customerEmail} joined the private Telegram channel.`);
+}
+
+/** Tell a member their recurring payment failed and how to fix it. Best-effort. */
+export async function sendPaymentFailedEmail(
+  email: string,
+  billingPortalUrl: string | null,
+): Promise<void> {
+  const button = billingPortalUrl
+    ? `<p><a href="${billingPortalUrl}" style="display:inline-block;background:#2dd4bf;color:#0c1117;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Update payment method →</a></p>`
+    : `<p>Please update your card at <a href="https://tradelevelspro.com/member-login">tradelevelspro.com</a>.</p>`;
+  await sendEmail({
+    to: email,
+    subject: "Action needed: your Trade Levels Pro payment failed",
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
+        <h1 style="color:#0c1117;">Your payment didn't go through</h1>
+        <p>We couldn't process your latest Trade Levels Pro subscription payment. Update your card to keep your access active.</p>
+        ${button}
+        <p style="color:#666;font-size:13px;margin-top:24px;">If you meant to cancel, no action is needed.</p>
+      </div>`,
+    text: `Your Trade Levels Pro payment failed. Update your card to keep access${billingPortalUrl ? `: ${billingPortalUrl}` : " at tradelevelspro.com"}.`,
   });
 }
 

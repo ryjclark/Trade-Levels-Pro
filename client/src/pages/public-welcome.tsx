@@ -3,17 +3,20 @@ import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import { CONTACT_EMAIL } from "@/lib/constants";
+import { useMemberAuth } from "@/hooks/use-member-auth";
 
 interface SessionInfo {
   email: string | null;
   status?: string;
   telegramInviteLink: string | null;
+  memberToken?: string | null;
 }
 
 export default function PublicWelcomePage() {
   const [info, setInfo] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { login } = useMemberAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -35,6 +38,11 @@ export default function PublicWelcomePage() {
             const data: SessionInfo = await res.json();
             if (cancelled) return;
             setInfo(data);
+            // Auto-login: if the server issued a member session, store it so the
+            // buyer is signed in on the site immediately (no magic-link email).
+            if (data.memberToken) {
+              login(data.memberToken, data.email ?? undefined);
+            }
             // Got the invite — stop polling and show it.
             if (data.telegramInviteLink) {
               setLoading(false);
@@ -106,6 +114,11 @@ export default function PublicWelcomePage() {
                 >
                   Open Telegram invite →
                 </a>
+                <p className="capture-sub" style={{ marginTop: 16 }}>
+                  You're also signed in on the site. View the daily plan and the
+                  TradingView indicator anytime at{" "}
+                  <a href="/terminal" style={{ color: "#2dd4bf" }}>the terminal →</a>
+                </p>
               </>
             )}
 

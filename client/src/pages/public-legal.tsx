@@ -4,7 +4,7 @@ import PublicFooter from "@/components/public-footer";
 import { CONTACT_EMAIL } from "@/lib/constants";
 
 interface LegalPageProps {
-  kind: "terms" | "privacy" | "risk";
+  kind: "terms" | "privacy" | "risk" | "refund";
 }
 
 export default function PublicLegalPage({ kind }: LegalPageProps) {
@@ -37,7 +37,7 @@ export default function PublicLegalPage({ kind }: LegalPageProps) {
 }
 
 const LEGAL_CONTENT: Record<
-  "terms" | "privacy" | "risk",
+  "terms" | "privacy" | "risk" | "refund",
   { title: string; body: string[] }
 > = {
   terms: {
@@ -74,6 +74,18 @@ const LEGAL_CONTENT: Record<
       "<strong>Your responsibility.</strong> You alone are responsible for your trading decisions, position sizing, risk management, broker selection, and compliance with the rules of any prop firm or trading platform you use.",
       "<strong>Not a fiduciary.</strong> Trade Levels Pro is not a registered investment adviser, broker-dealer, or commodity trading adviser. No fiduciary relationship is created by your use of the Service.",
       "If you do not understand the risks of trading futures, consult a qualified financial professional before participating in the markets.",
+    ],
+  },
+  refund: {
+    title: "Refund Policy",
+    body: [
+      "We want you to be able to actually use Trade Levels Pro. This policy explains how billing, cancellations, and refunds work.",
+      "<strong>Subscriptions.</strong> Trade Levels Pro is a recurring subscription, billed monthly or annually. Your access continues for the full period you have paid for.",
+      "<strong>Cancel anytime.</strong> You can cancel from your billing portal (Manage billing after you log in) or by contacting support. Cancelling stops future charges; you keep access through the end of the current paid period. You will not be billed again after you cancel.",
+      "<strong>New subscriber guarantee.</strong> If you cannot access the Service after subscribing (for example your welcome email or Telegram invite did not arrive), contact us right away and we will get you set up or issue a full refund of your most recent payment. We would always rather fix access than lose you over a delivery hiccup.",
+      "<strong>Renewals.</strong> Recurring renewal charges are generally non-refundable once the new period has begun, except where required by law. If a renewal caught you by surprise, contact us and we will review it in good faith.",
+      "<strong>How to request.</strong> Email us with the address on your subscription and we will respond promptly. Approved refunds are returned to your original payment method by our payment processor.",
+      `<strong>Contact.</strong> Refund and billing questions can be sent to <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.`,
     ],
   },
 };

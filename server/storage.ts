@@ -17,7 +17,9 @@ export interface IStorage {
   getLatestPublishedPlan(): Promise<Plan | undefined>;
   upsertMember(data: InsertMember): Promise<Member>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
+  getMemberByCustomerId(customerId: string): Promise<Member | undefined>;
   setMemberInvite(email: string, inviteLink: string): Promise<Member | undefined>;
+  setMemberActiveByEmail(email: string): Promise<Member>;
   markMemberJoinedByInvite(inviteLink: string): Promise<Member | undefined>;
   markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
   listMembers(limit?: number): Promise<Member[]>;
@@ -230,6 +232,15 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getMemberByCustomerId(customerId: string): Promise<Member | undefined> {
+    const result = await db
+      .select()
+      .from(members)
+      .where(eq(members.stripeCustomerId, customerId))
+      .limit(1);
+    return result[0];
+  }
+
   // Set the Telegram invite link (and keep the member active) WITHOUT touching
   // stripe ids or other fields — used to heal a member whose invite never
   // generated, so we never clobber existing data the way a full upsert would.
@@ -249,6 +260,25 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ telegramJoinedAt: new Date() })
       .where(eq(members.telegramInviteLink, inviteLink))
+      .returning();
+    return row;
+  }
+
+  // Activate (or create) a member by email WITHOUT clobbering their telegram
+  // invite/join fields — unlike upsertMember's conflict path, which nulls them.
+  async setMemberActiveByEmail(email: string): Promise<Member> {
+    const existing = await this.getMemberByEmail(email);
+    if (existing) {
+      const [row] = await db
+        .update(members)
+        .set({ status: "active" })
+        .where(eq(members.email, email))
+        .returning();
+      return row;
+    }
+    const [row] = await db
+      .insert(members)
+      .values({ email, status: "active" })
       .returning();
     return row;
   }

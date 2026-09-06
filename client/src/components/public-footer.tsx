@@ -31,6 +31,7 @@ export default function PublicFooter() {
           <Link href="/terms" className="public-footer-link" data-testid="footer-link-terms">Terms</Link>
           <Link href="/privacy" className="public-footer-link" data-testid="footer-link-privacy">Privacy</Link>
           <Link href="/risk" className="public-footer-link" data-testid="footer-link-risk">Risk Disclaimer</Link>
+          <Link href="/refund" className="public-footer-link" data-testid="footer-link-refund">Refund Policy</Link>
         </div>
         <div className="public-footer-col">
           <div className="public-footer-heading">Contact</div>

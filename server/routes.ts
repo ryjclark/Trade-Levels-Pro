@@ -19,6 +19,7 @@ import {
   type MemberAuthRequest,
 } from "./member-auth";
 import { sendMemberLoginLink } from "./email";
+import { regenerateMemberInvite } from "./stripe";
 import { PARSE_NEWSLETTER_PROMPT_VERSION } from "./lib/prompts/parse-newsletter";
 import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@shared/schema";
 import { z } from "zod";
@@ -823,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v42", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v43", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1265,23 +1266,87 @@ export async function registerRoutes(
   });
 
   // Add or re-activate a member by email (manual/comp — no Stripe required).
+  // Uses a non-clobbering activate so an existing member keeps their invite.
   app.post("/api/admin/members", requireAdmin, async (req, res) => {
     try {
       const email = String(req.body?.email || "").trim().toLowerCase();
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
         return res.status(400).json({ error: "Enter a valid email." });
       }
-      const member = await storage.upsertMember({
-        email,
-        status: "active",
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-      } as any);
+      const member = await storage.setMemberActiveByEmail(email);
       res.json({ ok: true, member });
     } catch (err) {
       console.error("add member error:", err);
       res.status(500).json({ error: "Failed to add member" });
     }
+  });
+
+  // Manually re-activate a member (e.g. after a resolved billing issue).
+  app.post("/api/admin/members/activate", requireAdmin, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email) return res.status(400).json({ error: "email required" });
+      const member = await storage.setMemberActiveByEmail(email);
+      res.json({ ok: true, member });
+    } catch (err) {
+      console.error("activate member error:", err);
+      res.status(500).json({ error: "Failed to activate member" });
+    }
+  });
+
+  // Mint a FRESH single-use Telegram invite for a member and return it, so you
+  // can hand it to a customer whose email filtered ours (e.g. Yahoo Japan spam).
+  app.post("/api/admin/members/resend-invite", requireAdmin, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email) return res.status(400).json({ error: "email required" });
+      const member = await storage.getMemberByEmail(email);
+      if (!member) return res.status(404).json({ error: "No such member" });
+      const inviteLink = await regenerateMemberInvite(email);
+      if (!inviteLink) {
+        return res.status(502).json({
+          error: "Telegram invite could not be created — check the bot's channel admin/invite permission.",
+        });
+      }
+      res.json({ ok: true, inviteLink });
+    } catch (err) {
+      console.error("resend invite error:", err);
+      res.status(500).json({ error: "Failed to create invite" });
+    }
+  });
+
+  // Lightweight health check: confirms the delivery-critical integrations are
+  // configured and the bot can actually see the channel, so a missing key or a
+  // permission slip surfaces here instead of on a paying customer.
+  app.get("/api/admin/health", requireAdmin, async (_req, res) => {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const health: Record<string, unknown> = {
+      resendKey: !!process.env.RESEND_API_KEY,
+      emailFrom: process.env.EMAIL_FROM || null,
+      ownerEmail: process.env.OWNER_EMAIL || "(unset — signup alerts go to contact@)",
+      ownerTelegram: !!process.env.OWNER_TELEGRAM_CHAT_ID,
+      stripeSecret: !!process.env.STRIPE_SECRET_KEY,
+      stripeWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+      stripePriceId: !!process.env.STRIPE_PRICE_ID,
+      telegramBotToken: !!botToken,
+      telegramChatId: !!chatId,
+    };
+    // Confirm the bot can see the channel + report the current member count.
+    if (botToken && chatId) {
+      try {
+        const r = await fetch(
+          `https://api.telegram.org/bot${botToken}/getChatMemberCount?chat_id=${encodeURIComponent(chatId)}`,
+        );
+        const d = (await r.json()) as { ok: boolean; result?: number; description?: string };
+        health.telegramChannelReachable = d.ok;
+        health.telegramMemberCount = d.ok ? d.result : d.description;
+      } catch (err) {
+        health.telegramChannelReachable = false;
+        health.telegramMemberCount = String(err);
+      }
+    }
+    res.json(health);
   });
 
   // ===== Member auth (Phase 2): passwordless magic-link login =====

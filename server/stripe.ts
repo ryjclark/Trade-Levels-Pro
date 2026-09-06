@@ -2,7 +2,8 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { sendWelcomeEmail, notifyOwnerOfSignup } from "./email";
+import { sendWelcomeEmail, notifyOwnerOfSignup, sendPaymentFailedEmail } from "./email";
+import { createMemberSession, requireMember, type MemberAuthRequest } from "./member-auth";
 import type { Member } from "@shared/schema";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -18,7 +19,7 @@ function getStripe(): Stripe | null {
   return new Stripe(STRIPE_SECRET_KEY);
 }
 
-async function createTelegramInvite(): Promise<string | null> {
+export async function createTelegramInvite(): Promise<string | null> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return null;
   try {
     const expireDate = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
@@ -87,6 +88,15 @@ async function provisionMemberAccess(args: {
   return { member, inviteCreatedNow: false };
 }
 
+/** Admin action: mint a FRESH single-use invite for a member (even if one exists,
+ *  e.g. the old one expired or was never received) and persist it. */
+export async function regenerateMemberInvite(email: string): Promise<string | null> {
+  const inviteLink = await createTelegramInvite();
+  if (!inviteLink) return null;
+  await storage.setMemberInvite(email.toLowerCase(), inviteLink);
+  return inviteLink;
+}
+
 export function registerStripeRoutes(app: Express): void {
   app.post(
     "/stripe/webhook",
@@ -144,6 +154,36 @@ export function registerStripeRoutes(app: Express): void {
         } else if (event.type === "customer.subscription.deleted") {
           const sub = event.data.object as Stripe.Subscription;
           await storage.markMemberInactiveBySubscription(sub.id);
+        } else if (event.type === "invoice.payment_failed") {
+          // A recurring charge failed. Stripe will retry, but nudge the member to
+          // fix their card. Best-effort — never fail the webhook.
+          const invoice = event.data.object as Stripe.Invoice;
+          const customerId =
+            typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id || null;
+          let to = invoice.customer_email || "";
+          if (!to && customerId) {
+            const m = await storage.getMemberByCustomerId(customerId);
+            to = m?.email || "";
+          }
+          if (to) {
+            let portalUrl: string | null = null;
+            if (customerId) {
+              try {
+                const portal = await stripe.billingPortal.sessions.create({
+                  customer: customerId,
+                  return_url: `${APP_BASE_URL}/member-login`,
+                });
+                portalUrl = portal.url;
+              } catch (err) {
+                console.error("billingPortal (payment_failed) failed:", err);
+              }
+            }
+            try {
+              await sendPaymentFailedEmail(to, portalUrl);
+            } catch (err) {
+              console.error("sendPaymentFailedEmail failed:", err);
+            }
+          }
         }
       } catch (err) {
         console.error("Webhook handler error:", err);
@@ -215,10 +255,23 @@ export function registerStripeRoutes(app: Express): void {
           customerId,
           subscriptionId,
         });
+        // Auto-login: issue a member session so the buyer is signed in on the
+        // site immediately, with no magic-link email required. The session_id is
+        // only known to whoever completed this checkout, so this is safe.
+        let memberToken: string | null = null;
+        if (member.status === "active") {
+          try {
+            const session2 = await createMemberSession(email.toLowerCase());
+            memberToken = session2.token;
+          } catch (err) {
+            console.error("welcome auto-login session failed:", err);
+          }
+        }
         return res.json({
           email,
           status: member.status,
           telegramInviteLink: member.telegramInviteLink ?? null,
+          memberToken,
         });
       }
 
@@ -233,4 +286,28 @@ export function registerStripeRoutes(app: Express): void {
       res.status(500).json({ error: "Failed to load session" });
     }
   });
+
+  // Logged-in member opens the Stripe billing portal to manage/cancel/update card.
+  app.post(
+    "/api/member/portal",
+    requireMember,
+    async (req: MemberAuthRequest, res: Response) => {
+      const stripe = getStripe();
+      if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
+      try {
+        const member = await storage.getMemberByEmail((req.memberEmail || "").toLowerCase());
+        if (!member?.stripeCustomerId) {
+          return res.status(400).json({ error: "No billing account on file." });
+        }
+        const portal = await stripe.billingPortal.sessions.create({
+          customer: member.stripeCustomerId,
+          return_url: `${APP_BASE_URL}/terminal`,
+        });
+        res.json({ url: portal.url });
+      } catch (err) {
+        console.error("member portal error:", err);
+        res.status(500).json({ error: "Could not open billing portal." });
+      }
+    },
+  );
 }

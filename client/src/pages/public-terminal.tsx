@@ -709,6 +709,26 @@ export default function PublicTerminalPage() {
           <div style={{ fontSize: 12, opacity: 0.55, marginTop: 16 }} data-testid="terminal-member-status">
             Signed in{memberEmail ? ` as ${memberEmail}` : ""} ·{" "}
             <button
+              onClick={async () => {
+                try {
+                  const r = await fetch("/api/member/portal", {
+                    method: "POST",
+                    headers: { authorization: `Bearer ${memberToken}` },
+                  });
+                  const d = await r.json();
+                  if (r.ok && d.url) window.location.href = d.url;
+                  else alert(d.error || "Could not open billing portal.");
+                } catch {
+                  alert("Could not open billing portal.");
+                }
+              }}
+              style={{ background: "none", border: "none", color: "var(--teal, #5EEAD4)", cursor: "pointer", padding: 0, fontSize: 12 }}
+              data-testid="button-manage-billing"
+            >
+              Manage billing
+            </button>{" "}
+            ·{" "}
+            <button
               onClick={() => logout()}
               style={{ background: "none", border: "none", color: "var(--teal, #5EEAD4)", cursor: "pointer", padding: 0, fontSize: 12 }}
             >

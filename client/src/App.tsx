@@ -99,6 +99,7 @@ function Router() {
       <Route path="/terms">{() => <PublicLegalPage kind="terms" />}</Route>
       <Route path="/privacy">{() => <PublicLegalPage kind="privacy" />}</Route>
       <Route path="/risk">{() => <PublicLegalPage kind="risk" />}</Route>
+      <Route path="/refund">{() => <PublicLegalPage kind="refund" />}</Route>
       <Route path="/welcome" component={PublicWelcomePage} />
       <Route path="/login" component={PublicLoginRoute} />
       <Route path="/admin">
