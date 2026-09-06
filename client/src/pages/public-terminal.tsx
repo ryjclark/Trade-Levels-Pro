@@ -118,6 +118,7 @@ export default function PublicTerminalPage() {
   const [symbol, setSymbol] = useState<TermSym>("ES");
   const [copiedExport, setCopiedExport] = useState(false);
   const [copiedPine, setCopiedPine] = useState(false);
+  const [pineCode, setPineCode] = useState<string | null>(null);
   const { isMember, email: memberEmail, token: memberToken, logout } = useMemberAuth();
   // The owner, logged into /admin, can preview the full plan too (no magic link).
   const { isAuthenticated: isAdmin, getToken: getAdminToken } = useAuth();
@@ -509,30 +510,27 @@ export default function PublicTerminalPage() {
                       </button>
                       <button
                         onClick={async () => {
-                          // Open a tab synchronously (avoids popup blocking), then
-                          // fill it with the Pine code so you can select-all + copy
-                          // into TradingView's Pine Editor — the old workflow.
-                          const w = window.open("", "_blank");
+                          // Reveal the Pine code inline (no popup — popup blockers
+                          // were silently killing the old new-tab approach). Shows
+                          // in a copyable box below so you can grab the code and
+                          // paste into TradingView's Pine Editor.
+                          if (pineCode != null) { setPineCode(null); return; }
+                          setPineCode("Loading…");
                           try {
                             const r = await fetch(`/api/public/levels-export?symbol=${symbol}&format=pine`, {
                               headers: { authorization: `Bearer ${unlockToken}` },
                             });
-                            if (!r.ok) { if (w) w.close(); return; }
-                            const text = await r.text();
-                            if (w) {
-                              const esc = text.replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"));
-                              w.document.write(
-                                `<title>Trade Levels Pro ${symbol} indicator</title>` +
-                                `<body style="margin:0;background:#0b0e14"><pre style="white-space:pre-wrap;word-break:break-word;font:13px/1.6 ui-monospace,Menlo,monospace;padding:16px;color:#e6edf3">${esc}</pre></body>`
+                            if (!r.ok) {
+                              setPineCode(
+                                "Couldn't load the indicator code (error " + r.status + "). " +
+                                "Reload the page and make sure you're signed in, then try again."
                               );
-                              w.document.close();
-                            } else {
-                              // Popup blocked — fall back to clipboard copy.
-                              await navigator.clipboard.writeText(text);
-                              setCopiedPine(true);
-                              setTimeout(() => setCopiedPine(false), 2000);
+                              return;
                             }
-                          } catch { if (w) w.close(); }
+                            setPineCode(await r.text());
+                          } catch {
+                            setPineCode("Couldn't load the indicator code — check your connection and try again.");
+                          }
                         }}
                         data-testid="button-pine"
                         style={{
@@ -541,7 +539,7 @@ export default function PublicTerminalPage() {
                           color: "var(--teal, #5EEAD4)",
                         }}
                       >
-                        {copiedPine ? "✓ Copied" : "📈 Open TradingView indicator code →"}
+                        {pineCode != null ? "✕ Hide indicator code" : "📈 Show TradingView indicator code"}
                       </button>
                       <a href="#tv-howto" style={{ fontSize: 12, color: "var(--text-mute, #94a3b8)" }}>
                         How to use it →
@@ -561,11 +559,52 @@ export default function PublicTerminalPage() {
                     </a>
                   )}
                 </div>
+                {unlocked && pineCode != null && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                      <button
+                        onClick={() => {
+                          try {
+                            navigator.clipboard.writeText(pineCode).then(
+                              () => { setCopiedPine(true); setTimeout(() => setCopiedPine(false), 2000); },
+                              () => {},
+                            );
+                          } catch {}
+                        }}
+                        data-testid="button-copy-pine"
+                        style={{
+                          fontSize: 12, padding: "6px 12px", borderRadius: 8, cursor: "pointer",
+                          border: "1px solid var(--teal, #5EEAD4)", background: "var(--teal, #5EEAD4)",
+                          color: "#0b0e14", fontWeight: 600,
+                        }}
+                      >
+                        {copiedPine ? "✓ Copied — paste into Pine Editor" : "📋 Copy code"}
+                      </button>
+                      <span style={{ fontSize: 11, opacity: 0.6 }}>
+                        or click inside the box, select all (Cmd/Ctrl+A), and copy.
+                      </span>
+                    </div>
+                    <textarea
+                      readOnly
+                      value={pineCode}
+                      onFocus={(e) => e.currentTarget.select()}
+                      spellCheck={false}
+                      data-testid="textarea-pine"
+                      style={{
+                        width: "100%", minHeight: 200, resize: "vertical",
+                        fontFamily: "ui-monospace, Menlo, monospace", fontSize: 12, lineHeight: 1.5,
+                        background: "#0b0e14", color: "#e6edf3",
+                        border: "1px solid var(--border, #26262b)", borderRadius: 8, padding: 12,
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                )}
                 {unlocked && (
                   <div id="tv-howto" style={{ marginTop: 12, fontSize: 12, lineHeight: 1.7, opacity: 0.75 }}>
                     <b style={{ opacity: 0.9 }}>TradingView indicator — how to use it:</b>
                     <ol style={{ margin: "6px 0 0 18px", padding: 0 }}>
-                      <li>Click <b>Open TradingView indicator code</b> above — the Pine script opens in a new tab. Select all (Cmd/Ctrl+A) and copy it.</li>
+                      <li>Click <b>Show TradingView indicator code</b> above — the Pine script appears in a box. Tap <b>Copy code</b> (or select all + copy).</li>
                       <li>In TradingView, open <b>Pine Editor</b> (bottom panel) → paste the script → <b>Add to chart</b>.</li>
                       <li>Your Magnet, Dynamic Zone, A+ entry, targets, and invalidation draw right on the chart.</li>
                       <li>Re-copy each morning after the new plan posts (TradingView can’t auto-refresh a daily snapshot).</li>
