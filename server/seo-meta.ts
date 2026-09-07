@@ -26,7 +26,7 @@ const STATIC: Record<string, RouteMeta> = {
   "/pricing": {
     title: "Pricing | Trade Levels Pro",
     description:
-      "Simple monthly or annual access to the daily ES and NQ trade plans, the on-site terminal, and the TradingView levels indicator. Cancel anytime.",
+      "Simple monthly or annual access to the daily ES and NQ trade plans, the on-site terminal, plus an optional TradingView overlay. Cancel anytime.",
   },
   "/sample": {
     title: "Sample Daily Plan | Trade Levels Pro",
@@ -36,7 +36,7 @@ const STATIC: Record<string, RouteMeta> = {
   "/how-it-works": {
     title: "How It Works | Trade Levels Pro",
     description:
-      "How the daily ES and NQ trade plans are built and delivered: levels after the cash close, to Telegram and the on-site terminal, plus a TradingView indicator.",
+      "How the daily ES and NQ trade plans are built and delivered: levels after the cash close, to Telegram and the on-site terminal, plus an optional TradingView overlay you copy in.",
   },
   "/track-record": {
     title: "Track Record | Trade Levels Pro",
@@ -69,7 +69,7 @@ const STATIC: Record<string, RouteMeta> = {
   "/terminal": {
     title: "Today's Plan | Trade Levels Pro",
     description:
-      "The live daily ES and NQ trade plan: bias, Magnet, Dynamic Zone, the support and resistance ladder, and the TradingView levels indicator for members.",
+      "The live daily ES and NQ trade plan: bias, Magnet, Dynamic Zone, the support and resistance ladder, plus an optional TradingView overlay for members.",
   },
   "/terms": {
     title: "Terms of Service | Trade Levels Pro",

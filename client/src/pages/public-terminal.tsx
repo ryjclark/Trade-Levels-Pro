@@ -242,9 +242,9 @@ export default function PublicTerminalPage() {
             Terminal
           </h1>
           <p className="public-hero-subtitle" style={{ maxWidth: 640 }}>
-            Magnet, Dynamic Zone, and the key structure levels — prior-day high/low/close
-            and overnight range — drawn straight on the chart. Bias, the ranked setups, and a
-            one-click TradingView indicator unlock for members.
+            Magnet, Dynamic Zone, and the key structure levels (prior-day high/low/close
+            and overnight range) drawn on the terminal chart. Bias, the ranked setups, and an
+            optional TradingView overlay unlock for members.
           </p>
           <div
             data-testid="terminal-viewing-as"
