@@ -13,7 +13,7 @@ import {
 } from "@/lib/constants";
 
 const FAQ = [
-  { q: "Which markets does this cover?", a: "Both ES and NQ E-mini futures, with ES as the primary focus. You get a plan and levels for each." },
+  { q: "Which markets does this cover?", a: "ES and NQ E-mini futures are the focus, ES is what the plans are built around, and NQ is the most popular. You also get daily levels for Gold, Crude, and Russell in the terminal and Telegram." },
   { q: "Is this an alerts service?", a: "No. It is a daily plan with the key levels and ranked setups. You learn to navigate the levels and make your own decisions." },
   { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ session." },
   { q: "What do I get each day?", a: "The Magnet and Dynamic Zone, the key structure and reaction levels, a daily bias, and ranked failed-breakdown longs plus secondary rejection shorts, for both ES and NQ." },
@@ -25,7 +25,7 @@ const FAQ = [
 ];
 
 const FEATURES = [
-  "Daily ES and NQ levels and trade plan",
+  "Daily ES and NQ levels and trade plan (plus Gold, Crude, Russell)",
   "Magnet, Dynamic Zone, and ranked reaction levels",
   "Ranked failed-breakdown longs plus rejection shorts",
   "One-click TradingView indicator — your daily levels drawn on your chart",

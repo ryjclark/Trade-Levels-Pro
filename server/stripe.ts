@@ -214,6 +214,10 @@ export function registerStripeRoutes(app: Express): void {
         cancel_url: `${APP_BASE_URL}/pricing`,
         customer_email: email,
         allow_promotion_codes: true,
+        // Force the price's native currency (USD). Without this, Stripe Adaptive
+        // Pricing converts to the visitor's local currency (e.g. ¥ JPY), which
+        // mismatched the USD shown on /pricing.
+        adaptive_pricing: { enabled: false },
       });
       res.json({ url: session.url });
     } catch (err) {

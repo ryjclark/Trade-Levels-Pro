@@ -146,6 +146,17 @@ body { background: var(--bg); }
 }
 .reveal-in { opacity: 1; transform: translateY(0); }
 
+/* Accessibility / robustness: anyone who prefers reduced motion (and many
+   headless/crawler contexts) sees all content immediately, never a blank
+   section waiting on a scroll trigger. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 /* Section divider */
 .section-divider {
   height: 1px;

@@ -87,8 +87,8 @@ export default function PublicHomePage() {
                 Daily ES and NQ levels for traders who <span className="accent">prepare</span>, then react.
               </h1>
               <p className="public-hero-subtitle">
-                Tomorrow's Magnet, Dynamic Zone, ranked reaction levels, and trade plan for ES and NQ,
-                delivered to Telegram and the on-site terminal after the close.
+                Tomorrow's Magnet, Dynamic Zone, ranked reaction levels, and trade plan for ES and NQ
+                (plus Gold, Crude, and Russell), delivered to Telegram and the on-site terminal after the close.
               </p>
               <div className="hero-cta-row">
                 <Link href="/pricing" className="btn-primary" data-testid="button-cta-hero">
