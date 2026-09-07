@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
+import { renderIndexForPath } from "./seo-meta";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
@@ -9,6 +10,9 @@ export function serveStatic(app: Express) {
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+
+  // Read the built shell once; we rewrite its <head> per request for SEO.
+  const indexHtml = fs.readFileSync(path.resolve(distPath, "index.html"), "utf8");
 
   // Hashed build assets (/assets/*) are content-addressed and immutable — cache
   // them for a year. Everything else (esp. index.html) must never be served
@@ -26,10 +30,13 @@ export function serveStatic(app: Express) {
     }),
   );
 
-  // SPA fallback — the HTML must always be fresh so a new deploy shows up on the
-  // next load without any cache-clearing.
-  app.use("/{*path}", (_req, res) => {
+  // SPA fallback — rewrite the shell's <head> for this route (correct title,
+  // description, canonical, og:url) and return a real 404 status for unknown
+  // paths instead of a soft-404. The HTML is always no-store so new deploys
+  // show up on the next load without cache-clearing.
+  app.use("/{*path}", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const { html, status } = renderIndexForPath(indexHtml, req.path);
+    res.status(status).type("html").send(html);
   });
 }

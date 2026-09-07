@@ -6,8 +6,11 @@ const SITE_URL = "https://tradelevelspro.com";
 const STATIC_PATHS: Array<{ path: string; changefreq: string; priority: number }> = [
   { path: "/", changefreq: "weekly", priority: 1.0 },
   { path: "/sample", changefreq: "weekly", priority: 0.9 },
+  { path: "/terminal", changefreq: "daily", priority: 0.9 },
   { path: "/how-it-works", changefreq: "monthly", priority: 0.8 },
   { path: "/pricing", changefreq: "monthly", priority: 0.9 },
+  { path: "/track-record", changefreq: "daily", priority: 0.8 },
+  { path: "/about", changefreq: "monthly", priority: 0.6 },
   { path: "/prop-firms", changefreq: "weekly", priority: 0.8 },
   { path: "/learn", changefreq: "weekly", priority: 0.8 },
   { path: "/learn/what-is-the-dynamic-zone", changefreq: "monthly", priority: 0.7 },

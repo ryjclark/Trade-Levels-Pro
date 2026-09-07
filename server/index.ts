@@ -20,6 +20,16 @@ app.use(
   })
 );
 
+// Canonicalize host: permanently send www.* to the bare domain so there is only
+// one indexable site. (Also requires www to be bound to this deployment.)
+app.use((req, res, next) => {
+  const host = (req.headers.host || "").toLowerCase();
+  if (host.startsWith("www.")) {
+    return res.redirect(301, "https://tradelevelspro.com" + req.originalUrl);
+  }
+  next();
+});
+
 app.get("/subscribe", (_req, res) => res.redirect(301, "/pricing"));
 
 // Stripe webhook MUST receive raw body — register before express.json()
