@@ -36,7 +36,11 @@ export function serveStatic(app: Express) {
   // show up on the next load without cache-clearing.
   app.use("/{*path}", (req, res) => {
     res.setHeader("Cache-Control", "no-store");
-    const { html, status } = renderIndexForPath(indexHtml, req.path);
+    // Use originalUrl, not req.path: under an app.use("/{*path}") splat mount,
+    // req.path is stripped to "/", which would give every route the homepage
+    // meta and a 200. originalUrl is always the real requested path.
+    const pathname = (req.originalUrl || req.url || "/").split("?")[0] || "/";
+    const { html, status } = renderIndexForPath(indexHtml, pathname);
     res.status(status).type("html").send(html);
   });
 }
