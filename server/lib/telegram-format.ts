@@ -39,7 +39,7 @@ function cap(s: string): string {
 // the ranked level data and drops the R1-R4/S1-S4 ladder. Longs target the magnet;
 // shorts fade the first resistance back to the magnet, so no level is shown as both
 // a long target and a short at once. Falls back to a minimal line for older plans.
-export function formatAlgorithmPlan(plan: Plan): string {
+export function formatAlgorithmPlan(plan: Plan, full = false): string {
   const lv = (plan as any).levels as PlanLevels | null;
   const magnet = plan.magnet ?? lv?.magnet ?? null;
 
@@ -70,8 +70,21 @@ export function formatAlgorithmPlan(plan: Plan): string {
   L.push(`🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}`);
   L.push("");
   if (plan.bias) L.push(`Bias: ${cap(plan.bias)}`);
+  // Email mode (full): include the bias reasoning the on-site plan shows.
+  if (full && plan.biasReasoning) L.push(plan.biasReasoning);
   L.push(`Magnet: ${num(magnet)}`);
   L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
+  // Email mode (full): include the full Resistance/Support ladder from the site.
+  if (full) {
+    const res = [plan.r1, plan.r2, plan.r3, plan.r4]
+      .map((v, i) => (v != null ? `R${i + 1} ${num(v)}` : null))
+      .filter(Boolean);
+    const sup = [plan.s1, plan.s2, plan.s3, plan.s4]
+      .map((v, i) => (v != null ? `S${i + 1} ${num(v)}` : null))
+      .filter(Boolean);
+    if (res.length) L.push(`Resistance: ${res.join(" · ")}`);
+    if (sup.length) L.push(`Support: ${sup.join(" · ")}`);
+  }
   // The full support/resistance map lives on the terminal (tradelevelspro.com/terminal).
   // The alert stays lean: bias, zone, the setups, and targets.
 
@@ -126,8 +139,22 @@ export function formatAlgorithmPlan(plan: Plan): string {
     }
   }
 
+  // Email mode (full): include the Top Long / Top Short write-ups from the site.
+  if (full) {
+    if (plan.topLongTrade) {
+      L.push("");
+      L.push(`🟢 Top Long: ${plan.topLongTrade}`);
+    }
+    if (plan.topShortTrade) {
+      if (!plan.topLongTrade) L.push("");
+      L.push(`🔴 Top Short: ${plan.topShortTrade}`);
+    }
+  }
+
   L.push("");
   L.push("Rule: wait for acceptance, then manage level to level.");
+  // Telegram (lean) points to the site for the complete plan; the email is full.
+  if (!full) L.push("Full plan — bias reasoning, all levels, top long/short: tradelevelspro.com/terminal");
   L.push("Educational only. Not investment advice.");
   return L.join("\n");
 }

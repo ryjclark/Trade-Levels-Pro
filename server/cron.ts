@@ -490,7 +490,9 @@ export async function sendDailyPlanEmails(): Promise<void> {
     const planDate = plans[0].date;
     const recipients = await storage.listDailyEmailRecipients(planDate);
     if (!recipients.length) return;
-    const texts = plans.map((p) => formatAlgorithmPlan(p));
+    // Email carries the COMPLETE plan (bias reasoning, full ladder, top long/short)
+    // so it matches the on-site Today's Plan exactly. Telegram stays lean.
+    const texts = plans.map((p) => formatAlgorithmPlan(p, true));
     let sent = 0;
     for (const email of recipients) {
       try {
@@ -505,6 +507,19 @@ export async function sendDailyPlanEmails(): Promise<void> {
   } catch (err) {
     console.error("[daily-email] error:", err);
   }
+}
+
+// Send the CURRENT published ES/NQ plans as the full digest to one address,
+// without touching the emailed-dedup ledger. Used for previewing the email.
+export async function sendTestPlanEmail(to: string): Promise<void> {
+  const pubs = await storage.listPublicPlans(50);
+  const plans = channelSymbols()
+    .map((s) => pubs.find((p) => p.symbol === s))
+    .filter((p): p is Plan => !!p);
+  if (!plans.length) throw new Error("no published plans to preview");
+  const planDate = plans[0].date;
+  const texts = plans.map((p) => formatAlgorithmPlan(p, true));
+  await sendDailyPlanDigest(to, texts, planDate);
 }
 
 export async function runGenerateTick() {

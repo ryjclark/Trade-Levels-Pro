@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v57", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v58", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -835,12 +835,17 @@ export async function registerRoutes(
     if (!key || String(req.query.key || "") !== key) {
       return res.status(401).json({ error: "unauthorized" });
     }
-    const { runIntradayTick, runResultsTick, runGenerateTick } = await import("./cron");
+    const { runIntradayTick, runResultsTick, runGenerateTick, sendTestPlanEmail } = await import("./cron");
     try {
       const job = req.params.job;
       if (job === "intraday") await runIntradayTick();
       else if (job === "results") await runResultsTick();
       else if (job === "generate") await runGenerateTick();
+      else if (job === "test-email") {
+        const to = String(req.query.to || process.env.OWNER_EMAIL || "");
+        if (!to) return res.status(400).json({ error: "missing to" });
+        await sendTestPlanEmail(to);
+      }
       else return res.status(400).json({ error: "unknown job" });
       res.json({ ok: true, job });
     } catch (err: any) {
