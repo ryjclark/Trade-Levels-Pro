@@ -490,11 +490,11 @@ export async function sendDailyPlanEmails(): Promise<void> {
     const planDate = plans[0].date;
     const recipients = await storage.listDailyEmailRecipients(planDate);
     if (!recipients.length) return;
-    const text = plans.map((p) => formatAlgorithmPlan(p)).join("\n\n———\n\n");
+    const texts = plans.map((p) => formatAlgorithmPlan(p));
     let sent = 0;
     for (const email of recipients) {
       try {
-        await sendDailyPlanDigest(email, text);
+        await sendDailyPlanDigest(email, texts, planDate);
         await storage.markMemberEmailed(email, planDate);
         sent++;
       } catch (err) {

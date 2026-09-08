@@ -182,17 +182,45 @@ export async function sendDailyPlanEmail(
   });
 }
 
-// Opt-in daily digest: emails the exact Telegram plan text (already formatted by
-// formatAlgorithmPlan) so email/site/Telegram all say the same thing.
-export async function sendDailyPlanDigest(email: string, planText: string): Promise<void> {
-  const esc = planText.replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"));
+// Opt-in daily digest: one branded email with a card per symbol. Each card holds
+// the exact Telegram plan text (from formatAlgorithmPlan) so email/site/Telegram
+// all say the same thing, wrapped in a clean, email-safe light-themed layout.
+export async function sendDailyPlanDigest(
+  email: string,
+  planTexts: string[],
+  dateLabel?: string,
+): Promise<void> {
+  const esc = (s: string) =>
+    s.replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"));
+  const cards = planTexts
+    .map(
+      (t) =>
+        `<div style="border:1px solid #e6e8eb;border-radius:14px;padding:16px 20px;margin:0 0 16px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,0.04);">` +
+        `<pre style="margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;font-size:13.5px;line-height:1.7;color:#0c1117;">${esc(t)}</pre>` +
+        `</div>`,
+    )
+    .join("");
+  const html =
+    `<div style="background:#eef1f4;padding:28px 16px;font-family:Inter,-apple-system,'Segoe UI',Arial,sans-serif;">` +
+    `<div style="max-width:600px;margin:0 auto;">` +
+    `<div style="text-align:center;margin-bottom:18px;">` +
+    `<div style="font-size:22px;font-weight:800;letter-spacing:-0.3px;color:#0c1117;">Trade Levels <span style="color:#0891b2;">Pro</span></div>` +
+    `<div style="font-size:13px;color:#6b7280;margin-top:3px;">Daily trade plan${dateLabel ? " · " + esc(dateLabel) : ""}</div>` +
+    `</div>` +
+    cards +
+    `<div style="text-align:center;margin:8px 0 18px;">` +
+    `<a href="https://tradelevelspro.com/terminal" style="display:inline-block;background:#2dd4bf;color:#0c1117;font-weight:700;text-decoration:none;padding:12px 26px;border-radius:10px;font-size:14px;">View on the site →</a>` +
+    `</div>` +
+    `<div style="text-align:center;font-size:11.5px;color:#9aa2ac;line-height:1.6;">` +
+    `You're receiving this because daily-plan email is on for your account. ` +
+    `<a href="https://tradelevelspro.com/account" style="color:#6b7280;">Manage or turn off</a>.<br/>` +
+    `Educational content only. Not investment advice. Trading futures involves substantial risk of loss.` +
+    `</div></div></div>`;
   await sendEmail({
     to: email,
-    subject: "Your daily trade plan — Trade Levels Pro",
-    html:
-      `<div style="font-family:ui-monospace,Menlo,Consolas,monospace;max-width:600px;margin:0 auto;color:#111;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;">${esc}</div>` +
-      `<p style="font-family:Inter,Arial,sans-serif;color:#666;font-size:12px;max-width:600px;margin:16px auto 0;">You're getting this because you turned on daily-plan email. Manage it anytime under Today's Plan settings at <a href="https://tradelevelspro.com/account">tradelevelspro.com/account</a>. Educational content only, not investment advice.</p>`,
-    text: `${planText}\n\nManage email delivery at https://tradelevelspro.com/account`,
+    subject: "Your daily trade plan · Trade Levels Pro",
+    html,
+    text: planTexts.join("\n\n----------\n\n") + "\n\nManage email delivery at https://tradelevelspro.com/account",
   });
 }
 
