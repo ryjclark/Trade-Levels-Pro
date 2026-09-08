@@ -335,13 +335,41 @@ export function registerStripeRoutes(app: Express): void {
       if (!stripe) return res.status(503).json({ error: "Stripe not configured" });
       try {
         const member = await storage.getMemberByEmail((req.memberEmail || "").toLowerCase());
-        if (!member?.stripeCustomerId) {
+        if (!member) return res.status(400).json({ error: "No billing account on file." });
+
+        const returnUrl = `${APP_BASE_URL}/account`;
+        const openPortal = (customer: string) =>
+          stripe.billingPortal.sessions.create({ customer, return_url: returnUrl });
+
+        // Try the stored customer id first.
+        if (member.stripeCustomerId) {
+          try {
+            const portal = await openPortal(member.stripeCustomerId);
+            return res.json({ url: portal.url });
+          } catch (err: any) {
+            // Only self-heal on a missing/mismatched customer; rethrow anything else.
+            if (err?.code !== "resource_missing") throw err;
+          }
+        }
+
+        // Self-heal: the stored id isn't in THIS Stripe account (a leftover from a
+        // previous account). Find the member's live customer by email — prefer one
+        // with an active subscription — repair the record, and open the portal.
+        const list = await stripe.customers.list({ email: member.email, limit: 100 });
+        let chosen: string | null = null;
+        for (const c of list.data) {
+          const subs = await stripe.subscriptions.list({ customer: c.id, status: "all", limit: 3 });
+          if (subs.data.some((s) => ["active", "trialing", "past_due"].includes(s.status))) {
+            chosen = c.id;
+            break;
+          }
+        }
+        if (!chosen && list.data[0]) chosen = list.data[0].id;
+        if (!chosen) {
           return res.status(400).json({ error: "No billing account on file." });
         }
-        const portal = await stripe.billingPortal.sessions.create({
-          customer: member.stripeCustomerId,
-          return_url: `${APP_BASE_URL}/terminal`,
-        });
+        await storage.setMemberStripeCustomerId(member.email, chosen);
+        const portal = await openPortal(chosen);
         res.json({ url: portal.url });
       } catch (err) {
         console.error("member portal error:", err);

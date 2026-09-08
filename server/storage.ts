@@ -24,6 +24,7 @@ export interface IStorage {
   markMemberInactiveBySubscription(subscriptionId: string): Promise<Member | undefined>;
   setMemberTelegramUserId(email: string, telegramUserId: string): Promise<void>;
   getMemberTelegramUserId(email: string): Promise<string | null>;
+  setMemberStripeCustomerId(email: string, stripeCustomerId: string): Promise<void>;
   listMembers(limit?: number): Promise<Member[]>;
   getMemberEmailPref(email: string): Promise<boolean>;
   setMemberEmailPref(email: string, dailyEmail: boolean): Promise<void>;
@@ -376,6 +377,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(telegramMembers.email, email.toLowerCase()))
       .limit(1);
     return rows[0]?.telegramUserId ?? null;
+  }
+
+  // Repair a stale/mismatched Stripe customer id on a member record (e.g. an id
+  // left over from a different Stripe account before the live-account switch).
+  async setMemberStripeCustomerId(email: string, stripeCustomerId: string): Promise<void> {
+    await db
+      .update(members)
+      .set({ stripeCustomerId })
+      .where(eq(members.email, email));
   }
 
   async listDueScheduledPlans(now: Date): Promise<Plan[]> {
