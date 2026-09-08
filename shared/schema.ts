@@ -380,6 +380,17 @@ export const memberEmailPrefs = pgTable("member_email_prefs", {
 });
 export type MemberEmailPref = typeof memberEmailPrefs.$inferSelect;
 
+// Maps a member's email to the Telegram user id captured when they joined the
+// private channel (from the chat_member webhook). Lets us remove them from the
+// channel on cancellation. Aux table: created on boot via CREATE TABLE IF NOT
+// EXISTS, kept out of the members table to avoid a members-table migration.
+export const telegramMembers = pgTable("telegram_members", {
+  email: text("email").primaryKey(),
+  telegramUserId: text("telegram_user_id").notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+});
+export type TelegramMember = typeof telegramMembers.$inferSelect;
+
 export const previews = pgTable("previews", {
   id: serial("id").primaryKey(),
   email: text("email").notNull(),

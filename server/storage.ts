@@ -1,6 +1,6 @@
 import { eq, and, desc, lte, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, members, memberEmailPrefs, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, memberEmailPrefs, telegramMembers, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
 import { PUBLIC_PLAN_SOURCES } from "@shared/constants";
 
 export interface IStorage {
@@ -21,7 +21,9 @@ export interface IStorage {
   setMemberInvite(email: string, inviteLink: string): Promise<Member | undefined>;
   setMemberActiveByEmail(email: string): Promise<Member>;
   markMemberJoinedByInvite(inviteLink: string): Promise<Member | undefined>;
-  markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
+  markMemberInactiveBySubscription(subscriptionId: string): Promise<Member | undefined>;
+  setMemberTelegramUserId(email: string, telegramUserId: string): Promise<void>;
+  getMemberTelegramUserId(email: string): Promise<string | null>;
   listMembers(limit?: number): Promise<Member[]>;
   getMemberEmailPref(email: string): Promise<boolean>;
   setMemberEmailPref(email: string, dailyEmail: boolean): Promise<void>;
@@ -346,11 +348,34 @@ export class DatabaseStorage implements IStorage {
       });
   }
 
-  async markMemberInactiveBySubscription(subscriptionId: string): Promise<void> {
-    await db
+  async markMemberInactiveBySubscription(subscriptionId: string): Promise<Member | undefined> {
+    const [row] = await db
       .update(members)
       .set({ status: "inactive" })
-      .where(eq(members.stripeSubscriptionId, subscriptionId));
+      .where(eq(members.stripeSubscriptionId, subscriptionId))
+      .returning();
+    return row;
+  }
+
+  // ----- Telegram member id (captured on channel join; used to remove on cancel) -----
+
+  async setMemberTelegramUserId(email: string, telegramUserId: string): Promise<void> {
+    await db
+      .insert(telegramMembers)
+      .values({ email: email.toLowerCase(), telegramUserId })
+      .onConflictDoUpdate({
+        target: telegramMembers.email,
+        set: { telegramUserId, joinedAt: new Date() },
+      });
+  }
+
+  async getMemberTelegramUserId(email: string): Promise<string | null> {
+    const rows = await db
+      .select()
+      .from(telegramMembers)
+      .where(eq(telegramMembers.email, email.toLowerCase()))
+      .limit(1);
+    return rows[0]?.telegramUserId ?? null;
   }
 
   async listDueScheduledPlans(now: Date): Promise<Plan[]> {

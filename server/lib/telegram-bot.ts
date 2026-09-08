@@ -86,9 +86,19 @@ export async function handleTelegramUpdate(update: any, token: string): Promise<
         newStatus === "administrator" || newStatus === "creator";
       const wasOut = oldStatus == null || oldStatus === "left" || oldStatus === "kicked";
       const inviteLink: string | undefined = cm.invite_link?.invite_link;
+      const tgUserId: number | undefined = cm.new_chat_member?.user?.id;
       if (isNowIn && wasOut && inviteLink) {
         const member = await storage.markMemberJoinedByInvite(inviteLink);
         if (member) {
+          // Remember their Telegram user id so we can remove them from the
+          // channel if they later cancel.
+          if (tgUserId != null) {
+            try {
+              await storage.setMemberTelegramUserId(member.email, String(tgUserId));
+            } catch (err) {
+              console.error("setMemberTelegramUserId failed:", err);
+            }
+          }
           try {
             await notifyOwnerOfJoin(member.email);
           } catch (err) {

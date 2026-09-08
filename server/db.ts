@@ -26,4 +26,11 @@ export async function ensureAuxTables(): Promise<void> {
       updated_at timestamptz NOT NULL DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS telegram_members (
+      email text PRIMARY KEY,
+      telegram_user_id text NOT NULL,
+      joined_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
 }

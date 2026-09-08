@@ -19,6 +19,32 @@ function getStripe(): Stripe | null {
   return new Stripe(STRIPE_SECRET_KEY);
 }
 
+// Remove a cancelled member from the private channel. Ban then immediately
+// unban (only_if_banned) so they're kicked out now but NOT permanently blocked —
+// a future re-subscribe can rejoin with a fresh single-use invite. Best-effort.
+async function removeFromTelegramChannel(telegramUserId: string): Promise<void> {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  const base = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+  const uid = Number(telegramUserId);
+  if (!Number.isFinite(uid)) return;
+  try {
+    const res = await fetch(`${base}/banChatMember`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, user_id: uid }),
+    });
+    const data = (await res.json()) as { ok: boolean; description?: string };
+    if (!data.ok) console.error("Telegram banChatMember failed:", data.description || data);
+    await fetch(`${base}/unbanChatMember`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, user_id: uid, only_if_banned: true }),
+    });
+  } catch (err) {
+    console.error("removeFromTelegramChannel failed:", err);
+  }
+}
+
 export async function createTelegramInvite(): Promise<string | null> {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return null;
   try {
@@ -153,7 +179,16 @@ export function registerStripeRoutes(app: Express): void {
           }
         } else if (event.type === "customer.subscription.deleted") {
           const sub = event.data.object as Stripe.Subscription;
-          await storage.markMemberInactiveBySubscription(sub.id);
+          const member = await storage.markMemberInactiveBySubscription(sub.id);
+          // Kick them out of the private Telegram channel (best-effort).
+          if (member) {
+            try {
+              const tgId = await storage.getMemberTelegramUserId(member.email);
+              if (tgId) await removeFromTelegramChannel(tgId);
+            } catch (err) {
+              console.error("telegram removal on cancel failed:", err);
+            }
+          }
         } else if (event.type === "invoice.payment_failed") {
           // A recurring charge failed. Stripe will retry, but nudge the member to
           // fix their card. Best-effort — never fail the webhook.
