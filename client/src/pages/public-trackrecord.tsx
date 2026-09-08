@@ -158,21 +158,21 @@ export default function PublicTrackRecordPage() {
               data-testid="track-record-overall"
             >
               <StatTile
-                label="Failed-breakdown win rate"
-                value={pct(view?.failedBreakdownWinRate ?? null)}
-                sub={
-                  view?.failedBreakdownSamples
-                    ? `${view.failedBreakdownSamples} flushes reclaimed`
-                    : "of levels that flushed, % that reclaimed"
-                }
-              />
-              <StatTile
                 label="Target-hit rate"
                 value={pct(view?.targetHitRate ?? null)}
                 sub={
                   view?.targetSamples
                     ? `1st target, ${view.targetSamples} sessions`
                     : "1st upside target reached"
+                }
+              />
+              <StatTile
+                label="Failed-breakdown reclaim rate"
+                value={pct(view?.failedBreakdownWinRate ?? null)}
+                sub={
+                  view?.failedBreakdownSamples
+                    ? `${view.failedBreakdownSamples} flushes`
+                    : "of levels that flushed, % that reclaimed"
                 }
               />
               <StatTile
@@ -316,12 +316,13 @@ export default function PublicTrackRecordPage() {
             )}
 
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 32, maxWidth: 660 }}>
-              <b>Failed-breakdown win rate</b> — of the support levels that flushed
-              below (traded under the line), the share that closed back above it. This is
-              the core setup we trade, so it's the headline number. <b>Target-hit rate</b> —
-              how often the first upside target was reached. A "tag" means price traded to
-              or through a level. (We also track "magnet hit," but price crosses the pivot
-              most sessions, so it's a low-signal stat we don't lead with.)
+              <b>Target-hit rate</b> — how often the first upside target was reached, our
+              headline number. <b>Failed-breakdown reclaim rate</b> — of the support levels
+              that flushed below (traded under the line), the share that closed back above it;
+              a completed failed breakdown is a strong tell but only a minority of flushes
+              reclaim cleanly, so this is deliberately a conservative stat. A "tag" means price
+              traded to or through a level. (We also track "magnet hit," but price crosses the
+              pivot most sessions, so it's a low-signal stat we don't lead with.)
             </p>
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 12, maxWidth: 660 }}>
               These figures are level-interaction statistics measured

@@ -51,7 +51,7 @@ const FAQ = [
 export default function PublicHomePage() {
   useSeo({
     title: `${SITE_NAME}: Daily ES and NQ Futures Trade Plans`,
-    description: `Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, ranked reaction levels, and a failed-breakdown plan, delivered to Telegram and the on-site terminal after the close. ${TAGLINE}`,
+    description: `Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, ranked reaction levels, and a failed-breakdown plan, delivered to Telegram and the on-site plan after the close. ${TAGLINE}`,
     path: "/",
     jsonLd: {
       "@context": "https://schema.org",
@@ -88,7 +88,7 @@ export default function PublicHomePage() {
               </h1>
               <p className="public-hero-subtitle">
                 Tomorrow's Magnet, Dynamic Zone, ranked reaction levels, and trade plan for ES and NQ
-                (plus Gold, Crude, and Russell), delivered to Telegram and the on-site terminal after the close.
+                (plus Gold, Crude, and Russell), delivered to Telegram and the on-site plan after the close.
               </p>
               <div className="hero-cta-row">
                 <Link href="/pricing" className="btn-primary" data-testid="button-cta-hero">
@@ -275,7 +275,7 @@ export default function PublicHomePage() {
             </div>
             <div className="public-steps">
               <div className="public-step"><div className="public-step-num">1</div><p>Subscribe once to access the private Telegram channel.</p></div>
-              <div className="public-step"><div className="public-step-num">2</div><p>Receive tomorrow's ES and NQ plan in Telegram and the on-site terminal after the close.</p></div>
+              <div className="public-step"><div className="public-step-num">2</div><p>Receive tomorrow's ES and NQ plan in Telegram and the on-site plan after the close.</p></div>
               <div className="public-step"><div className="public-step-num">3</div><p>Use the levels and bias to trade with discipline at the open.</p></div>
             </div>
           </section>

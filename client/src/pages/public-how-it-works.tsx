@@ -159,14 +159,14 @@ export default function PublicHowItWorksPage() {
             <div className="public-steps">
               <div className="public-step">
                 <div className="public-step-num">1</div>
-                <p>Subscribe once to access the private Telegram channel and the on-site terminal.</p>
+                <p>Subscribe once to access the private Telegram channel and the on-site plan.</p>
               </div>
               <div className="public-step">
                 <div className="public-step-num">2</div>
                 <p>
                   Receive tomorrow's ranked ES and NQ plan in Telegram by 5:30 PM ET:
                   failed-breakdown longs listed best-first, rejection shorts as the
-                  secondary play. The same levels are on the terminal (market data is
+                  secondary play. The same levels are in Today's Plan (market data is
                   delayed roughly 60 seconds).
                 </p>
               </div>
