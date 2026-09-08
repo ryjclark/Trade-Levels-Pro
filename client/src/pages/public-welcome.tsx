@@ -117,7 +117,7 @@ export default function PublicWelcomePage() {
                 <p className="capture-sub" style={{ marginTop: 16 }}>
                   You're also signed in on the site. View the daily plan and the
                   TradingView indicator anytime at{" "}
-                  <a href="/terminal" style={{ color: "#2dd4bf" }}>the terminal →</a>
+                  <a href="/terminal" style={{ color: "#2dd4bf" }}>Today's Plan →</a>
                 </p>
               </>
             )}

@@ -147,13 +147,14 @@ export async function sendWelcomeEmail(
     html: `
       <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
         <h1 style="color:#0c1117;">Welcome to Trade Levels Pro</h1>
-        <p>Your subscription is active. You'll receive the next ES daily plan after the close.</p>
+        <p>Your subscription is active. Each trading day after the close you get the plan for ES and NQ (plus Gold, Crude, and Russell).</p>
         ${inviteBlock}
+        <p style="color:#444;font-size:14px;margin-top:20px;"><strong>Prefer not to use Telegram?</strong> You don't need it. Just log in at <a href="https://tradelevelspro.com/member-login" style="color:#0891b2;">tradelevelspro.com</a> with this email and read every day's plan under <strong>Today's Plan</strong>.</p>
         <p style="color:#666;font-size:13px;margin-top:32px;">Educational content only. Not investment advice.</p>
       </div>`,
     text: `Welcome to Trade Levels Pro. Your subscription is active.${
       telegramInviteUrl ? `\n\nJoin the private Telegram channel: ${telegramInviteUrl}\n(Single-use, expires in 7 days.)` : ""
-    }`,
+    }\n\nPrefer not to use Telegram? You don't need it — just log in at https://tradelevelspro.com/member-login with this email and read every day's plan under Today's Plan.`,
   });
 }
 

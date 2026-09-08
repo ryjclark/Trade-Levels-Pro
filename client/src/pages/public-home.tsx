@@ -41,7 +41,7 @@ const METHOD = [
 ];
 
 const FAQ = [
-  { q: "Which markets are covered?", a: "Both ES (S&P 500) and NQ (Nasdaq 100) E-mini futures. ES is the primary focus, and NQ is published alongside it." },
+  { q: "Which markets are covered?", a: "ES (S&P 500) and NQ (Nasdaq 100) E-mini futures are the focus — ES is what the plans are built around and NQ is published alongside it. You also get daily levels for Gold, Crude, and Russell." },
   { q: "Is this an alerts service?", a: "No. It's a daily plan with key levels and 1–2 high-quality setups. You learn to navigate the levels and make your own decisions, not follow someone else's calls." },
   { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ sessions." },
   { q: "When are plans posted?", a: "By 5:30 PM ET each trading day, for the next session, so you're prepared before the open." },
