@@ -103,6 +103,8 @@ function Router() {
       <Route path="/track-record" component={PublicTrackRecordPage} />
       <Route path="/brief" component={PublicBriefPage} />
       <Route path="/terminal" component={PublicTerminalPage} />
+      <Route path="/plan" component={PublicTerminalPage} />
+      <Route path="/todays-plan" component={PublicTerminalPage} />
       <Route path="/member-login" component={MemberLoginPage} />
       <Route path="/member-auth" component={MemberAuthPage} />
       <Route path="/account" component={PublicAccountPage} />

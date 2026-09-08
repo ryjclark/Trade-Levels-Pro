@@ -209,7 +209,7 @@ export async function sendDailyPlanDigest(
     `</div>` +
     cards +
     `<div style="text-align:center;margin:8px 0 18px;">` +
-    `<a href="https://tradelevelspro.com/terminal" style="display:inline-block;background:#2dd4bf;color:#0c1117;font-weight:700;text-decoration:none;padding:12px 26px;border-radius:10px;font-size:14px;">View on the site →</a>` +
+    `<a href="https://tradelevelspro.com/plan" style="display:inline-block;background:#2dd4bf;color:#0c1117;font-weight:700;text-decoration:none;padding:12px 26px;border-radius:10px;font-size:14px;">View Today's Plan →</a>` +
     `</div>` +
     `<div style="text-align:center;font-size:11.5px;color:#9aa2ac;line-height:1.6;">` +
     `You're receiving this because daily-plan email is on for your account. ` +

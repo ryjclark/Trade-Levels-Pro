@@ -47,7 +47,7 @@ function cap(s: string): string {
 export function formatAlgorithmPlan(plan: Plan): string {
   const lv = (plan as any).levels as PlanLevels | null;
   const magnet = plan.magnet ?? lv?.magnet ?? null;
-  const siteLine = "📊 Full plan + TradingView indicator → tradelevelspro.com/terminal";
+  const siteLine = "📊 Full plan + TradingView indicator → tradelevelspro.com/plan";
 
   const L: string[] = [];
   L.push(`🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}`);

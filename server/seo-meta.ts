@@ -71,6 +71,20 @@ const STATIC: Record<string, RouteMeta> = {
     description:
       "The live daily ES and NQ trade plan: bias, Magnet, Dynamic Zone, the support and resistance ladder, plus an optional TradingView overlay for members.",
   },
+  // Friendly aliases that match the "Today's Plan" name (used in email/Telegram
+  // links). They render the same page; noindex keeps /terminal the one indexed URL.
+  "/plan": {
+    title: "Today's Plan | Trade Levels Pro",
+    description:
+      "The live daily ES and NQ trade plan: bias, Magnet, Dynamic Zone, the support and resistance ladder, plus an optional TradingView overlay for members.",
+    noindex: true,
+  },
+  "/todays-plan": {
+    title: "Today's Plan | Trade Levels Pro",
+    description:
+      "The live daily ES and NQ trade plan: bias, Magnet, Dynamic Zone, the support and resistance ladder, plus an optional TradingView overlay for members.",
+    noindex: true,
+  },
   "/terms": {
     title: "Terms of Service | Trade Levels Pro",
     description: "The terms that govern your use of Trade Levels Pro.",
