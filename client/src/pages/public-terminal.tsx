@@ -239,11 +239,11 @@ export default function PublicTerminalPage() {
       <main className="public-container" style={{ paddingTop: 56, paddingBottom: 80 }}>
         <header style={{ marginBottom: 20 }}>
           <h1 className="public-h1" style={{ fontSize: 40, marginBottom: 10 }}>
-            Terminal
+            Today's Plan
           </h1>
           <p className="public-hero-subtitle" style={{ maxWidth: 640 }}>
             Magnet, Dynamic Zone, and the key structure levels (prior-day high/low/close
-            and overnight range) drawn on the terminal chart. Bias, the ranked setups, and an
+            and overnight range) drawn on the chart. Bias, the ranked setups, and an
             optional TradingView overlay unlock for members.
           </p>
           <div
