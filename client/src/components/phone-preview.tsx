@@ -22,10 +22,9 @@ export default function PhonePreview() {
         </div>
         <div className="phone-chat">
           <div className="tg-bubble">
-            <div className="tg-bubble-title">ES Daily Trade Plan</div>
+            <div className="tg-bubble-title">🤖 ES Trade Plan · Example</div>
             <div className="tg-line">
-              <span className="tg-label">Bias:</span>{" "}
-              <strong>Bullish while price holds the magnet</strong>
+              <span className="tg-label">Bias:</span> <strong>Bullish</strong>
             </div>
             <div className="tg-line">
               <span className="tg-label">Magnet:</span>{" "}
@@ -36,26 +35,23 @@ export default function PhonePreview() {
               <span className="tg-num">7,475 – 7,517</span>
             </div>
             <div className="tg-line" style={{ marginTop: 4 }}>
-              <span className="tg-label">Failed-breakdown longs</span>
+              🟢 <span className="tg-label">Failed-breakdown longs (best first)</span>
             </div>
             <div className="tg-line">
-              🥇 <span className="tg-num">7,427</span> reclaim → long toward{" "}
-              <span className="tg-num">7,496</span>, then{" "}
-              <span className="tg-num">7,517</span>
+              🥇 <span className="tg-num">7,427</span> → flush and reclaim, long toward the magnet
             </div>
-            <div className="tg-line">
-              🥈 <span className="tg-num">7,399</span> deeper backup
-            </div>
+            <div className="tg-line">🥈 <span className="tg-num">7,399</span> (backup)</div>
+            <div className="tg-line">🥉 <span className="tg-num">7,372</span> (deeper)</div>
             <div className="tg-line" style={{ marginTop: 4 }}>
-              <span className="tg-label">Rejection short</span>
+              🔴 <span className="tg-label">Rejection shorts (secondary)</span>
             </div>
             <div className="tg-line">
-              🥇 <span className="tg-num">7,517</span> reject and fail → toward magnet
+              🥇 <span className="tg-num">7,517</span> → reject and fail, short toward the magnet
             </div>
+            <div className="tg-line">🥈 <span className="tg-num">7,547</span></div>
             <div className="tg-line" style={{ marginTop: 6 }}>
-              <span className="tg-label">Rule:</span>{" "}
               <span style={{ color: "rgba(255,255,255,0.85)" }}>
-                Wait for acceptance, then manage level to level
+                Rule: wait for acceptance, then manage level to level.
               </span>
             </div>
             <div className="tg-foot">
