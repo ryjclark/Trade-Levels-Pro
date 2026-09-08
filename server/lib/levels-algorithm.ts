@@ -782,9 +782,28 @@ function atr(bars: Bar[], n = 14): number {
   return trs.slice(-k).reduce((a, b) => a + b, 0) / k;
 }
 
+// US equity / CME full-closure market holidays (YYYY-MM-DD). Static list — extend
+// each year. Only affects the plan's DATE label (which session the plan is for),
+// never the level values. Errors of omission are safe (falls back to the old
+// weekday behavior for that day); only skip dates the market is truly closed.
+const MARKET_HOLIDAYS = new Set<string>([
+  // 2026
+  "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03", "2026-05-25",
+  "2026-06-19", "2026-07-03", "2026-09-07", "2026-11-26", "2026-12-25",
+  // 2027
+  "2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31",
+  "2027-06-18", "2027-07-05", "2027-09-06", "2027-11-25", "2027-12-24",
+]);
+
 function nextTradingDay(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00Z");
-  do { d.setUTCDate(d.getUTCDate() + 1); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+  do {
+    d.setUTCDate(d.getUTCDate() + 1);
+  } while (
+    d.getUTCDay() === 0 ||
+    d.getUTCDay() === 6 ||
+    MARKET_HOLIDAYS.has(d.toISOString().slice(0, 10))
+  );
   return d.toISOString().slice(0, 10);
 }
 
