@@ -180,6 +180,94 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// ===== Prerendered body content =====
+// The client is pure CSR (createRoot().render), so React CLEARS #root and
+// re-renders on mount. That lets us seed #root with real, static HTML for each
+// route: crawlers and `curl` (no JS) see genuine content + internal links, and
+// users instantly get the React app that replaces it. No hydration mismatch.
+
+const NAV_LINKS: Array<[string, string]> = [
+  ["/", "Home"],
+  ["/pricing", "Pricing"],
+  ["/sample", "Sample plan"],
+  ["/prop-firms", "For prop traders"],
+  ["/how-it-works", "How it works"],
+  ["/track-record", "Track record"],
+  ["/learn", "Learn"],
+  ["/terminal", "Today's plan"],
+  ["/about", "About"],
+];
+
+const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
+  "/": {
+    h1: "Daily ES and NQ levels for traders who prepare, then react.",
+    paras: [
+      "Trade Levels Pro publishes a daily ES and NQ futures trade plan after the cash close: the Magnet, the Dynamic Zone, ranked reaction levels, a directional bias, and one to two ranked setups (failed-breakdown longs and rejection shorts), each with clear invalidation.",
+      "Plans are delivered to a private Telegram channel and the on-site terminal, with Gold, Crude, and Russell included. $49/month or $490/year, cancel anytime. Educational content only, not investment advice.",
+    ],
+  },
+  "/pricing": {
+    h1: "Pricing",
+    paras: [
+      "One simple plan: $49 per month or $490 per year. Cancel anytime.",
+      "You get the daily ES and NQ trade plan (plus Gold, Crude, and Russell): Magnet, Dynamic Zone, ranked reaction levels, a daily bias, and ranked failed-breakdown longs plus rejection shorts, delivered to Telegram and the on-site terminal. An optional TradingView overlay lets you copy the levels onto your own chart; re-copy when each new plan posts.",
+    ],
+  },
+  "/sample": {
+    h1: "Sample daily plan",
+    paras: [
+      "This is the actual message members receive in Telegram each trading day, for ES and NQ (numbers are illustrative examples).",
+      "ES Trade Plan. Bias: Bullish. Magnet: 7,496. Dynamic Zone: 7,475 to 7,517. Failed-breakdown longs (best first): 7,427 flush and reclaim, long toward the magnet; 7,399 backup; 7,372 deeper. Rejection shorts (secondary): 7,517 reject and fail, short toward the magnet; 7,547. Rule: wait for acceptance, then manage level to level.",
+      "You get a separate plan for each market, ES and NQ, every trading day. On the on-site terminal you also get the full support and resistance ladder and the live chart.",
+    ],
+  },
+  "/prop-firms": {
+    h1: "A daily plan for eval and funded ES and NQ traders",
+    paras: [
+      "A discipline layer for your prop evaluation or funded account, not signal spam. Every setup has clear invalidation, pre-defined levels give you a reason to wait, and ranked reaction levels give logical level-to-level targets, which is what helps traders stay inside drawdown and consistency rules.",
+      "This is not guaranteed funding, not copy trading, not a signal service, and not affiliated with any prop firm. Educational content only. Firms and educators can partner with us for a referral link and sample assets.",
+    ],
+  },
+  "/how-it-works": {
+    h1: "How it works",
+    paras: [
+      "After the cash close each trading day, Trade Levels Pro defines the next session's Magnet, Dynamic Zone, ranked reaction levels, and bias, then publishes the plan to Telegram and the on-site terminal so you can prepare before the open and react to price instead of predicting.",
+    ],
+  },
+  "/track-record": {
+    h1: "Track record",
+    paras: [
+      "A running record of how the published daily ES and NQ levels performed, measured from each session's open, high, low, and close.",
+    ],
+  },
+  "/learn": {
+    h1: "Learn",
+    paras: [
+      "Guides on trading the daily plan: the Dynamic Zone, Magnet levels, rejection and failed-breakdown setups, acceptance, and level-to-level trading for ES and NQ.",
+    ],
+  },
+  "/about": {
+    h1: "About Trade Levels Pro",
+    paras: [
+      "Daily, educational ES and NQ futures trade plans for active and prop firm traders, built around a repeatable, level-based process.",
+    ],
+  },
+};
+
+function renderRouteBody(path: string, meta: RouteMeta): string {
+  const entry = ROUTE_BODY[path];
+  const h1 = esc(entry?.h1 || meta.title);
+  const paras = (entry?.paras || [meta.description]).map((p) => `<p>${esc(p)}</p>`).join("");
+  const nav = NAV_LINKS.map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join(" · ");
+  // Sits inside #root; React clears it on mount. Kept minimal + semantic.
+  return (
+    `<div id="prerender-content"><header><a href="/">Trade Levels Pro</a></header>` +
+    `<main><h1>${h1}</h1>${paras}` +
+    `<p><a href="/pricing">See pricing</a> · <a href="/sample">See a sample plan</a></p></main>` +
+    `<nav aria-label="Site">${nav}</nav></div>`
+  );
+}
+
 /** Rewrites the <head> of the built index.html for a given path and returns the
  *  HTML plus the HTTP status the response should carry. */
 export function renderIndexForPath(baseHtml: string, rawPath: string): { html: string; status: number } {
@@ -198,6 +286,11 @@ export function renderIndexForPath(baseHtml: string, rawPath: string): { html: s
   if (meta.noindex && !/name="robots"/.test(html)) {
     html = html.replace(/<\/head>/, `    <meta name="robots" content="noindex,follow" />\n  </head>`);
   }
+
+  // Seed #root with real content for crawlers / no-JS. React clears it on mount.
+  const normPath = rawPath.replace(/\/+$/, "") || "/";
+  const body = renderRouteBody(normPath, meta);
+  html = html.replace('<div id="root"></div>', `<div id="root">${body}</div>`);
 
   return { html, status };
 }
