@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v64", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v65", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -938,7 +938,7 @@ export async function registerRoutes(
       // Derive the ACTUAL trade the plan calls (shared with the Telegram plan and
       // the terminal chart, so they can never disagree): A+ failed-breakdown long,
       // backups, upside targets, and the invalidation (range low below the entries).
-      const { aplus, backups, targets, invalid } = computePlanTrade(lv, magnet, symbol, (plan as any).currentPrice);
+      const { aplus, backups, targets, invalid, shorts } = computePlanTrade(lv, magnet, symbol, (plan as any).currentPrice);
 
       if (format === "pine") {
         const regime: string = lv.regime === "momentum" ? "Momentum / breakout" : "Range day";
@@ -975,22 +975,52 @@ export async function registerRoutes(
         backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} (backup) ${fmt(b)}`, "color.new(color.green, 25)", 1)));
         targets.forEach((t, i) => L.push(f(t, `T${i + 1} target ${fmt(t)}`, "color.new(color.aqua, 0)", 2)));
         if (invalid != null) L.push(f(invalid, `✕ Invalid < ${fmt(invalid)} (long off)`, "color.new(color.red, 0)", 2, true));
+        if (shorts && shorts.length) {
+          L.push("", "// --- Rejection shorts (secondary, lower win-rate) ---");
+          L.push(f(shorts[0], `🔻 SHORT ${fmt(shorts[0])} — reject & fail`, "color.new(color.fuchsia, 0)", 2));
+          shorts.slice(1).forEach((s, i) => L.push(f(s, `Short ${i + 2} (backup) ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1)));
+        }
         if (hasProf) {
           L.push("", "// --- Prior-session profile (context) ---");
           L.push(f(prof.poc, `POC ${fmt(prof.poc)} (prior)`, "color.new(color.purple, 0)", 2));
           if (prof.vah != null) L.push(f(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true));
           if (prof.val != null) L.push(f(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true));
         }
+        // Stale-snapshot guard: this plan is for plan.date. If the chart's current
+        // session is a LATER date, the levels are yesterday's — warn to recopy.
+        const [pY, pM, pD] = String(plan.date).split("-").map((n) => parseInt(n, 10));
+        L.push(
+          "",
+          "// --- Stale-snapshot guard ---",
+          `planY = ${pY}`,
+          `planM = ${pM}`,
+          `planD = ${pD}`,
+          "isStale = (year > planY) or (year == planY and month > planM) or (year == planY and month == planM and dayofmonth > planD)",
+        );
         L.push(
           "",
           "// --- Info panel ---",
-          "var table tb = table.new(position.top_right, 1, 4, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)",
+          "var table tb = table.new(position.top_right, 1, 5, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)",
           "if barstate.islast",
           `    table.cell(tb, 0, 0, ${JSON.stringify(`Trade Levels Pro — ${symbol}`)}, text_color=color.white, bgcolor=color.new(color.blue, 10), text_size=size.small)`,
           `    table.cell(tb, 0, 1, ${JSON.stringify(plan.date)}, text_color=color.gray, text_size=size.small)`,
           `    table.cell(tb, 0, 2, ${JSON.stringify(`Bias: ${biasCap}`)}, text_color=${bias === "bullish" ? "color.lime" : bias === "bearish" ? "color.red" : "color.gray"}, text_size=size.small)`,
           `    table.cell(tb, 0, 3, ${JSON.stringify(regime)}, text_color=color.orange, text_size=size.small)`,
+          `    table.cell(tb, 0, 4, isStale ? "⚠ STALE — recopy today's plan" : "✓ Current for this session", text_color=color.white, bgcolor=(isStale ? color.new(color.red, 0) : color.new(color.green, 25)), text_size=size.small)`,
         );
+
+        // Price alerts — fire when price reaches a key level. Create them in
+        // TradingView via the alarm-clock icon → "Any alert() function call" or
+        // pick a specific condition below.
+        L.push("", "// --- Alerts (set via TradingView's alert dialog) ---");
+        const alertLine = (price: number, title: string, msg: string) =>
+          `alertcondition(ta.cross(close, ${pn(price)}), title=${JSON.stringify(title)}, message=${JSON.stringify(msg)})`;
+        if (aplus != null) L.push(alertLine(aplus, `${symbol} A+ long`, `${symbol} reached A+ long ${fmt(aplus)} — flush & reclaim`));
+        if (invalid != null) L.push(alertLine(invalid, `${symbol} invalidation`, `${symbol} hit invalidation ${fmt(invalid)} — long is off`));
+        L.push(alertLine(magnet, `${symbol} magnet`, `${symbol} reached the magnet ${fmt(magnet)}`));
+        if (targets.length) L.push(alertLine(targets[0], `${symbol} T1 target`, `${symbol} reached T1 target ${fmt(targets[0])}`));
+        if (shorts && shorts.length) L.push(alertLine(shorts[0], `${symbol} short`, `${symbol} reached rejection short ${fmt(shorts[0])}`));
+
         return res.type("text/plain").send(L.join("\n"));
       }
 

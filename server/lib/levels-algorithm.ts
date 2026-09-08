@@ -551,6 +551,7 @@ export interface PlanTrade {
   backups: number[];
   targets: number[];
   invalid: number | null;
+  shorts: number[];
 }
 
 /** The actual trade the plan calls — A+ failed-breakdown long, backups, upside
@@ -567,7 +568,7 @@ export function computePlanTrade(
   symbol: SymbolId,
   currentPrice?: number | null,
 ): PlanTrade {
-  if (magnet == null) return { aplus: null, backups: [], targets: [], invalid: null };
+  if (magnet == null) return { aplus: null, backups: [], targets: [], invalid: null, shorts: [] };
   const step = roundStepFor(symbol);
   const supPts = lv.swingSupportPoints ?? [];
   const longPts = pickSetupLevels(supPts, magnet, "below", step);
@@ -579,7 +580,10 @@ export function computePlanTrade(
   const invalid =
     supPts.filter((p) => p.price < entryFloor && p.tier !== "micro").sort((a, b) => b.price - a.price)[0]?.price ??
     (lv.dynamicZoneBottom ?? null);
-  return { aplus, backups, targets, invalid };
+  // Rejection shorts: resistances above the magnet (secondary, lower win-rate).
+  const resPts = (lv as any).swingResistancePoints ?? [];
+  const shorts = pickSetupLevels(resPts, magnet, "above", step).map((p) => p.price);
+  return { aplus, backups, targets, invalid, shorts };
 }
 
 /** Plain-English quality tag for a chosen setup level, distinguishing real
