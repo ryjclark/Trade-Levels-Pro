@@ -39,14 +39,18 @@ function cap(s: string): string {
 // the ranked level data and drops the R1-R4/S1-S4 ladder. Longs target the magnet;
 // shorts fade the first resistance back to the magnet, so no level is shown as both
 // a long target and a short at once. Falls back to a minimal line for older plans.
-export function formatAlgorithmPlan(plan: Plan, full = false): string {
+// Lean plan for BOTH Telegram and email: the trader-critical essentials only —
+// bias, magnet, dynamic zone, the single best long + best short, the rule, and a
+// pointer to the site. The full ladder, bias reasoning, backups, POC/value area
+// and the TradingView indicator all live on Today's Plan (tradelevelspro.com/terminal),
+// which stays the complete source of truth. Kept deliberately short and scannable.
+export function formatAlgorithmPlan(plan: Plan): string {
   const lv = (plan as any).levels as PlanLevels | null;
   const magnet = plan.magnet ?? lv?.magnet ?? null;
 
   // Failed-breakdown longs = supports below the magnet, rejection shorts =
   // resistances above it. Prefer the ranked swing points; if a plan has none,
-  // fall back to the S1-S4 / R1-R4 levels so we ALWAYS emit the clean compact
-  // plan and never the old pivot dump.
+  // fall back to the S1-S4 / R1-R4 levels so we ALWAYS have a best entry.
   const step = roundStepFor((plan.symbol as "ES" | "NQ") ?? "ES");
   let longPts: SwingPointData[] = [];
   let shortPts: SwingPointData[] = [];
@@ -61,100 +65,39 @@ export function formatAlgorithmPlan(plan: Plan, full = false): string {
     shortVals = [plan.r1, plan.r2, plan.r3, plan.r4].filter((v): v is number => v != null && v > magnet).slice(0, 3);
   }
 
+  const siteLine = "📊 Full plan + TradingView indicator → tradelevelspro.com/terminal";
+
   if (magnet == null || (longVals.length === 0 && shortVals.length === 0)) {
-    return `🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}\nLevels on the terminal: tradelevelspro.com/terminal`;
+    return `🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}\n${siteLine}`;
   }
 
-  const medals = ["🥇", "🥈", "🥉"];
   const L: string[] = [];
   L.push(`🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}`);
   L.push("");
   if (plan.bias) L.push(`Bias: ${cap(plan.bias)}`);
-  // Email mode (full): include the bias reasoning the on-site plan shows.
-  if (full && plan.biasReasoning) L.push(plan.biasReasoning);
   L.push(`Magnet: ${num(magnet)}`);
   L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
-  // Email mode (full): include the full Resistance/Support ladder from the site.
-  if (full) {
-    const res = [plan.r1, plan.r2, plan.r3, plan.r4]
-      .map((v, i) => (v != null ? `R${i + 1} ${num(v)}` : null))
-      .filter(Boolean);
-    const sup = [plan.s1, plan.s2, plan.s3, plan.s4]
-      .map((v, i) => (v != null ? `S${i + 1} ${num(v)}` : null))
-      .filter(Boolean);
-    if (res.length) L.push(`Resistance: ${res.join(" · ")}`);
-    if (sup.length) L.push(`Support: ${sup.join(" · ")}`);
-  }
-  // The full support/resistance map lives on the terminal (tradelevelspro.com/terminal).
-  // The alert stays lean: bias, zone, the setups, and targets.
+  L.push("");
 
-  // Momentum/breakout regime: patience plan — nearest-first supports (near shelf
-  // leads, A+ major flagged ⭐), targets ABOVE the magnet, shorts ABOVE the magnet
-  // only, all muted. Mirrors the on-site plan exactly.
   if (lv?.regime === "momentum" && longPts.length) {
+    // Momentum/breakout: patience, single A+ long, targets above the magnet.
     const priceRef = (plan as any).currentPrice ?? magnet;
-    const targets = pickMomentumTargets(
+    const target = pickMomentumTargets(
       (lv?.swingResistancePoints ?? []).map((p) => p.price),
       Math.max(priceRef, magnet),
       step * 0.8,
-    ).map((v) => num(v));
-    L.push("");
-    L.push("⚠️ Momentum/breakout — be patient. Don't chase up here.");
-    L.push("");
-    L.push("🟢 Failed-breakdown longs (wait for it to come to you)");
-    longPts.forEach((p, i) => {
-      if (i === 0) L.push(`${medals[0]} ⭐ ${num(p.price)} (A+) → flush and reclaim, long the failed breakdown`);
-      else L.push(`${medals[i]} ${num(p.price)}${p.tier === "major" ? " (deeper backup)" : ""}`);
-    });
-    if (targets.length) L.push(`Targets: ${targets.join(", ")}`);
-    L.push("Shallow dips are chases — no trade unless price flushes a level and reclaims.");
-    // Invalidation = the range low: nearest real support BELOW the near entries.
-    const dzBottom = lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom ?? magnet;
-    const entryFloor = longPts[Math.min(1, longPts.length - 1)].price;
-    const invalid =
-      (lv?.swingSupportPoints ?? [])
-        .filter((p) => p.price < entryFloor && p.tier !== "micro")
-        .sort((a, b) => b.price - a.price)[0]?.price ?? dzBottom;
-    L.push(`Invalidation: below ${num(invalid)} the long is off — breakdown-short territory (size down).`);
-    L.push("");
-    L.push("🔴 Rejection shorts (not the edge here — scalps only, if at all)");
-    if (shortPts.length) shortPts.forEach((p, i) => L.push(`${medals[i]} ${num(p.price)} → reject and fail, small scalp`));
-    else L.push("Small level-to-level scalps only.");
+    )[0];
+    L.push("⚠️ Momentum — be patient, don't chase.");
+    L.push(`🟢 Long ${num(longPts[0].price)} → flush + reclaim${target != null ? `, target ${num(target)}` : ""}`);
+    L.push("🔴 Shorts are scalps only up here.");
   } else {
-    if (longVals.length) {
-      L.push("");
-      L.push("🟢 Failed-breakdown longs (best first)");
-      longVals.forEach((v, i) => {
-        if (i === 0) L.push(`${medals[0]} ${num(v)} → flush and reclaim, long toward the magnet ${num(magnet)}`);
-        else L.push(`${medals[i]} ${num(v)} ${i === 1 ? "(backup)" : "(deeper)"}`);
-      });
-    }
-    if (shortVals.length) {
-      L.push("");
-      L.push("🔴 Rejection shorts (secondary)");
-      shortVals.forEach((v, i) => {
-        if (i === 0) L.push(`${medals[0]} ${num(v)} → reject and fail, short toward the magnet`);
-        else L.push(`${medals[i]} ${num(v)}`);
-      });
-    }
-  }
-
-  // Email mode (full): include the Top Long / Top Short write-ups from the site.
-  if (full) {
-    if (plan.topLongTrade) {
-      L.push("");
-      L.push(`🟢 Top Long: ${plan.topLongTrade}`);
-    }
-    if (plan.topShortTrade) {
-      if (!plan.topLongTrade) L.push("");
-      L.push(`🔴 Top Short: ${plan.topShortTrade}`);
-    }
+    if (longVals.length) L.push(`🟢 Long ${num(longVals[0])} → flush + reclaim, target ${num(magnet)}`);
+    if (shortVals.length) L.push(`🔴 Short ${num(shortVals[0])} → reject + fail, target ${num(magnet)}`);
   }
 
   L.push("");
-  L.push("Rule: wait for acceptance, then manage level to level.");
-  // Telegram (lean) points to the site for the complete plan; the email is full.
-  if (!full) L.push("Full plan — bias reasoning, all levels, top long/short: tradelevelspro.com/terminal");
+  L.push("Wait for acceptance, then manage level to level.");
+  L.push(siteLine);
   L.push("Educational only. Not investment advice.");
   return L.join("\n");
 }

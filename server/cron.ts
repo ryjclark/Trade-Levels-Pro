@@ -490,9 +490,9 @@ export async function sendDailyPlanEmails(): Promise<void> {
     const planDate = plans[0].date;
     const recipients = await storage.listDailyEmailRecipients(planDate);
     if (!recipients.length) return;
-    // Email carries the COMPLETE plan (bias reasoning, full ladder, top long/short)
-    // so it matches the on-site Today's Plan exactly. Telegram stays lean.
-    const texts = plans.map((p) => formatAlgorithmPlan(p, true));
+    // Email and Telegram both use the same lean plan (bias, magnet, zone, best
+    // long + short, site link). The full plan lives on Today's Plan.
+    const texts = plans.map((p) => formatAlgorithmPlan(p));
     let sent = 0;
     for (const email of recipients) {
       try {
@@ -518,7 +518,7 @@ export async function sendTestPlanEmail(to: string): Promise<void> {
     .filter((p): p is Plan => !!p);
   if (!plans.length) throw new Error("no published plans to preview");
   const planDate = plans[0].date;
-  const texts = plans.map((p) => formatAlgorithmPlan(p, true));
+  const texts = plans.map((p) => formatAlgorithmPlan(p));
   await sendDailyPlanDigest(to, texts, planDate);
 }
 
