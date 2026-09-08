@@ -100,7 +100,7 @@ export default function PublicSamplePage() {
 
             <p style={{ textAlign: "center", fontSize: 13, opacity: 0.6, maxWidth: 640, margin: "18px auto 0" }}>
               Numbers are illustrative examples, the format is exactly what gets sent. On the
-              on-site plan you also get the full support/resistance ladder and the live
+              Today's Plan you also get the full support/resistance ladder and the live
               chart. The optional TradingView overlay lets you copy these levels onto your own
               chart (re-copy when each new plan posts).
             </p>

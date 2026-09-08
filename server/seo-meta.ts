@@ -15,7 +15,7 @@ export interface RouteMeta {
 }
 
 const DEFAULT_DESC =
-  "Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, and a full S/R ladder, delivered to Telegram and the on-site plan after the close.";
+  "Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, and a full S/R ladder, delivered to Telegram and Today's Plan after the close.";
 
 // Exact-path routes.
 const STATIC: Record<string, RouteMeta> = {
@@ -26,7 +26,7 @@ const STATIC: Record<string, RouteMeta> = {
   "/pricing": {
     title: "Pricing | Trade Levels Pro",
     description:
-      "Simple monthly or annual access to the daily ES and NQ trade plans, the on-site plan, plus an optional TradingView overlay. Cancel anytime.",
+      "Simple monthly or annual access to the daily ES and NQ trade plans, Today's Plan, plus an optional TradingView overlay. Cancel anytime.",
   },
   "/sample": {
     title: "Sample Daily Plan | Trade Levels Pro",
@@ -36,7 +36,7 @@ const STATIC: Record<string, RouteMeta> = {
   "/how-it-works": {
     title: "How It Works | Trade Levels Pro",
     description:
-      "How the daily ES and NQ trade plans are built and delivered: levels after the cash close, to Telegram and the on-site plan, plus an optional TradingView overlay you copy in.",
+      "How the daily ES and NQ trade plans are built and delivered: levels after the cash close, to Telegram and Today's Plan, plus an optional TradingView overlay you copy in.",
   },
   "/track-record": {
     title: "Track Record | Trade Levels Pro",
@@ -194,7 +194,7 @@ const NAV_LINKS: Array<[string, string]> = [
   ["/how-it-works", "How it works"],
   ["/track-record", "Track record"],
   ["/learn", "Learn"],
-  ["/terminal", "Today's plan"],
+  ["/terminal", "Today's Plan"],
   ["/about", "About"],
 ];
 
@@ -203,14 +203,14 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
     h1: "Daily ES and NQ levels for traders who prepare, then react.",
     paras: [
       "Trade Levels Pro publishes a daily ES and NQ futures trade plan after the cash close: the Magnet, the Dynamic Zone, ranked reaction levels, a directional bias, and one to two ranked setups (failed-breakdown longs and rejection shorts), each with clear invalidation.",
-      "Plans are delivered to a private Telegram channel and the on-site plan, with Gold, Crude, and Russell included. $49/month or $490/year, cancel anytime. Educational content only, not investment advice.",
+      "Plans are delivered to a private Telegram channel and Today's Plan, with Gold, Crude, and Russell included. $49/month or $490/year, cancel anytime. Educational content only, not investment advice.",
     ],
   },
   "/pricing": {
     h1: "Pricing",
     paras: [
       "One simple plan: $49 per month or $490 per year. Cancel anytime.",
-      "You get the daily ES and NQ trade plan (plus Gold, Crude, and Russell): Magnet, Dynamic Zone, ranked reaction levels, a daily bias, and ranked failed-breakdown longs plus rejection shorts, delivered to Telegram and the on-site plan. An optional TradingView overlay lets you copy the levels onto your own chart; re-copy when each new plan posts.",
+      "You get the daily ES and NQ trade plan (plus Gold, Crude, and Russell): Magnet, Dynamic Zone, ranked reaction levels, a daily bias, and ranked failed-breakdown longs plus rejection shorts, delivered to Telegram and Today's Plan. An optional TradingView overlay lets you copy the levels onto your own chart; re-copy when each new plan posts.",
     ],
   },
   "/sample": {
@@ -218,7 +218,7 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
     paras: [
       "This is the actual message members receive in Telegram each trading day, for ES and NQ (numbers are illustrative examples).",
       "ES Trade Plan. Bias: Bullish. Magnet: 7,496. Dynamic Zone: 7,475 to 7,517. Failed-breakdown longs (best first): 7,427 flush and reclaim, long toward the magnet; 7,399 backup; 7,372 deeper. Rejection shorts (secondary): 7,517 reject and fail, short toward the magnet; 7,547. Rule: wait for acceptance, then manage level to level.",
-      "You get a separate plan for each market, ES and NQ, every trading day. On the on-site plan you also get the full support and resistance ladder and the live chart.",
+      "You get a separate plan for each market, ES and NQ, every trading day. On Today's Plan you also get the full support and resistance ladder and the live chart.",
     ],
   },
   "/prop-firms": {
@@ -231,13 +231,14 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
   "/how-it-works": {
     h1: "How it works",
     paras: [
-      "After the cash close each trading day, Trade Levels Pro defines the next session's Magnet, Dynamic Zone, ranked reaction levels, and bias, then publishes the plan to Telegram and the on-site plan so you can prepare before the open and react to price instead of predicting.",
+      "After the cash close each trading day, Trade Levels Pro defines the next session's Magnet, Dynamic Zone, ranked reaction levels, and bias, then publishes the plan to Telegram and Today's Plan so you can prepare before the open and react to price instead of predicting.",
     ],
   },
   "/track-record": {
     h1: "Track record",
     paras: [
-      "A running record of how the published daily ES and NQ levels performed, measured from each session's open, high, low, and close.",
+      "A running, automatically-scored record of how the published daily ES and NQ levels actually performed, measured from each session's open, high, low, and close, with no cherry-picking.",
+      "The headline is the target-hit rate: how often the first upside target was reached. We also report the failed-breakdown reclaim rate, support and resistance tag rates, and the number of sessions counted. These are level-interaction statistics measured from OHLC data, not trading results or account performance, and past performance is not indicative of future results.",
     ],
   },
   "/learn": {

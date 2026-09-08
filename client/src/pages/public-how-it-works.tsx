@@ -159,7 +159,7 @@ export default function PublicHowItWorksPage() {
             <div className="public-steps">
               <div className="public-step">
                 <div className="public-step-num">1</div>
-                <p>Subscribe once to access the private Telegram channel and the on-site plan.</p>
+                <p>Subscribe once to access the private Telegram channel and Today's Plan.</p>
               </div>
               <div className="public-step">
                 <div className="public-step-num">2</div>
