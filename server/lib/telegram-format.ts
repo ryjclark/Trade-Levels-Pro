@@ -39,64 +39,55 @@ function cap(s: string): string {
 // the ranked level data and drops the R1-R4/S1-S4 ladder. Longs target the magnet;
 // shorts fade the first resistance back to the magnet, so no level is shown as both
 // a long target and a short at once. Falls back to a minimal line for older plans.
-// Lean plan for BOTH Telegram and email: the trader-critical essentials only —
-// bias, magnet, dynamic zone, the single best long + best short, the rule, and a
-// pointer to the site. The full ladder, bias reasoning, backups, POC/value area
-// and the TradingView indicator all live on Today's Plan (tradelevelspro.com/terminal),
-// which stays the complete source of truth. Kept deliberately short and scannable.
+// The plan for BOTH Telegram and email mirrors the on-site "Trade Plan" panel:
+// bias + reasoning, the Top Long and Top Short write-ups (ranked setups + entry
+// rules), anchored by the magnet + dynamic zone. We intentionally OMIT the raw
+// "Detected reaction levels" S/R ladder (Ryan: "too hard to read") — that plus
+// the POC/value area and the TradingView indicator live on Today's Plan.
 export function formatAlgorithmPlan(plan: Plan): string {
   const lv = (plan as any).levels as PlanLevels | null;
   const magnet = plan.magnet ?? lv?.magnet ?? null;
-
-  // Failed-breakdown longs = supports below the magnet, rejection shorts =
-  // resistances above it. Prefer the ranked swing points; if a plan has none,
-  // fall back to the S1-S4 / R1-R4 levels so we ALWAYS have a best entry.
-  const step = roundStepFor((plan.symbol as "ES" | "NQ") ?? "ES");
-  let longPts: SwingPointData[] = [];
-  let shortPts: SwingPointData[] = [];
-  if (lv?.swingSupportPoints && magnet != null) longPts = rankSide(lv.swingSupportPoints, magnet, "below", step);
-  if (lv?.swingResistancePoints && magnet != null) shortPts = rankSide(lv.swingResistancePoints, magnet, "above", step);
-  let longVals: number[] = longPts.map((p) => p.price);
-  let shortVals: number[] = shortPts.map((p) => p.price);
-  if (!longVals.length && magnet != null) {
-    longVals = [plan.s1, plan.s2, plan.s3, plan.s4].filter((v): v is number => v != null && v < magnet).slice(0, 3);
-  }
-  if (!shortVals.length && magnet != null) {
-    shortVals = [plan.r1, plan.r2, plan.r3, plan.r4].filter((v): v is number => v != null && v > magnet).slice(0, 3);
-  }
-
   const siteLine = "📊 Full plan + TradingView indicator → tradelevelspro.com/terminal";
-
-  if (magnet == null || (longVals.length === 0 && shortVals.length === 0)) {
-    return `🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}\n${siteLine}`;
-  }
 
   const L: string[] = [];
   L.push(`🤖 ${plan.symbol} Trade Plan · ${plainDate(plan.date)}`);
   L.push("");
   if (plan.bias) L.push(`Bias: ${cap(plan.bias)}`);
-  L.push(`Magnet: ${num(magnet)}`);
-  L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
-  L.push("");
+  if (plan.biasReasoning) L.push(plan.biasReasoning.trim());
 
-  if (lv?.regime === "momentum" && longPts.length) {
-    // Momentum/breakout: patience, single A+ long, targets above the magnet.
-    const priceRef = (plan as any).currentPrice ?? magnet;
-    const target = pickMomentumTargets(
-      (lv?.swingResistancePoints ?? []).map((p) => p.price),
-      Math.max(priceRef, magnet),
-      step * 0.8,
-    )[0];
-    L.push("⚠️ Momentum — be patient, don't chase.");
-    L.push(`🟢 Long ${num(longPts[0].price)} → flush + reclaim${target != null ? `, target ${num(target)}` : ""}`);
-    L.push("🔴 Shorts are scalps only up here.");
-  } else {
+  if (magnet != null) {
+    L.push("");
+    L.push(`Magnet: ${num(magnet)}`);
+    L.push(`Dynamic Zone: ${num(lv?.dynamicZoneBottom ?? plan.dynamicZoneBottom)} – ${num(lv?.dynamicZoneTop ?? plan.dynamicZoneTop)}`);
+  }
+
+  // Primary path: the stored Top Long / Top Short write-ups the site renders.
+  if (plan.topLongTrade || plan.topShortTrade) {
+    if (plan.topLongTrade) {
+      L.push("");
+      L.push("🟢 Top Long");
+      L.push(plan.topLongTrade.trim());
+    }
+    if (plan.topShortTrade) {
+      L.push("");
+      L.push("🔴 Top Short");
+      L.push(plan.topShortTrade.trim());
+    }
+  } else if (magnet != null) {
+    // Fallback for plans without stored write-ups: single best long + short.
+    const step = roundStepFor((plan.symbol as "ES" | "NQ") ?? "ES");
+    let longVals: number[] = [];
+    let shortVals: number[] = [];
+    if (lv?.swingSupportPoints) longVals = rankSide(lv.swingSupportPoints, magnet, "below", step).map((p) => p.price);
+    if (lv?.swingResistancePoints) shortVals = rankSide(lv.swingResistancePoints, magnet, "above", step).map((p) => p.price);
+    if (!longVals.length) longVals = [plan.s1, plan.s2, plan.s3, plan.s4].filter((v): v is number => v != null && v < magnet);
+    if (!shortVals.length) shortVals = [plan.r1, plan.r2, plan.r3, plan.r4].filter((v): v is number => v != null && v > magnet);
+    L.push("");
     if (longVals.length) L.push(`🟢 Long ${num(longVals[0])} → flush + reclaim, target ${num(magnet)}`);
     if (shortVals.length) L.push(`🔴 Short ${num(shortVals[0])} → reject + fail, target ${num(magnet)}`);
   }
 
   L.push("");
-  L.push("Wait for acceptance, then manage level to level.");
   L.push(siteLine);
   L.push("Educational only. Not investment advice.");
   return L.join("\n");
