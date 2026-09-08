@@ -368,6 +368,18 @@ export const insertMemberSchema = createInsertSchema(members).omit({
 export type InsertMember = z.infer<typeof insertMemberSchema>;
 export type Member = typeof members.$inferSelect;
 
+// Per-member email delivery preference (opt-in daily plan email). Kept in its
+// OWN table (not a members column) so it can never break the critical members
+// queries, and created idempotently on boot via CREATE TABLE IF NOT EXISTS since
+// the deploy pipeline runs no migrations. lastEmailedDate dedups to one send/day.
+export const memberEmailPrefs = pgTable("member_email_prefs", {
+  email: text("email").primaryKey(),
+  dailyEmail: boolean("daily_email").notNull().default(true),
+  lastEmailedDate: text("last_emailed_date"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type MemberEmailPref = typeof memberEmailPrefs.$inferSelect;
+
 export const previews = pgTable("previews", {
   id: serial("id").primaryKey(),
   email: text("email").notNull(),

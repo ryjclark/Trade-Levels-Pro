@@ -38,6 +38,8 @@ export default function PublicAccountPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dailyEmail, setDailyEmail] = useState<boolean | null>(null);
+  const [emailSaving, setEmailSaving] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -55,6 +57,12 @@ export default function PublicAccountPage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    fetch("/api/member/email-pref", { headers: { authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("failed"))))
+      .then((d: { dailyEmail: boolean }) => {
+        if (!cancelled) setDailyEmail(!!d.dailyEmail);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -62,6 +70,28 @@ export default function PublicAccountPage() {
 
   // Once the stored token has been validated, send guests to login.
   if (checked && !isMember) return <Redirect to="/member-login" />;
+
+  const toggleDailyEmail = async () => {
+    const next = !dailyEmail;
+    setEmailSaving(true);
+    setDailyEmail(next); // optimistic
+    try {
+      const r = await fetch("/api/member/email-pref", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ dailyEmail: next }),
+      });
+      if (!r.ok) {
+        setDailyEmail(!next); // revert
+        setError("Could not save your email preference.");
+      }
+    } catch {
+      setDailyEmail(!next);
+      setError("Could not save your email preference.");
+    } finally {
+      setEmailSaving(false);
+    }
+  };
 
   const getInvite = async () => {
     setError(null);
@@ -232,6 +262,52 @@ export default function PublicAccountPage() {
                   </p>
                 </>
               )}
+            </div>
+
+            {/* Delivery preference */}
+            <div style={cardStyle} data-testid="card-delivery">
+              <div style={rowStyle}>
+                <div style={{ maxWidth: 420 }}>
+                  <div style={{ fontSize: 13, opacity: 0.6 }}>Delivery</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, marginTop: 2 }}>Email me the daily plan</div>
+                  <div style={{ fontSize: 13, opacity: 0.7, lineHeight: 1.6, marginTop: 4 }}>
+                    Get each day's ES and NQ plan in your inbox after the close, on by default,
+                    in addition to Telegram and the site (no Telegram required). Turn it off here
+                    anytime.
+                  </div>
+                </div>
+                <button
+                  onClick={toggleDailyEmail}
+                  disabled={dailyEmail === null || emailSaving}
+                  role="switch"
+                  aria-checked={!!dailyEmail}
+                  data-testid="toggle-daily-email"
+                  style={{
+                    flexShrink: 0,
+                    width: 52,
+                    height: 30,
+                    borderRadius: 999,
+                    border: "none",
+                    cursor: dailyEmail === null ? "wait" : "pointer",
+                    background: dailyEmail ? "var(--teal, #5EEAD4)" : "rgba(255,255,255,0.18)",
+                    position: "relative",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 3,
+                      left: dailyEmail ? 25 : 3,
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: "#0b0e14",
+                      transition: "left 0.15s",
+                    }}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* Quick links */}

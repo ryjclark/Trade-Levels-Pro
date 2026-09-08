@@ -1,6 +1,6 @@
 import { eq, and, desc, lte, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, members, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, memberEmailPrefs, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
 import { PUBLIC_PLAN_SOURCES } from "@shared/constants";
 
 export interface IStorage {
@@ -23,6 +23,10 @@ export interface IStorage {
   markMemberJoinedByInvite(inviteLink: string): Promise<Member | undefined>;
   markMemberInactiveBySubscription(subscriptionId: string): Promise<void>;
   listMembers(limit?: number): Promise<Member[]>;
+  getMemberEmailPref(email: string): Promise<boolean>;
+  setMemberEmailPref(email: string, dailyEmail: boolean): Promise<void>;
+  listDailyEmailRecipients(planDate: string): Promise<string[]>;
+  markMemberEmailed(email: string, planDate: string): Promise<void>;
   listDueScheduledPlans(now: Date): Promise<Plan[]>;
   claimScheduledPlan(id: number): Promise<Plan | undefined>;
   listPublicPlans(limit?: number): Promise<Plan[]>;
@@ -285,6 +289,61 @@ export class DatabaseStorage implements IStorage {
 
   async listMembers(limit: number = 200): Promise<Member[]> {
     return db.select().from(members).orderBy(desc(members.createdAt)).limit(limit);
+  }
+
+  // ----- Member email preference (opt-in daily plan email) -----
+
+  // Daily email is ON by default (paying members get the plan they bought); a
+  // row with daily_email=false means they explicitly opted out.
+  async getMemberEmailPref(email: string): Promise<boolean> {
+    const rows = await db
+      .select()
+      .from(memberEmailPrefs)
+      .where(eq(memberEmailPrefs.email, email.toLowerCase()))
+      .limit(1);
+    return rows[0]?.dailyEmail ?? true;
+  }
+
+  async setMemberEmailPref(email: string, dailyEmail: boolean): Promise<void> {
+    const e = email.toLowerCase();
+    await db
+      .insert(memberEmailPrefs)
+      .values({ email: e, dailyEmail, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: memberEmailPrefs.email,
+        set: { dailyEmail, updatedAt: new Date() },
+      });
+  }
+
+  // Every ACTIVE member gets the daily email UNLESS they explicitly opted out
+  // (daily_email=false). Members with no pref row are on by default. Deduped to
+  // one send per plan date even if the cron fires more than once.
+  async listDailyEmailRecipients(planDate: string): Promise<string[]> {
+    const rows = await db
+      .select({
+        email: members.email,
+        dailyEmail: memberEmailPrefs.dailyEmail,
+        last: memberEmailPrefs.lastEmailedDate,
+      })
+      .from(members)
+      .leftJoin(memberEmailPrefs, eq(memberEmailPrefs.email, members.email))
+      .where(eq(members.status, "active"));
+    return rows
+      .filter((r) => r.dailyEmail !== false) // default on unless explicitly opted out
+      .filter((r) => !r.last || r.last < planDate)
+      .map((r) => r.email);
+  }
+
+  // Upsert so a default-on member (no row yet) gets a row stamped with the date.
+  async markMemberEmailed(email: string, planDate: string): Promise<void> {
+    const e = email.toLowerCase();
+    await db
+      .insert(memberEmailPrefs)
+      .values({ email: e, dailyEmail: true, lastEmailedDate: planDate, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: memberEmailPrefs.email,
+        set: { lastEmailedDate: planDate },
+      });
   }
 
   async markMemberInactiveBySubscription(subscriptionId: string): Promise<void> {

@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v55", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v56", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1439,6 +1439,28 @@ export async function registerRoutes(
     } catch (err) {
       console.error("member telegram-invite error:", err);
       res.status(500).json({ error: "Could not create invite" });
+    }
+  });
+
+  // Opt-in daily-plan email preference.
+  app.get("/api/member/email-pref", requireMember, async (req: MemberAuthRequest, res) => {
+    try {
+      const dailyEmail = await storage.getMemberEmailPref((req.memberEmail || "").toLowerCase());
+      res.json({ dailyEmail });
+    } catch (err) {
+      console.error("get email-pref error:", err);
+      res.status(500).json({ error: "Could not load preference" });
+    }
+  });
+
+  app.post("/api/member/email-pref", requireMember, async (req: MemberAuthRequest, res) => {
+    try {
+      const dailyEmail = !!req.body?.dailyEmail;
+      await storage.setMemberEmailPref((req.memberEmail || "").toLowerCase(), dailyEmail);
+      res.json({ ok: true, dailyEmail });
+    } catch (err) {
+      console.error("set email-pref error:", err);
+      res.status(500).json({ error: "Could not save preference" });
     }
   });
 

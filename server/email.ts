@@ -182,6 +182,20 @@ export async function sendDailyPlanEmail(
   });
 }
 
+// Opt-in daily digest: emails the exact Telegram plan text (already formatted by
+// formatAlgorithmPlan) so email/site/Telegram all say the same thing.
+export async function sendDailyPlanDigest(email: string, planText: string): Promise<void> {
+  const esc = planText.replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"));
+  await sendEmail({
+    to: email,
+    subject: "Your daily trade plan — Trade Levels Pro",
+    html:
+      `<div style="font-family:ui-monospace,Menlo,Consolas,monospace;max-width:600px;margin:0 auto;color:#111;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;">${esc}</div>` +
+      `<p style="font-family:Inter,Arial,sans-serif;color:#666;font-size:12px;max-width:600px;margin:16px auto 0;">You're getting this because you turned on daily-plan email. Manage it anytime under Today's Plan settings at <a href="https://tradelevelspro.com/account">tradelevelspro.com/account</a>. Educational content only, not investment advice.</p>`,
+    text: `${planText}\n\nManage email delivery at https://tradelevelspro.com/account`,
+  });
+}
+
 export async function sendWeeklyPreview(
   emailList: string[],
   planSnapshot: Plan

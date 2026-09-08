@@ -4,9 +4,11 @@ import { sendTelegramMessage } from "./telegram";
 import { formatTelegramPro, escapeMdV2 } from "./formatter";
 import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars, channelSymbols, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import { deliverToSubscribers } from "./lib/telegram-bot";
+import { formatAlgorithmPlan } from "./lib/telegram-format";
+import { sendDailyPlanDigest } from "./email";
 import { postToX } from "./lib/twitter";
 import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
-import type { PlanLevels } from "@shared/schema";
+import type { PlanLevels, Plan } from "@shared/schema";
 
 /** Today's date as YYYY-MM-DD in America/New_York. */
 function nyToday(): string {
@@ -475,8 +477,39 @@ export async function runIntradayTick() {
 export async function runResultsTick() {
   await fetchAndStoreDailyResults();
 }
+// Opt-in daily email: after the next-session plans are published, email the
+// featured (ES/NQ) plan(s) — the exact Telegram text — to members who turned it
+// on. Deduped to one send per plan date, best-effort, defaults to nobody.
+export async function sendDailyPlanEmails(): Promise<void> {
+  try {
+    const pubs = await storage.listPublicPlans(50);
+    const plans = channelSymbols()
+      .map((s) => pubs.find((p) => p.symbol === s))
+      .filter((p): p is Plan => !!p);
+    if (!plans.length) return;
+    const planDate = plans[0].date;
+    const recipients = await storage.listDailyEmailRecipients(planDate);
+    if (!recipients.length) return;
+    const text = plans.map((p) => formatAlgorithmPlan(p)).join("\n\n———\n\n");
+    let sent = 0;
+    for (const email of recipients) {
+      try {
+        await sendDailyPlanDigest(email, text);
+        await storage.markMemberEmailed(email, planDate);
+        sent++;
+      } catch (err) {
+        console.error(`[daily-email] failed for ${email}:`, err);
+      }
+    }
+    console.log(`[daily-email] sent to ${sent}/${recipients.length} member(s) for ${planDate}`);
+  } catch (err) {
+    console.error("[daily-email] error:", err);
+  }
+}
+
 export async function runGenerateTick() {
   await generateAndPublishLevels();
+  await sendDailyPlanEmails();
   await postDailyBriefToTelegram();
 }
 
@@ -502,6 +535,7 @@ export function registerCronJobs() {
     "15 17 * * 1-5",
     () => {
       generateAndPublishLevels()
+        .then(() => sendDailyPlanEmails())
         .then(() => postDailyBriefToTelegram())
         .catch((e) => console.error("[cron] levels generation error:", e));
     },

@@ -102,6 +102,11 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
   
+  const { ensureAuxTables } = await import("./db");
+  await ensureAuxTables().catch(err => {
+    console.error("Failed to ensure aux tables:", err);
+  });
+
   await seedDatabase().catch(err => {
     console.error("Failed to seed database:", err);
   });
