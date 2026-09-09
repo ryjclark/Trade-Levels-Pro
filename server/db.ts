@@ -33,4 +33,11 @@ export async function ensureAuxTables(): Promise<void> {
       joined_at timestamptz NOT NULL DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS member_access_expiry (
+      email text PRIMARY KEY,
+      expires_at timestamptz NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
 }

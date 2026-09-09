@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v66", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v67", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1293,7 +1293,13 @@ export async function registerRoutes(
   app.get("/api/admin/members", requireAdmin, async (_req, res) => {
     try {
       const list = await storage.listMembers(200);
-      res.json(list);
+      const expiries = await storage.listAccessExpiries();
+      const expMap = new Map(expiries.map((e) => [e.email.toLowerCase(), e.expiresAt]));
+      const withExpiry = list.map((m) => ({
+        ...m,
+        accessExpiresAt: expMap.get(m.email.toLowerCase()) ?? null,
+      }));
+      res.json(withExpiry);
     } catch (err) {
       console.error("list members error:", err);
       res.status(500).json({ error: "Failed to load members" });
@@ -1316,16 +1322,53 @@ export async function registerRoutes(
     }
   });
 
-  // Manually re-activate a member (e.g. after a resolved billing issue).
+  // Manually re-activate a member (e.g. after a resolved billing issue). This is
+  // PERMANENT activation, so any complimentary expiry is cleared.
   app.post("/api/admin/members/activate", requireAdmin, async (req, res) => {
     try {
       const email = String(req.body?.email || "").trim().toLowerCase();
       if (!email) return res.status(400).json({ error: "email required" });
       const member = await storage.setMemberActiveByEmail(email);
+      await storage.clearMemberAccessExpiry(email);
       res.json({ ok: true, member });
     } catch (err) {
       console.error("activate member error:", err);
       res.status(500).json({ error: "Failed to activate member" });
+    }
+  });
+
+  // Grant complimentary access for N months (default 2): activate, set an expiry
+  // date (auto-deactivates via the nightly job), and email the login link + invite.
+  app.post("/api/admin/members/comp", requireAdmin, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return res.status(400).json({ error: "Enter a valid email." });
+      }
+      const months = Math.min(24, Math.max(1, Number(req.body?.months) || 2));
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + months);
+      await storage.setMemberActiveByEmail(email);
+      await storage.setMemberAccessExpiry(email, expiresAt);
+      // Best-effort Telegram invite so the access email includes it.
+      let inviteLink: string | null = null;
+      try {
+        inviteLink = await regenerateMemberInvite(email);
+      } catch (e) {
+        console.warn("comp: invite refresh failed (continuing):", e);
+      }
+      const member = await storage.getMemberByEmail(email);
+      if (member) {
+        try {
+          await sendWelcomeEmail(member, inviteLink ?? member.telegramInviteLink ?? null);
+        } catch (e) {
+          console.error("comp: welcome email failed:", e);
+        }
+      }
+      res.json({ ok: true, email, months, expiresAt: expiresAt.toISOString() });
+    } catch (err) {
+      console.error("comp member error:", err);
+      res.status(500).json({ error: "Failed to grant complimentary access" });
     }
   });
 

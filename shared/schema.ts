@@ -391,6 +391,17 @@ export const telegramMembers = pgTable("telegram_members", {
 });
 export type TelegramMember = typeof telegramMembers.$inferSelect;
 
+// Complimentary / trial access with an end date. A row here means the member's
+// access is time-limited; a nightly job deactivates them once expiresAt passes.
+// Aux table (created on boot via CREATE TABLE IF NOT EXISTS) so it never touches
+// the critical members schema. Paying members have no row.
+export const memberAccessExpiry = pgTable("member_access_expiry", {
+  email: text("email").primaryKey(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type MemberAccessExpiry = typeof memberAccessExpiry.$inferSelect;
+
 export const previews = pgTable("previews", {
   id: serial("id").primaryKey(),
   email: text("email").notNull(),

@@ -1,6 +1,6 @@
-import { eq, and, desc, lte, isNotNull } from "drizzle-orm";
+import { eq, and, desc, lte, lt, isNotNull } from "drizzle-orm";
 import { db } from "./db";
-import { plans, publishLogs, siteSettings, previews, members, memberEmailPrefs, telegramMembers, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
+import { plans, publishLogs, siteSettings, previews, members, memberEmailPrefs, telegramMembers, memberAccessExpiry, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
 import { PUBLIC_PLAN_SOURCES } from "@shared/constants";
 
 export interface IStorage {
@@ -25,6 +25,12 @@ export interface IStorage {
   setMemberTelegramUserId(email: string, telegramUserId: string): Promise<void>;
   getMemberTelegramUserId(email: string): Promise<string | null>;
   setMemberStripeCustomerId(email: string, stripeCustomerId: string): Promise<void>;
+  setMemberInactiveByEmail(email: string): Promise<void>;
+  setMemberAccessExpiry(email: string, expiresAt: Date): Promise<void>;
+  clearMemberAccessExpiry(email: string): Promise<void>;
+  getMemberAccessExpiry(email: string): Promise<Date | null>;
+  listAccessExpiries(): Promise<{ email: string; expiresAt: Date }[]>;
+  listDueExpiries(now: Date): Promise<string[]>;
   listMembers(limit?: number): Promise<Member[]>;
   getMemberEmailPref(email: string): Promise<boolean>;
   setMemberEmailPref(email: string, dailyEmail: boolean): Promise<void>;
@@ -386,6 +392,46 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ stripeCustomerId })
       .where(eq(members.email, email));
+  }
+
+  // ----- Complimentary / trial access with an auto-expiry date -----
+
+  async setMemberInactiveByEmail(email: string): Promise<void> {
+    await db.update(members).set({ status: "inactive" }).where(eq(members.email, email.toLowerCase()));
+  }
+
+  async setMemberAccessExpiry(email: string, expiresAt: Date): Promise<void> {
+    const e = email.toLowerCase();
+    await db
+      .insert(memberAccessExpiry)
+      .values({ email: e, expiresAt })
+      .onConflictDoUpdate({ target: memberAccessExpiry.email, set: { expiresAt } });
+  }
+
+  async clearMemberAccessExpiry(email: string): Promise<void> {
+    await db.delete(memberAccessExpiry).where(eq(memberAccessExpiry.email, email.toLowerCase()));
+  }
+
+  async getMemberAccessExpiry(email: string): Promise<Date | null> {
+    const rows = await db
+      .select()
+      .from(memberAccessExpiry)
+      .where(eq(memberAccessExpiry.email, email.toLowerCase()))
+      .limit(1);
+    return rows[0]?.expiresAt ?? null;
+  }
+
+  async listAccessExpiries(): Promise<{ email: string; expiresAt: Date }[]> {
+    return db.select({ email: memberAccessExpiry.email, expiresAt: memberAccessExpiry.expiresAt }).from(memberAccessExpiry);
+  }
+
+  // Emails whose complimentary access has run out (for the nightly expiry job).
+  async listDueExpiries(now: Date): Promise<string[]> {
+    const rows = await db
+      .select({ email: memberAccessExpiry.email })
+      .from(memberAccessExpiry)
+      .where(lt(memberAccessExpiry.expiresAt, now));
+    return rows.map((r) => r.email);
   }
 
   async listDueScheduledPlans(now: Date): Promise<Plan[]> {

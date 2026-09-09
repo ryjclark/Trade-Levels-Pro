@@ -567,7 +567,39 @@ export function registerCronJobs() {
     { timezone: "America/New_York" } as any,
   );
 
-  console.log(
-    "[cron] Registered scheduled-publish (every minute) + daily-results + recap (5pm ET) + self-generating levels (5:15pm ET) + intraday level-hit alerts (2min, opt-in)",
+  // 3:10 AM America/New_York, daily — end complimentary/trial access that has
+  // reached its expiry date (deactivates the member).
+  cron.schedule(
+    "10 3 * * *",
+    () => {
+      expireCompAccess().catch((e) => console.error("[cron] comp-expiry error:", e));
+    },
+    { timezone: "America/New_York" } as any,
   );
+
+  console.log(
+    "[cron] Registered scheduled-publish (every minute) + daily-results + recap (5pm ET) + self-generating levels (5:15pm ET) + intraday level-hit alerts (2min, opt-in) + comp-expiry (3:10am ET)",
+  );
+}
+
+// Deactivate members whose complimentary/trial access has expired. Idempotent:
+// clears the expiry row after deactivating so it never re-processes.
+export async function expireCompAccess(): Promise<void> {
+  try {
+    const due = await storage.listDueExpiries(new Date());
+    if (!due.length) return;
+    let count = 0;
+    for (const email of due) {
+      try {
+        await storage.setMemberInactiveByEmail(email);
+        await storage.clearMemberAccessExpiry(email);
+        count++;
+      } catch (err) {
+        console.error(`[comp-expiry] failed for ${email}:`, err);
+      }
+    }
+    console.log(`[comp-expiry] deactivated ${count} expired complimentary member(s)`);
+  } catch (err) {
+    console.error("[comp-expiry] error:", err);
+  }
 }

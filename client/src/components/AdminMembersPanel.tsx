@@ -16,6 +16,7 @@ interface Member {
   createdAt: string;
   telegramInviteLink: string | null;
   telegramJoinedAt: string | null;
+  accessExpiresAt: string | null;
 }
 
 interface Health {
@@ -108,6 +109,21 @@ export default function AdminMembersPanel() {
     },
     onError: (err: any) => {
       toast({ title: "Could not send access email", description: err?.message || "Error", variant: "destructive" });
+    },
+  });
+
+  const compMutation = useMutation({
+    mutationFn: async (e: string) => {
+      const res = await apiRequest("POST", "/api/admin/members/comp", { email: e, months: 2 });
+      return (await res.json()) as { expiresAt: string };
+    },
+    onSuccess: (data, e) => {
+      const until = new Date(data.expiresAt).toLocaleDateString();
+      toast({ title: "2 months comp granted", description: `${e} is active until ${until} and was emailed their login link.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/members"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not grant comp", description: err?.message || "Error", variant: "destructive" });
     },
   });
 
@@ -232,6 +248,11 @@ export default function AdminMembersPanel() {
                       >
                         {m.status}
                       </Badge>
+                      {m.accessExpiresAt && (
+                        <div className="text-[11px] text-amber-300/80 mt-1" data-testid={`comp-until-${m.id}`}>
+                          comp until {new Date(m.accessExpiresAt).toLocaleDateString()}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-xs text-white/60">
                       {m.telegramJoinedAt
@@ -261,6 +282,16 @@ export default function AdminMembersPanel() {
                           title="Activate + email the login link and Telegram invite (they'll also get the daily plan email)"
                         >
                           <Send className="w-3.5 h-3.5 mr-1" /> Email access
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => compMutation.mutate(m.email)}
+                          disabled={compMutation.isPending}
+                          data-testid={`button-comp-${m.id}`}
+                          title="Grant 2 months complimentary access (auto-expires) and email their login link"
+                        >
+                          Comp 2mo
                         </Button>
                         {m.status !== "active" && (
                           <Button

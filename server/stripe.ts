@@ -88,6 +88,9 @@ async function provisionMemberAccess(args: {
   subscriptionId: string | null;
 }): Promise<{ member: Member; inviteCreatedNow: boolean }> {
   const email = args.email.toLowerCase();
+  // A real payment supersedes any complimentary/trial window, so clear the
+  // expiry to make sure the nightly job never deactivates a paying member.
+  await storage.clearMemberAccessExpiry(email).catch(() => {});
   let member = await storage.getMemberByEmail(email);
 
   if (!member) {
