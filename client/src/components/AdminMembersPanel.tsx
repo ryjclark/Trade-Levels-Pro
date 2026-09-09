@@ -113,19 +113,31 @@ export default function AdminMembersPanel() {
   });
 
   const compMutation = useMutation({
-    mutationFn: async (e: string) => {
-      const res = await apiRequest("POST", "/api/admin/members/comp", { email: e, months: 2 });
-      return (await res.json()) as { expiresAt: string };
+    mutationFn: async ({ email: e, months }: { email: string; months: number }) => {
+      const res = await apiRequest("POST", "/api/admin/members/comp", { email: e, months });
+      return (await res.json()) as { expiresAt: string; months: number };
     },
-    onSuccess: (data, e) => {
+    onSuccess: (data, vars) => {
       const until = new Date(data.expiresAt).toLocaleDateString();
-      toast({ title: "2 months comp granted", description: `${e} is active until ${until} and was emailed their login link.` });
+      toast({ title: `${data.months}-month comp granted`, description: `${vars.email} is active until ${until} and was emailed their login link.` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/members"] });
     },
     onError: (err: any) => {
       toast({ title: "Could not grant comp", description: err?.message || "Error", variant: "destructive" });
     },
   });
+
+  // Ask how many months, then grant. Backend clamps to 1–24.
+  const promptComp = (email: string) => {
+    const raw = window.prompt(`Complimentary access for ${email} — how many months?`, "2");
+    if (raw == null) return; // cancelled
+    const months = parseInt(raw.trim(), 10);
+    if (!Number.isFinite(months) || months < 1) {
+      toast({ title: "Enter a whole number of months (1 or more).", variant: "destructive" });
+      return;
+    }
+    compMutation.mutate({ email, months });
+  };
 
   const copyInvite = async () => {
     if (!lastInvite) return;
@@ -286,12 +298,12 @@ export default function AdminMembersPanel() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => compMutation.mutate(m.email)}
+                          onClick={() => promptComp(m.email)}
                           disabled={compMutation.isPending}
                           data-testid={`button-comp-${m.id}`}
-                          title="Grant 2 months complimentary access (auto-expires) and email their login link"
+                          title="Grant complimentary access for a number of months you choose (auto-expires) and email their login link"
                         >
-                          Comp 2mo
+                          Comp…
                         </Button>
                         {m.status !== "active" && (
                           <Button
