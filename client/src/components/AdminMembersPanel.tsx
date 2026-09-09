@@ -100,6 +100,17 @@ export default function AdminMembersPanel() {
     },
   });
 
+  const sendAccessMutation = useMutation({
+    mutationFn: async (e: string) => apiRequest("POST", "/api/admin/members/send-access", { email: e }),
+    onSuccess: (_data, e) => {
+      toast({ title: "Access email sent", description: `${e} can now log in at /member-login and gets the daily plan email.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/members"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not send access email", description: err?.message || "Error", variant: "destructive" });
+    },
+  });
+
   const copyInvite = async () => {
     if (!lastInvite) return;
     try {
@@ -124,8 +135,10 @@ export default function AdminMembersPanel() {
           <Users className="w-4 h-4" /> Members
         </CardTitle>
         <CardDescription>
-          Active members can log in at <code>/member-login</code> and see the full plan. Add a
-          comp/test member by email, resend a fresh Telegram invite, or re-activate someone.
+          Active members can log in at <code>/member-login</code> and see the full plan, and get the
+          daily plan email automatically (Telegram optional). Add a comp/test member, resend a Telegram
+          invite, re-activate someone, or hit <strong>Email access</strong> to activate them and email
+          their login link + invite (for anyone who never got an email or doesn't use Telegram).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -238,6 +251,16 @@ export default function AdminMembersPanel() {
                           title="Mint a fresh single-use Telegram invite"
                         >
                           <Send className="w-3.5 h-3.5 mr-1" /> Invite
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendAccessMutation.mutate(m.email)}
+                          disabled={sendAccessMutation.isPending}
+                          data-testid={`button-access-${m.id}`}
+                          title="Activate + email the login link and Telegram invite (they'll also get the daily plan email)"
+                        >
+                          <Send className="w-3.5 h-3.5 mr-1" /> Email access
                         </Button>
                         {m.status !== "active" && (
                           <Button

@@ -18,7 +18,7 @@ import {
   deleteMemberSessionByToken,
   type MemberAuthRequest,
 } from "./member-auth";
-import { sendMemberLoginLink } from "./email";
+import { sendMemberLoginLink, sendWelcomeEmail } from "./email";
 import { regenerateMemberInvite } from "./stripe";
 import { PARSE_NEWSLETTER_PROMPT_VERSION } from "./lib/prompts/parse-newsletter";
 import { insertPlanSchema, ingestLevelsSchema, saveParsedPlanSchema } from "@shared/schema";
@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v65", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v66", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1347,6 +1347,34 @@ export async function registerRoutes(
     } catch (err) {
       console.error("resend invite error:", err);
       res.status(500).json({ error: "Failed to create invite" });
+    }
+  });
+
+  // Email a member their ACCESS: activates them, then sends the welcome email —
+  // which carries the magic-link login ("read Today's Plan on the site") AND a
+  // Telegram invite. This is the fix for members who never got an email or don't
+  // use Telegram: once active they also get the daily plan email automatically.
+  app.post("/api/admin/members/send-access", requireAdmin, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email) return res.status(400).json({ error: "email required" });
+      const existing = await storage.getMemberByEmail(email);
+      if (!existing) return res.status(404).json({ error: "No such member" });
+      // Active = can log in via magic link AND receives the daily plan email.
+      await storage.setMemberActiveByEmail(email);
+      // Best-effort Telegram invite so the email includes it; never block on it.
+      let inviteLink: string | null = existing.telegramInviteLink || null;
+      try {
+        inviteLink = (await regenerateMemberInvite(email)) || inviteLink;
+      } catch (e) {
+        console.warn("send-access: invite refresh failed (continuing):", e);
+      }
+      const member = await storage.getMemberByEmail(email);
+      if (member) await sendWelcomeEmail(member, inviteLink);
+      res.json({ ok: true, emailed: email });
+    } catch (err) {
+      console.error("send-access error:", err);
+      res.status(500).json({ error: "Failed to send access email" });
     }
   });
 
