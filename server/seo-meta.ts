@@ -48,6 +48,11 @@ const STATIC: Record<string, RouteMeta> = {
     description:
       "Daily ES and NQ levels built for prop firm rules: clear entries, targets, and invalidation to help you trade within drawdown and consistency limits.",
   },
+  "/tradingview": {
+    title: "TradingView Guide | Trade Levels Pro",
+    description:
+      "How to put the Trade Levels Pro daily ES and NQ levels on your TradingView chart using the optional Pine overlay.",
+  },
   "/learn": {
     title: "Learn | Trade Levels Pro",
     description:
@@ -253,6 +258,14 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
     paras: [
       "A running, automatically-scored record of how the published daily ES and NQ levels actually performed, measured from each session's open, high, low, and close, with no cherry-picking.",
       "The headline is the target-hit rate: how often the first upside target was reached. We also report the failed-breakdown reclaim rate, support and resistance tag rates, and the number of sessions counted. These are level-interaction statistics measured from OHLC data, not trading results or account performance, and past performance is not indicative of future results.",
+    ],
+  },
+  "/tradingview": {
+    h1: "TradingView guide",
+    paras: [
+      "Use the optional overlay to put the daily Magnet, Dynamic Zone, and ranked reaction levels on your own TradingView chart.",
+      "Open Today's Plan or the levels export, choose Show code, then Copy. Open TradingView, Pine Editor, New, Paste, then Add to chart.",
+      "Re-copy after each new plan around 5:30 PM ET. This is not one-click auto-publish: Telegram and Today's Plan remain the primary delivery channels, while TradingView is an optional visual aid.",
     ],
   },
   "/learn": {
