@@ -232,7 +232,11 @@ export function registerStripeRoutes(app: Express): void {
     }
   );
 
-  app.post("/api/checkout", async (req: Request, res: Response) => {
+  // Route-scoped JSON parser: registerStripeRoutes runs before the global
+  // express.json() (so the webhook above can read its raw body), which left
+  // req.body unparsed here and silently defaulted every "annual" request to
+  // monthly. Parse the body just for this route.
+  app.post("/api/checkout", express.json(), async (req: Request, res: Response) => {
     const stripe = getStripe();
     if (!stripe || !STRIPE_PRICE_ID) {
       return res.status(503).json({
