@@ -243,8 +243,13 @@ export function registerStripeRoutes(app: Express): void {
     try {
       const email = typeof req.body?.email === "string" ? req.body.email : undefined;
       // Annual if requested and an annual price is configured; else monthly.
+      // Fall back to the known live annual price id when the env var is missing
+      // (a deployment sometimes fails to pick up a newly-added secret, which would
+      // otherwise silently bill "annual" at the monthly rate). Price ids are not
+      // secret. If STRIPE_PRICE_ID_ANNUAL is set it still takes precedence.
       const plan = req.body?.plan === "annual" ? "annual" : "monthly";
-      const priceId = plan === "annual" && STRIPE_PRICE_ID_ANNUAL ? STRIPE_PRICE_ID_ANNUAL : STRIPE_PRICE_ID;
+      const annualPriceId = STRIPE_PRICE_ID_ANNUAL || "price_1U5FWeFpno3hNS1skZVRZEEf";
+      const priceId = plan === "annual" ? annualPriceId : STRIPE_PRICE_ID;
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
