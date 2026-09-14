@@ -67,8 +67,16 @@ export function channelSymbols(): SymbolId[] {
   return raw.length ? raw : (["ES", "NQ"] as SymbolId[]);
 }
 
+// ES/NQ/RTY pinned to the explicit December 2026 contract for the current roll.
+// Yahoo's continuous "=F" rolls at expiration (3rd Friday) and, worse, rolls
+// inconsistently across its caches, so the server kept serving the expiring
+// September contract days after the market had rolled to December. Pinning
+// guarantees the levels match the front contract traders actually use.
+// QUARTERLY MAINTENANCE: update these to the next quarter (H27=Mar, M27=Jun,
+// U27=Sep, Z27=Dec) before ESZ26 expires ~Dec 18, 2026. GC/CL roll monthly and
+// stay on continuous.
 const YAHOO_SYMBOL: Record<SymbolId, string> = {
-  ES: "ES=F", NQ: "NQ=F", GC: "GC=F", CL: "CL=F", RTY: "RTY=F",
+  ES: "ESZ26.CME", NQ: "NQZ26.CME", GC: "GC=F", CL: "CL=F", RTY: "RTYZ26.CME",
 };
 const TICK: Record<SymbolId, number> = {
   ES: 0.25, NQ: 0.25, GC: 0.1, CL: 0.01, RTY: 0.1,
