@@ -12,6 +12,7 @@ const STATIC_PATHS: Array<{ path: string; changefreq: string; priority: number }
   { path: "/track-record", changefreq: "daily", priority: 0.8 },
   { path: "/about", changefreq: "monthly", priority: 0.6 },
   { path: "/prop-firms", changefreq: "weekly", priority: 0.8 },
+  { path: "/tradingview", changefreq: "monthly", priority: 0.7 },
   { path: "/learn", changefreq: "weekly", priority: 0.8 },
   { path: "/learn/what-is-the-dynamic-zone", changefreq: "monthly", priority: 0.7 },
   { path: "/learn/es-vs-nq-which-to-trade", changefreq: "monthly", priority: 0.7 },
@@ -30,6 +31,10 @@ const STATIC_PATHS: Array<{ path: string; changefreq: string; priority: number }
 ];
 
 export function registerSeoRoutes(app: Express): void {
+  app.get("/faq", (_req, res) => {
+    res.redirect(301, "https://tradelevelspro.com/pricing#faq");
+  });
+
   app.get("/robots.txt", (_req, res) => {
     res.type("text/plain").send(
       [
