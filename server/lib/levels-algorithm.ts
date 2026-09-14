@@ -75,97 +75,15 @@ const TICK: Record<SymbolId, number> = {
 };
 const roundToTick = (v: number, t: number) => Math.round(v / t) * t;
 
-// ── Contract rollover ────────────────────────────────────────────────────────
-// Yahoo's continuous "=F" symbols follow the front month by EXPIRATION (3rd
-// Friday), not by the CME volume roll (~8 days earlier). During roll week that
-// means "=F" keeps serving the expiring, thin contract while liquidity and price
-// have already moved to the next contract, so levels get built on the wrong
-// contract. We instead resolve the explicit active contract for the current
-// date. This only decides WHICH contract's bars are fetched; none of the level
-// math below changes.
-const QUARTERLY_ROOT: Partial<Record<SymbolId, string>> = { ES: "ES", NQ: "NQ", RTY: "RTY" };
-const QUARTERLY_CODE: Record<number, string> = { 2: "H", 5: "M", 8: "U", 11: "Z" }; // Mar/Jun/Sep/Dec
-
-/** 3rd Friday of year/month0 (0-based month), as a UTC date. */
-function thirdFriday(year: number, month0: number): Date {
-  const first = new Date(Date.UTC(year, month0, 1));
-  const firstFriday = 1 + ((5 - first.getUTCDay() + 7) % 7);
-  return new Date(Date.UTC(year, month0, firstFriday + 14));
-}
-
-/** Current calendar date in ET, as a UTC-midnight date for day comparisons. */
-function etDateOnly(now: Date): Date {
-  const p = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(now);
-  const g = (t: string) => Number(p.find((x) => x.type === t)?.value);
-  return new Date(Date.UTC(g("year"), g("month") - 1, g("day")));
-}
-
-/**
- * Active front-by-volume contract for a quarterly-cycle root (ES/NQ/RTY), as a
- * Yahoo symbol like "ESZ26.CME". Index futures roll ~8 days before their
- * 3rd-Friday expiration; before the roll we use the current quarter, on/after it
- * the next quarter.
- */
-function activeQuarterlyContract(root: string, now: Date): string {
-  const today = etDateOnly(now);
-  const y0 = today.getUTCFullYear();
-  for (const qy of [y0, y0 + 1, y0 + 2]) {
-    for (const qm of [2, 5, 8, 11]) {
-      const roll = thirdFriday(qy, qm);
-      roll.setUTCDate(roll.getUTCDate() - 8);
-      if (today < roll) {
-        const yy = String(qy % 100).padStart(2, "0");
-        return `${root}${QUARTERLY_CODE[qm]}${yy}.CME`;
-      }
-    }
-  }
-  return `${root}=F`;
-}
-
-/**
- * Yahoo chart symbol to fetch for an instrument, rolled to the active contract.
- * Quarterly index futures (ES/NQ/RTY) resolve to the explicit CME contract so we
- * never serve the expiring one during roll week; GC/CL (monthly cycle) stay on
- * the continuous symbol for now.
- */
-export function yahooSymbol(symbol: SymbolId, now: Date = new Date()): string {
-  const root = QUARTERLY_ROOT[symbol];
-  return root ? activeQuarterlyContract(root, now) : YAHOO_SYMBOL[symbol];
-}
-
-/**
- * Fetch a Yahoo chart JSON for the rolled contract, falling back to the
- * continuous "=F" symbol if the explicit contract is ever unavailable, so a plan
- * still generates rather than failing outright. Returns the raw chart result[0].
- */
-async function fetchYahooResult(symbol: SymbolId, range: string, interval: string): Promise<any> {
-  const rolled = yahooSymbol(symbol);
-  const cont = YAHOO_SYMBOL[symbol];
-  const tries = rolled === cont ? [rolled] : [rolled, cont];
-  let lastStatus = 0;
-  for (const y of tries) {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=${range}&interval=${interval}`;
-    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-    if (res.ok) {
-      const json: any = await res.json();
-      const r = json?.chart?.result?.[0];
-      if (r) {
-        if (y === cont && rolled !== cont) {
-          console.warn(`[levels] ${symbol}: rolled contract ${rolled} unavailable, using continuous ${cont}`);
-        }
-        return r;
-      }
-    }
-    lastStatus = res.status;
-  }
-  throw new Error(`Yahoo fetch failed for ${symbol}: ${lastStatus}`);
-}
-
 /** ~3 months of daily bars, oldest -> newest. */
 export async function fetchDailyBars(symbol: SymbolId): Promise<Bar[]> {
-  const r = await fetchYahooResult(symbol, "3mo", "1d");
+  const y = YAHOO_SYMBOL[symbol];
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=3mo&interval=1d`;
+  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  if (!res.ok) throw new Error(`Yahoo fetch failed for ${y}: ${res.status}`);
+  const json: any = await res.json();
+  const r = json?.chart?.result?.[0];
+  if (!r) throw new Error(`No chart result for ${y}`);
   const ts: number[] = r.timestamp || [];
   const q = r.indicators?.quote?.[0] || {};
   const bars: Bar[] = [];
@@ -174,7 +92,7 @@ export async function fetchDailyBars(symbol: SymbolId): Promise<Bar[]> {
     if (o == null || h == null || l == null || c == null) continue;
     bars.push({ date: new Date(ts[i] * 1000).toISOString().slice(0, 10), open: o, high: h, low: l, close: c });
   }
-  if (bars.length < 6) throw new Error(`Not enough bars for ${symbol} (${bars.length})`);
+  if (bars.length < 6) throw new Error(`Not enough bars for ${y} (${bars.length})`);
   return bars;
 }
 
@@ -189,7 +107,13 @@ export async function fetchIntradayBars(
   range = "1mo",
   interval = "1h",
 ): Promise<IntradayBar[]> {
-  const r = await fetchYahooResult(symbol, range, interval);
+  const y = YAHOO_SYMBOL[symbol];
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(y)}?range=${range}&interval=${interval}`;
+  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  if (!res.ok) throw new Error(`Yahoo intraday fetch failed for ${y}: ${res.status}`);
+  const json: any = await res.json();
+  const r = json?.chart?.result?.[0];
+  if (!r) throw new Error(`No chart result for ${y}`);
   const ts: number[] = r.timestamp || [];
   const q = r.indicators?.quote?.[0] || {};
   const bars: IntradayBar[] = [];
