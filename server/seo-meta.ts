@@ -230,7 +230,7 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
   "/sample": {
     h1: "Sample daily plan",
     paras: [
-      "This is the actual message members receive in Telegram each trading day, for ES and NQ (numbers are illustrative examples).",
+      "Illustrative, redacted example of the daily Telegram drop for ES and NQ. Numbers are examples, not live levels.",
       "ES Trade Plan. Bias: Bullish. Magnet: 7,496. Dynamic Zone: 7,475 to 7,517. Failed-breakdown longs (best first): 7,427 flush and reclaim, long toward the magnet; 7,399 backup; 7,372 deeper. Rejection shorts (secondary): 7,517 reject and fail, short toward the magnet; 7,547. Rule: wait for acceptance, then manage level to level.",
       "You get a separate plan for each market, ES and NQ, every trading day. On Today's Plan you also get the full support and resistance ladder and the live chart.",
     ],

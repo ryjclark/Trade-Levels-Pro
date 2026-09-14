@@ -16,7 +16,12 @@ export default function PublicWelcomePage() {
   const [info, setInfo] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useMemberAuth();
+  const { login, isMember } = useMemberAuth();
+  const checkoutSessionId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("session_id")
+      : null;
+  const isCold = !checkoutSessionId && !isMember;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -80,9 +85,9 @@ export default function PublicWelcomePage() {
               Welcome to <span className="accent">Trade Levels Pro</span>
             </h1>
             <p className="public-hero-subtitle">
-              Your subscription is active. Here's how to access the private
-              Telegram channel where daily ES and NQ plans are posted after the
-              cash close.
+              {isCold
+                ? "Log in to access your member welcome and Telegram invite."
+                : "Your Trade Levels Pro subscription is active. Next step: join Telegram so you get the daily plan."}
             </p>
           </div>
         </section>
@@ -139,7 +144,7 @@ export default function PublicWelcomePage() {
 
             {!loading && !info && !error && (
               <>
-                <h3 className="capture-title">Thanks for subscribing</h3>
+                <h3 className="capture-title">{isCold ? "Member access" : "You're in"}</h3>
                 <p className="capture-sub">
                   Your subscription is active and we're setting up your Telegram
                   access. If your invite doesn't appear here shortly, email{" "}

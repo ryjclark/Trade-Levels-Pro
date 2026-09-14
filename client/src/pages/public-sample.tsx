@@ -81,9 +81,8 @@ export default function PublicSamplePage() {
           <div className="public-hero-content public-hero-centered">
             <h1>Sample <span className="accent">Daily Plan</span></h1>
             <p className="public-hero-subtitle">
-              This is the actual message members receive in Telegram each trading day,
-              for ES and NQ (an ES example is shown). The numbers are illustrative, the
-              format is exactly what gets sent.
+              Illustrative, redacted example of the daily Telegram drop for ES and NQ.
+              Numbers are examples, not live levels. The format is exactly what members get.
             </p>
           </div>
         </section>
@@ -99,7 +98,7 @@ export default function PublicSamplePage() {
             </div>
 
             <p style={{ textAlign: "center", fontSize: 13, opacity: 0.6, maxWidth: 640, margin: "18px auto 0" }}>
-              Numbers are illustrative examples, the format is exactly what gets sent. On the
+              Illustrative / redacted numbers only. Format matches the live daily drop. On the
               Today's Plan you also get the full support/resistance ladder and the live
               chart. The optional TradingView overlay lets you copy these levels onto your own
               chart (re-copy when each new plan posts).
@@ -152,6 +151,13 @@ export default function PublicSamplePage() {
           <Link href="/pricing" className="btn-primary" data-testid="button-cta-sample">
             {CTA_TEXT} →
           </Link>
+          <p className="public-small-text" style={{ marginTop: 16 }}>
+            <a href="/tradingview">TradingView guide →</a>
+            {" · "}
+            <a href="/prop-firms">For prop traders →</a>
+            {" · "}
+            <a href="/learn/how-to-trade-the-daily-plan">How to trade the daily plan →</a>
+          </p>
         </section>
 
         <PublicFooter />
