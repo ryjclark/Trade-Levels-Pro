@@ -101,6 +101,126 @@ function parseRateLimit(req: AdminAuthRequest, res: Response, next: NextFunction
   next();
 }
 
+// ── Intraday proof (track record) ────────────────────────────────────────────
+// Scores the failed-breakdown ladder on 15-min bars: was a ranked level tagged
+// (within TOL pts), did it flush+reclaim (the trade triggering), was the target
+// reached. Each past session is matched to the contract live that day. Cached so
+// the public page doesn't refetch Yahoo on every load; refreshes a few times/day
+// (the underlying data only changes once, after the close).
+type ProofResult = { updatedAt: string; tolerancePts: number; interval: string; bySymbol: Record<string, any> };
+let PROOF_CACHE: { at: number; data: ProofResult } | null = null;
+const PROOF_TTL_MS = 3 * 60 * 60 * 1000; // 3h
+
+async function computeIntradayProof(): Promise<ProofResult> {
+  const TOL = 2;
+  const CONTRACTS: Record<string, string[]> = {
+    ES: ["ESU26.CME", "ESZ26.CME"], NQ: ["NQU26.CME", "NQZ26.CME"],
+  };
+  const etDate = (unixSec: number) => {
+    const p = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date(unixSec * 1000));
+    const g = (t: string) => p.find((x) => x.type === t)?.value;
+    return `${g("year")}-${g("month")}-${g("day")}`;
+  };
+  type Bar = { t: number; h: number; l: number; c: number };
+  const fetchIntra = async (ySym: string): Promise<Map<string, Bar[]>> => {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySym)}?range=60d&interval=15m`;
+    const byDate = new Map<string, Bar[]>();
+    try {
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (!r.ok) return byDate;
+      const j: any = await r.json();
+      const res0 = j?.chart?.result?.[0];
+      const ts: number[] = res0?.timestamp || [];
+      const q = res0?.indicators?.quote?.[0] || {};
+      for (let i = 0; i < ts.length; i++) {
+        const h = q.high?.[i], l = q.low?.[i], c = q.close?.[i];
+        if (h == null || l == null || c == null) continue;
+        const d = etDate(ts[i]);
+        if (!byDate.has(d)) byDate.set(d, []);
+        byDate.get(d)!.push({ t: ts[i], h, l, c });
+      }
+    } catch { /* leave empty */ }
+    return byDate;
+  };
+
+  const results = await storage.listAllPlanResults(2000);
+  const planCache = new Map<number, any>();
+  const getPlan = async (id: number) => {
+    if (!planCache.has(id)) planCache.set(id, await storage.getPlanById(id));
+    return planCache.get(id);
+  };
+  const rate = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
+  const bySymbol: Record<string, any> = {};
+
+  for (const sym of Object.keys(CONTRACTS)) {
+    const maps: Record<string, Map<string, Bar[]>> = {};
+    for (const c of CONTRACTS[sym]) maps[c] = await fetchIntra(c);
+
+    let scored = 0, inPlay = 0, tagged = 0, triggered = 0, worked = 0, targetReached = 0;
+    const rankTrig = [0, 0, 0];
+    let ffSessions = 0, ffBackup = 0;
+    const recent: any[] = [];
+
+    for (const r of results.filter((x) => x.symbol === sym)) {
+      const plan = await getPlan(r.planId);
+      const lv = plan?.levels as import("@shared/schema").PlanLevels | null;
+      const magnet = plan?.magnet ?? lv?.magnet ?? null;
+      if (!lv || magnet == null) continue;
+      let day: Bar[] | undefined;
+      for (const c of CONTRACTS[sym]) {
+        const d = maps[c].get(r.date);
+        if (!d || d.length < 5) continue;
+        const hi = Math.max(...d.map((b) => b.h)), lo = Math.min(...d.map((b) => b.l));
+        if (magnet >= lo - 10 && magnet <= hi + 10) { day = d; break; }
+      }
+      if (!day) continue;
+      const chron = [...day].sort((a, b) => a.t - b.t);
+      const trade = computePlanTrade(lv, magnet, sym as SymbolId, plan.currentPrice ?? null);
+      const ladder = [trade.aplus, ...trade.backups].filter((x): x is number => x != null).slice(0, 3);
+      if (!ladder.length) continue;
+      const target = magnet;
+      scored++;
+      const tg = [false, false, false], tr = [false, false, false], wk = [false, false, false];
+      ladder.forEach((L, i) => {
+        let flush = -1;
+        for (let k = 0; k < chron.length; k++) {
+          if (chron[k].l <= L + TOL) tg[i] = true;
+          if (chron[k].l < L) { flush = k; break; }
+        }
+        if (flush >= 0) {
+          let rec = -1;
+          for (let k = flush + 1; k < chron.length; k++) { if (chron[k].c > L) { rec = k; break; } }
+          if (rec >= 0) { tr[i] = true; for (let k = rec; k < chron.length; k++) { if (chron[k].h >= target - TOL) { wk[i] = true; break; } } }
+        }
+      });
+      const tReached = chron.some((b) => b.h >= target - TOL);
+      const sTag = tg.some(Boolean), sTrig = tr.some(Boolean), sWork = wk.some(Boolean);
+      if (sTag) tagged++; if (sTrig) triggered++; if (sWork) worked++; if (tReached) targetReached++;
+      if (sTag || tReached) inPlay++;
+      tr.forEach((v, i) => { if (v) rankTrig[i]++; });
+      if (!tr[0]) { ffSessions++; if (tr[1] || tr[2]) ffBackup++; }
+      recent.push({ date: r.date, ladder, target, tagged: tg, triggered: tr, worked: wk, targetReached: tReached });
+    }
+    bySymbol[sym] = {
+      scored,
+      inPlayRate: rate(inPlay, scored),
+      targetReachedRate: rate(targetReached, scored),
+      taggedRate: rate(tagged, scored),
+      triggeredRate: rate(triggered, scored),
+      workedRate: rate(worked, scored),
+      rank1TrigRate: rate(rankTrig[0], scored),
+      rank2TrigRate: rate(rankTrig[1], scored),
+      rank3TrigRate: rate(rankTrig[2], scored),
+      backupSavedRate: rate(ffBackup, ffSessions),
+      backupSamples: ffSessions,
+      recent: recent.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30),
+    };
+  }
+  return { updatedAt: new Date().toISOString(), tolerancePts: TOL, interval: "15m", bySymbol };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -824,7 +944,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v77", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v78", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -1118,6 +1238,19 @@ export async function registerRoutes(
     } catch (e: any) {
       console.error("debug-ladder-intra error:", e);
       res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  // Intraday-verified proof for the public track-record page (cached).
+  app.get("/api/public/proof", async (_req, res) => {
+    try {
+      if (!PROOF_CACHE || Date.now() - PROOF_CACHE.at > PROOF_TTL_MS) {
+        PROOF_CACHE = { at: Date.now(), data: await computeIntradayProof() };
+      }
+      res.json(PROOF_CACHE.data);
+    } catch (e: any) {
+      console.error("proof error:", e);
+      res.status(500).json({ error: "Failed to load proof" });
     }
   });
 

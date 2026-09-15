@@ -5,62 +5,44 @@ import PublicFooter from "@/components/public-footer";
 import StickyCta from "@/components/sticky-cta";
 import "./public.css";
 
-interface Summary {
-  sessions: number;
-  magnetHitRate: number | null;
-  r1TagRate: number | null;
-  r2TagRate: number | null;
-  s1TagRate: number | null;
-  s2TagRate: number | null;
-  namedTagRates?: Record<string, number | null>;
-  supportTagRate?: number | null;
-  resistanceTagRate?: number | null;
-  failedBreakdownWinRate?: number | null;
-  failedBreakdownSamples?: number;
-  targetHitRate?: number | null;
-  targetSamples?: number;
+interface SymProof {
+  scored: number;
+  inPlayRate: number | null;
+  targetReachedRate: number | null;
+  taggedRate: number | null;
+  triggeredRate: number | null;
+  workedRate: number | null;
+  rank1TrigRate: number | null;
+  rank2TrigRate: number | null;
+  rank3TrigRate: number | null;
+  backupSavedRate: number | null;
+  backupSamples: number;
+  recent: ProofSession[];
 }
 
-interface Session {
+interface ProofSession {
   date: string;
-  symbol: string;
-  close: number | null;
-  aPlus: number | null;
-  aPlusReclaimed: 0 | 1 | null;
-  flushed: number;
-  reclaimed: number;
-  firstTarget: number | null;
-  firstTargetHit: 0 | 1 | null;
+  ladder: number[];
+  target: number;
+  tagged: boolean[];
+  triggered: boolean[];
+  worked: boolean[];
+  targetReached: boolean;
 }
 
-const NAMED_LABELS: Record<string, string> = {
-  priorHigh: "Prior-day high",
-  priorLow: "Prior-day low",
-  priorClose: "Prior-day close",
-  overnightHigh: "Overnight high",
-  overnightLow: "Overnight low",
-  priorWeekHigh: "Prior-week high",
-  priorWeekLow: "Prior-week low",
-  recentHigh: "~1mo high",
-  recentLow: "~1mo low",
-};
-
-interface TrackRecord {
-  overall: Summary;
-  bySymbol: Record<string, Summary>;
-  sessions?: Session[];
+interface Proof {
+  updatedAt: string;
+  tolerancePts: number;
+  interval: string;
+  bySymbol: Record<string, SymProof>;
 }
 
 function pct(v: number | null | undefined) {
   return v == null ? "—" : `${v}%`;
 }
 
-function n(v: number | null) {
+function n(v: number | null | undefined) {
   return v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 });
-}
-
-function yn(v: 0 | 1 | null) {
-  return v == null ? "—" : v === 1 ? "✓" : "—";
 }
 
 function shortDate(d: string) {
@@ -68,37 +50,46 @@ function shortDate(d: string) {
   return Number.isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatTile({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
     <div
       style={{
-        border: "1px solid var(--border, #26262b)",
+        border: accent ? "1px solid var(--border-teal-strong, rgba(94,234,212,0.45))" : "1px solid var(--border, #26262b)",
         borderRadius: 12,
         padding: "18px 20px",
-        background: "var(--card, rgba(255,255,255,0.02))",
+        background: accent ? "rgba(94,234,212,0.06)" : "var(--card, rgba(255,255,255,0.02))",
       }}
     >
       <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.1, color: accent ? "var(--teal, #5EEAD4)" : "inherit" }}>{value}</div>
       {sub && <div style={{ fontSize: 12, opacity: 0.55, marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
 
-export default function PublicTrackRecordPage() {
-  const { data, isLoading } = useQuery<TrackRecord>({
-    queryKey: ["/api/public/track-record"],
-  });
-
-  const overall = data?.overall;
-  const symbols = data ? Object.keys(data.bySymbol).sort() : [];
-  // Instrument filter: "all" (combined) or a single ticker's stats + ledger.
-  const [symFilter, setSymFilter] = useState<string>("all");
-  const view: Summary | undefined =
-    symFilter !== "all" ? data?.bySymbol[symFilter] ?? overall : overall;
-  const shownSessions = (data?.sessions ?? []).filter(
-    (s) => symFilter === "all" || s.symbol === symFilter,
+// One rung's status: worked (ran to target) > triggered (flush+reclaim) > tagged
+// (price reached it) > untouched. Color-coded so a reader can scan the ladder.
+function rung(level: number, tagged: boolean, triggered: boolean, worked: boolean) {
+  let color = "rgba(255,255,255,0.3)";
+  let title = "not reached";
+  if (worked) { color = "#4ade80"; title = "triggered → target"; }
+  else if (triggered) { color = "#fbbf24"; title = "flushed + reclaimed"; }
+  else if (tagged) { color = "#60a5fa"; title = "tagged (±2pts)"; }
+  return (
+    <span title={title} style={{ display: "inline-flex", alignItems: "center", gap: 5, marginRight: 12, fontSize: 13 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 8, background: color, display: "inline-block" }} />
+      {n(level)}
+    </span>
   );
+}
+
+export default function PublicTrackRecordPage() {
+  const { data, isLoading } = useQuery<Proof>({ queryKey: ["/api/public/proof"] });
+
+  const symbols = data ? Object.keys(data.bySymbol) : [];
+  const [sym, setSym] = useState<string>("ES");
+  const active = symbols.includes(sym) ? sym : symbols[0];
+  const view = active ? data?.bySymbol[active] : undefined;
 
   return (
     <div className="public-page">
@@ -108,232 +99,161 @@ export default function PublicTrackRecordPage() {
           <h1 className="public-h1" style={{ fontSize: 40, marginBottom: 10 }}>
             Track Record
           </h1>
-          <p className="public-hero-subtitle" style={{ maxWidth: 660 }}>
-            How our published levels actually performed — the failed-breakdown win rate,
-            target hits, and every session's call. Scored automatically from the regular
-            session's OHLC the night before, no cherry-picking.
+          <p className="public-hero-subtitle" style={{ maxWidth: 680 }}>
+            The whole method is simple: price reaches our ranked levels almost every session,
+            and then it's about which targets get hit. Below is exactly that, measured on
+            15-minute bars (not just the daily candle) so a level counts only if price actually
+            traded to it within a couple of points. Every session shown, no cherry-picking.
           </p>
         </header>
 
         {isLoading ? (
           <div style={{ opacity: 0.6 }}>Loading…</div>
-        ) : !overall || overall.sessions === 0 ? (
+        ) : !view || view.scored === 0 ? (
           <div className="archive-empty">
-            No results recorded yet. Numbers appear here after the first full
-            session settles.
+            No intraday-verified sessions yet. Numbers appear here as sessions settle.
           </div>
         ) : (
           <>
-            {/* Instrument filter — view the record combined or per ticker. */}
             {symbols.length > 1 && (
-              <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }} data-testid="track-record-filter">
-                {["all", ...symbols].map((s) => (
+              <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }} data-testid="proof-filter">
+                {symbols.map((s) => (
                   <button
                     key={s}
-                    onClick={() => setSymFilter(s)}
-                    data-testid={`track-record-filter-${s}`}
+                    onClick={() => setSym(s)}
                     style={{
-                      padding: "6px 16px",
+                      padding: "6px 18px",
                       borderRadius: 8,
                       border: "1px solid var(--border-teal-strong, rgba(94,234,212,0.4))",
-                      background: symFilter === s ? "var(--teal, #5EEAD4)" : "transparent",
-                      color: symFilter === s ? "#050810" : "inherit",
+                      background: active === s ? "var(--teal, #5EEAD4)" : "transparent",
+                      color: active === s ? "#050810" : "inherit",
                       fontWeight: 600,
                       fontSize: 13,
                       cursor: "pointer",
                     }}
                   >
-                    {s === "all" ? "All" : s}
+                    {s}
                   </button>
                 ))}
               </div>
             )}
+
             <section
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
                 gap: 14,
-                marginBottom: 40,
+                marginBottom: 18,
               }}
-              data-testid="track-record-overall"
+              data-testid="proof-hero"
             >
               <StatTile
-                label="Target-hit rate"
-                value={pct(view?.targetHitRate ?? null)}
-                sub={
-                  view?.targetSamples
-                    ? `1st target, ${view.targetSamples} sessions`
-                    : "1st upside target reached"
-                }
+                label="A level or target in play"
+                value={pct(view.inPlayRate)}
+                sub="price reached a ranked level or a target"
+                accent
               />
               <StatTile
-                label="Failed-breakdown reclaim rate"
-                value={pct(view?.failedBreakdownWinRate ?? null)}
-                sub={
-                  view?.failedBreakdownSamples
-                    ? `${view.failedBreakdownSamples} flushes`
-                    : "of levels that flushed, % that reclaimed"
-                }
+                label="First target reached"
+                value={pct(view.targetReachedRate)}
+                sub="the magnet, our first objective"
               />
               <StatTile
-                label="Support tag rate"
-                value={pct(view?.supportTagRate ?? null)}
-                sub="all support levels held"
+                label="Breakdown setup triggered"
+                value={pct(view.triggeredRate)}
+                sub="a ranked level flushed + reclaimed"
               />
               <StatTile
-                label="Resistance tag rate"
-                value={pct(view?.resistanceTagRate ?? null)}
-                sub="all resistance levels"
+                label="Sessions verified"
+                value={view.scored.toLocaleString()}
+                sub={`intraday · ${active}`}
               />
-              <StatTile label="Sessions counted" value={(view?.sessions ?? 0).toLocaleString()} />
             </section>
 
-            {shownSessions.length > 0 && (
-              <section style={{ marginBottom: 40 }}>
-                <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
-                  Every session — the honest ledger{symFilter !== "all" ? ` · ${symFilter}` : ""}
-                </h2>
-                <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14, maxWidth: 660 }}>
-                  The A+ failed-breakdown level each night, whether price flushed and reclaimed it
-                  (the setup working), and whether the first target hit. Every call, no cherry-picking.
-                </p>
-                <div style={{ overflowX: "auto" }}>
-                  <table
-                    style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}
-                    data-testid="track-record-sessions"
-                  >
-                    <thead>
-                      <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 13 }}>
-                        <th style={{ padding: "8px 10px" }}>Date</th>
-                        <th style={{ padding: "8px 10px" }}>Sym</th>
-                        <th style={{ padding: "8px 10px" }}>A+ level</th>
-                        <th style={{ padding: "8px 10px" }}>Flushed</th>
-                        <th style={{ padding: "8px 10px" }}>Reclaimed</th>
-                        <th style={{ padding: "8px 10px" }}>1st target</th>
-                        <th style={{ padding: "8px 10px" }}>Hit</th>
-                        <th style={{ padding: "8px 10px" }}>Close</th>
+            <section
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: 12,
+                marginBottom: 40,
+              }}
+            >
+              <StatTile label="#1 entry triggered" value={pct(view.rank1TrigRate)} />
+              <StatTile label="#2 entry triggered" value={pct(view.rank2TrigRate)} />
+              <StatTile label="#3 entry triggered" value={pct(view.rank3TrigRate)} />
+              <StatTile
+                label="Backup caught it"
+                value={pct(view.backupSavedRate)}
+                sub={view.backupSamples ? `when #1 missed (${view.backupSamples})` : "when #1 missed"}
+              />
+              <StatTile
+                label="Setup ran to target"
+                value={pct(view.workedRate)}
+                sub="triggered, then reached the magnet"
+              />
+            </section>
+
+            <section style={{ marginBottom: 40 }}>
+              <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
+                Every session — the ladder, intraday · {active}
+              </h2>
+              <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14, maxWidth: 680 }}>
+                The three ranked failed-breakdown longs each session and what price actually did
+                to each on 15-minute bars.{" "}
+                <span style={{ color: "#4ade80" }}>● ran to target</span>{" · "}
+                <span style={{ color: "#fbbf24" }}>● flushed + reclaimed</span>{" · "}
+                <span style={{ color: "#60a5fa" }}>● tagged (±{data?.tolerancePts}pts)</span>{" · "}
+                <span style={{ opacity: 0.5 }}>● not reached</span>
+              </p>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }} data-testid="proof-sessions">
+                  <thead>
+                    <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 13 }}>
+                      <th style={{ padding: "8px 10px" }}>Date</th>
+                      <th style={{ padding: "8px 10px" }}>Ranked failed-breakdown longs</th>
+                      <th style={{ padding: "8px 10px" }}>Target</th>
+                      <th style={{ padding: "8px 10px" }}>Hit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {view.recent.map((s, i) => (
+                      <tr key={`${s.date}-${i}`} style={{ borderTop: "1px solid var(--border, #26262b)", fontSize: 14 }}>
+                        <td style={{ padding: "10px", whiteSpace: "nowrap" }}>{shortDate(s.date)}</td>
+                        <td style={{ padding: "10px" }}>
+                          {s.ladder.map((L, j) => (
+                            <span key={j}>{rung(L, s.tagged[j], s.triggered[j], s.worked[j])}</span>
+                          ))}
+                        </td>
+                        <td style={{ padding: "10px", opacity: 0.75 }}>{n(s.target)}</td>
+                        <td style={{ padding: "10px", color: s.targetReached ? "#4ade80" : undefined }}>
+                          {s.targetReached ? "✓" : "—"}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {shownSessions.map((s, i) => (
-                        <tr
-                          key={`${s.date}-${s.symbol}-${i}`}
-                          style={{ borderTop: "1px solid var(--border, #26262b)", fontSize: 14 }}
-                        >
-                          <td style={{ padding: "10px" }}>{shortDate(s.date)}</td>
-                          <td style={{ padding: "10px", fontWeight: 600 }}>{s.symbol}</td>
-                          <td style={{ padding: "10px" }}>{n(s.aPlus)}</td>
-                          <td style={{ padding: "10px" }}>{s.flushed > 0 ? "✓" : "—"}</td>
-                          <td style={{ padding: "10px", color: s.flushed > 0 ? (s.reclaimed > 0 ? "#4ade80" : "#f87171") : undefined }}>
-                            {s.flushed > 0 ? (s.reclaimed > 0 ? "✓ won" : "✗") : "—"}
-                          </td>
-                          <td style={{ padding: "10px" }}>{n(s.firstTarget)}</td>
-                          <td style={{ padding: "10px", color: s.firstTargetHit === 1 ? "#4ade80" : undefined }}>
-                            {yn(s.firstTargetHit)}
-                          </td>
-                          <td style={{ padding: "10px", opacity: 0.65 }}>{n(s.close)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-            {overall.namedTagRates &&
-              Object.keys(overall.namedTagRates).length > 0 && (
-                <section style={{ marginBottom: 40 }}>
-                  <h2
-                    className="public-h1"
-                    style={{ fontSize: 22, marginBottom: 14 }}
-                  >
-                    Structure levels — how often each gets tagged
-                  </h2>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(150px, 1fr))",
-                      gap: 12,
-                    }}
-                    data-testid="track-record-named"
-                  >
-                    {Object.entries(overall.namedTagRates)
-                      .sort((a, b) => (b[1] ?? -1) - (a[1] ?? -1))
-                      .map(([key, val]) => (
-                        <StatTile
-                          key={key}
-                          label={NAMED_LABELS[key] ?? key}
-                          value={pct(val)}
-                        />
-                      ))}
-                  </div>
-                </section>
-              )}
-
-            {symbols.length > 0 && (
-              <section>
-                <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 14 }}>
-                  By symbol
-                </h2>
-                <div style={{ overflowX: "auto" }}>
-                  <table
-                    style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}
-                    data-testid="track-record-by-symbol"
-                  >
-                    <thead>
-                      <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 13 }}>
-                        <th style={{ padding: "8px 10px" }}>Symbol</th>
-                        <th style={{ padding: "8px 10px" }}>Sessions</th>
-                        <th style={{ padding: "8px 10px" }}>FB win</th>
-                        <th style={{ padding: "8px 10px" }}>Target hit</th>
-                        <th style={{ padding: "8px 10px" }}>Support</th>
-                        <th style={{ padding: "8px 10px" }}>Resistance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {symbols.map((sym) => {
-                        const s = data!.bySymbol[sym];
-                        return (
-                          <tr
-                            key={sym}
-                            style={{ borderTop: "1px solid var(--border, #26262b)" }}
-                            data-testid={`track-record-row-${sym}`}
-                          >
-                            <td style={{ padding: "10px", fontWeight: 600 }}>{sym}</td>
-                            <td style={{ padding: "10px" }}>{s.sessions}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.failedBreakdownWinRate ?? null)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.targetHitRate)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.supportTagRate ?? null)}</td>
-                            <td style={{ padding: "10px" }}>{pct(s.resistanceTagRate ?? null)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
-
-            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 32, maxWidth: 660 }}>
-              <b>Target-hit rate</b> — how often the first upside target was reached, our
-              headline number. <b>Failed-breakdown reclaim rate</b> — of the support levels
-              that flushed below (traded under the line), the share that closed back above it;
-              a completed failed breakdown is a strong tell but only a minority of flushes
-              reclaim cleanly, so this is deliberately a conservative stat. A "tag" means price
-              traded to or through a level. (We also track "magnet hit," but price crosses the
-              pivot most sessions, so it's a low-signal stat we don't lead with.)
+            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 8, maxWidth: 680 }}>
+              <b>In play</b> — price reached at least one ranked level or a target that session.
+              <b> Triggered</b> — a ranked support flushed below the line and reclaimed it intraday
+              (the failed-breakdown setting up). <b>Ran to target</b> — after triggering, price
+              reached the magnet (first objective). Measured on 15-minute bars with a ±{data?.tolerancePts}-point
+              tolerance, each session scored on the futures contract that was live that day.
             </p>
-            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 12, maxWidth: 660 }}>
-              These figures are level-interaction statistics measured
-              automatically from daily open/high/low/close data. They describe
-              how price interacted with the published levels. They are NOT trading
-              results or account performance, they do not represent any actual
-              profit or loss, and they do not account for fees, commissions,
-              slippage, or execution. Statistical and hypothetical measures have
-              inherent limitations. Past performance is not indicative of future
-              results. Nothing here is financial advice.
+            <p style={{ fontSize: 12, opacity: 0.5, marginTop: 12, maxWidth: 680 }}>
+              These are level-interaction statistics describing how price moved relative to the
+              published levels. They are NOT trading results or account performance, do not
+              represent any actual profit or loss, and do not account for fees, commissions,
+              slippage, or execution. Past performance is not indicative of future results.
+              Nothing here is financial advice.
             </p>
+            {data?.updatedAt && (
+              <p style={{ fontSize: 11, opacity: 0.4, marginTop: 12 }}>
+                Updated {new Date(data.updatedAt).toLocaleString("en-US", { timeZone: "America/New_York" })} ET
+              </p>
+            )}
           </>
         )}
       </main>
