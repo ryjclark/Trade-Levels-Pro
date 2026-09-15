@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v76", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v77", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -992,6 +992,131 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       console.error("debug-ladder error:", e);
+      res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  // TEMP read-only diagnostic: score the failed-breakdown ladder on INTRADAY
+  // (15-min) bars — the honest way to see if a level was tagged (within TOL pts),
+  // flushed-and-reclaimed (the trade triggering), and a target reached. Each past
+  // session is matched to the contract that was live THAT day (Sep vs Dec) by
+  // checking which contract's intraday range contains the plan's magnet. Read-only.
+  app.get("/api/public/debug-ladder-intra", async (_req, res) => {
+    const TOL = 2; // points: "hit within 1-2 points"
+    // Candidate contracts for the current backfill window (Aug-Sep 2026 roll).
+    const CONTRACTS: Partial<Record<string, string[]>> = {
+      ES: ["ESU26.CME", "ESZ26.CME"], NQ: ["NQU26.CME", "NQZ26.CME"],
+    };
+    const etDate = (unixSec: number) => {
+      const p = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+      }).formatToParts(new Date(unixSec * 1000));
+      const g = (t: string) => p.find((x) => x.type === t)?.value;
+      return `${g("year")}-${g("month")}-${g("day")}`;
+    };
+    type Bar = { t: number; h: number; l: number; c: number };
+    const fetchIntra = async (ySym: string): Promise<Map<string, Bar[]>> => {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySym)}?range=60d&interval=15m`;
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      const byDate = new Map<string, Bar[]>();
+      if (!r.ok) return byDate;
+      const j: any = await r.json();
+      const res0 = j?.chart?.result?.[0];
+      const ts: number[] = res0?.timestamp || [];
+      const q = res0?.indicators?.quote?.[0] || {};
+      for (let i = 0; i < ts.length; i++) {
+        const h = q.high?.[i], l = q.low?.[i], c = q.close?.[i];
+        if (h == null || l == null || c == null) continue;
+        const d = etDate(ts[i]);
+        if (!byDate.has(d)) byDate.set(d, []);
+        byDate.get(d)!.push({ t: ts[i], h, l, c });
+      }
+      return byDate;
+    };
+
+    try {
+      const results = await storage.listAllPlanResults(2000);
+      const planCache = new Map<number, any>();
+      const getPlan = async (id: number) => {
+        if (!planCache.has(id)) planCache.set(id, await storage.getPlanById(id));
+        return planCache.get(id);
+      };
+      const rate = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
+      const out: any = { tolerancePts: TOL, interval: "15m", bySymbol: {} };
+
+      for (const sym of Object.keys(CONTRACTS)) {
+        const contractMaps: Record<string, Map<string, Bar[]>> = {};
+        for (const c of CONTRACTS[sym]!) contractMaps[c] = await fetchIntra(c);
+
+        let scored = 0, anyTagged = 0, anyTriggered = 0, anyWorked = 0, targetReached = 0, planInPlay = 0;
+        const rankTrig = [0, 0, 0];
+        let firstFailSessions = 0, firstFailBackupTriggered = 0;
+        const recent: any[] = [];
+
+        for (const r of results.filter((x) => x.symbol === sym)) {
+          const plan = await getPlan(r.planId);
+          const lv = plan?.levels as import("@shared/schema").PlanLevels | null;
+          const magnet = plan?.magnet ?? lv?.magnet ?? null;
+          if (!lv || magnet == null) continue;
+          // Pick the contract whose intraday range for this date contains the magnet.
+          let day: Bar[] | undefined;
+          for (const c of CONTRACTS[sym]!) {
+            const d = contractMaps[c].get(r.date);
+            if (!d || d.length < 5) continue;
+            const hi = Math.max(...d.map((b) => b.h)), lo = Math.min(...d.map((b) => b.l));
+            if (magnet >= lo - 10 && magnet <= hi + 10) { day = d; break; }
+          }
+          if (!day) continue;
+          const chron = [...day].sort((a, b) => a.t - b.t);
+          const trade = computePlanTrade(lv, magnet, sym as SymbolId, plan.currentPrice ?? null);
+          const ladder = [trade.aplus, ...trade.backups].filter((x): x is number => x != null).slice(0, 3);
+          if (!ladder.length) continue;
+          const target = magnet; // failed-breakdown long's first objective is the magnet
+
+          scored++;
+          const tagged = [false, false, false], trig = [false, false, false], worked = [false, false, false];
+          ladder.forEach((L, i) => {
+            let flushIdx = -1;
+            for (let k = 0; k < chron.length; k++) {
+              if (chron[k].l <= L + TOL) tagged[i] = true;
+              if (chron[k].l < L) { flushIdx = k; break; }
+            }
+            if (flushIdx >= 0) {
+              let recIdx = -1;
+              for (let k = flushIdx + 1; k < chron.length; k++) { if (chron[k].c > L) { recIdx = k; break; } }
+              if (recIdx >= 0) {
+                trig[i] = true;
+                for (let k = recIdx; k < chron.length; k++) { if (chron[k].h >= target - TOL) { worked[i] = true; break; } }
+              }
+            }
+          });
+          const tReached = chron.some((b) => b.h >= target - TOL);
+          const sTag = tagged.some(Boolean), sTrig = trig.some(Boolean), sWork = worked.some(Boolean);
+          if (sTag) anyTagged++;
+          if (sTrig) anyTriggered++;
+          if (sWork) anyWorked++;
+          if (tReached) targetReached++;
+          if (sTag || tReached) planInPlay++;   // a breakdown level OR a target was in play
+          trig.forEach((v, i) => { if (v) rankTrig[i]++; });
+          if (!trig[0]) { firstFailSessions++; if (trig[1] || trig[2]) firstFailBackupTriggered++; }
+          if (recent.length < 15) recent.push({ date: r.date, ladder, target, tagged, triggered: trig, worked, targetReached: tReached });
+        }
+
+        out.bySymbol[sym] = {
+          scored,
+          planInPlayRate: rate(planInPlay, scored),         // a breakdown level OR target was reached
+          anyLevelTaggedRate: rate(anyTagged, scored),      // >=1 entry tagged within TOL
+          ladderTriggeredRate: rate(anyTriggered, scored),  // >=1 entry flushed + reclaimed
+          ladderWorkedRate: rate(anyWorked, scored),        // >=1 triggered AND target reached
+          targetReachedRate: rate(targetReached, scored),
+          rank1TrigRate: rate(rankTrig[0], scored), rank2TrigRate: rate(rankTrig[1], scored), rank3TrigRate: rate(rankTrig[2], scored),
+          backupTriggeredRate: rate(firstFailBackupTriggered, firstFailSessions), backupSamples: firstFailSessions,
+          recent: recent.sort((a, b) => (a.date < b.date ? 1 : -1)),
+        };
+      }
+      res.json(out);
+    } catch (e: any) {
+      console.error("debug-ladder-intra error:", e);
       res.status(500).json({ error: String(e?.message || e) });
     }
   });
