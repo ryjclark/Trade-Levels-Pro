@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v75", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v76", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -929,18 +929,14 @@ export async function registerRoutes(
         const magnet = plan?.magnet ?? lv?.magnet ?? null;
         if (!lv || magnet == null || r.high == null || r.low == null || r.close == null) continue;
 
-        // Ladder = top 3 MAJOR support shelves below the magnet (nearest first).
-        let ladder: number[] = (lv.swingSupportPoints ?? [])
-          .filter((p) => p.tier === "major" && p.price < magnet)
-          .map((p) => p.price)
-          .sort((a, b) => b - a)
+        // Use the SAME entry-selection the plan actually displays (single source
+        // of truth: computePlanTrade — what Telegram/chart/terminal all use):
+        // A+ plus its ranked backups, and the plan's first upside target.
+        const trade = computePlanTrade(lv, magnet, (r.symbol as SymbolId), plan.currentPrice ?? null);
+        const ladder: number[] = [trade.aplus, ...trade.backups]
+          .filter((x): x is number => x != null)
           .slice(0, 3);
-        // Fallback for older plans without tiered points.
-        if (ladder.length === 0) {
-          ladder = (lv.swingSupports ?? []).filter((s) => s < magnet).sort((a, b) => b - a).slice(0, 3);
-        }
-        const target = (lv.swingResistances ?? [])
-          .filter((x) => x > magnet).sort((a, b) => a - b)[0] ?? null;
+        const target = trade.targets[0] ?? null;
 
         const sym = r.symbol || "?";
         for (const key of ["ALL", sym]) {
