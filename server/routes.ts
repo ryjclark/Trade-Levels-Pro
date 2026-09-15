@@ -824,7 +824,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v74", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v75", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
@@ -897,6 +897,105 @@ export async function registerRoutes(
         storedTelegramMomentum,
       });
     } catch (e: any) {
+      res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  // TEMP read-only diagnostic: scores the failed-breakdown LADDER (top-3 major
+  // supports below the magnet) against each session's actual H/L/C from stored
+  // data. Answers "if the #1 entry didn't reclaim, did #2/#3 — and did a target
+  // hit?" Dry-run only: computes and returns, writes nothing.
+  app.get("/api/public/debug-ladder", async (_req, res) => {
+    try {
+      const results = await storage.listAllPlanResults(2000);
+      const planCache = new Map<number, any>();
+      const getPlan = async (id: number) => {
+        if (!planCache.has(id)) planCache.set(id, await storage.getPlanById(id));
+        return planCache.get(id);
+      };
+
+      const mk = () => ({
+        sessions: 0, hadLadder: 0,
+        anyTriggered: 0, worked: 0, targetHit: 0,
+        rank: [0, 0, 0], rankTrig: [0, 0, 0],
+        firstFail_backupWorked: 0, firstFail_sessions: 0,
+      });
+      const agg: Record<string, ReturnType<typeof mk>> = { ALL: mk() };
+      const perSession: any[] = [];
+
+      for (const r of results) {
+        const plan = await getPlan(r.planId);
+        const lv = plan?.levels as import("@shared/schema").PlanLevels | null;
+        const magnet = plan?.magnet ?? lv?.magnet ?? null;
+        if (!lv || magnet == null || r.high == null || r.low == null || r.close == null) continue;
+
+        // Ladder = top 3 MAJOR support shelves below the magnet (nearest first).
+        let ladder: number[] = (lv.swingSupportPoints ?? [])
+          .filter((p) => p.tier === "major" && p.price < magnet)
+          .map((p) => p.price)
+          .sort((a, b) => b - a)
+          .slice(0, 3);
+        // Fallback for older plans without tiered points.
+        if (ladder.length === 0) {
+          ladder = (lv.swingSupports ?? []).filter((s) => s < magnet).sort((a, b) => b - a).slice(0, 3);
+        }
+        const target = (lv.swingResistances ?? [])
+          .filter((x) => x > magnet).sort((a, b) => a - b)[0] ?? null;
+
+        const sym = r.symbol || "?";
+        for (const key of ["ALL", sym]) {
+          if (!agg[key]) agg[key] = mk();
+          const a = agg[key];
+          a.sessions += 1;
+          if (ladder.length === 0 || target == null) continue;
+          a.hadLadder += 1;
+          const trig = ladder.map((L) => r.low! < L && r.close! > L); // flush + reclaim
+          const tHit = r.high! >= target;
+          const anyTrig = trig.some(Boolean);
+          if (anyTrig) a.anyTriggered += 1;
+          if (tHit) a.targetHit += 1;
+          if (anyTrig && tHit) a.worked += 1;
+          trig.forEach((t, i) => { if (t) { a.rankTrig[i] += 1; } });
+          // "backup saved it": #1 didn't reclaim but #2 or #3 did
+          if (!trig[0]) {
+            a.firstFail_sessions += 1;
+            if (trig[1] || trig[2]) a.firstFail_backupWorked += 1;
+          }
+        }
+
+        if (sym === "ES") {
+          const trig = ladder.map((L) => r.low! < L && r.close! > L);
+          perSession.push({
+            date: r.date, ladder, target,
+            triggered: trig, targetHit: r.high! >= (target ?? Infinity),
+            H: r.high, L: r.low, C: r.close,
+          });
+        }
+      }
+
+      const rate = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
+      const summ = (a: ReturnType<typeof mk>) => ({
+        sessions: a.sessions,
+        scored: a.hadLadder,
+        ladderWorkedRate: rate(a.worked, a.hadLadder),            // >=1 of top-3 triggered AND target hit
+        anyTriggeredRate: rate(a.anyTriggered, a.hadLadder),      // >=1 of top-3 flushed+reclaimed
+        targetHitRate: rate(a.targetHit, a.hadLadder),            // session reached first target
+        rank1TrigRate: rate(a.rankTrig[0], a.hadLadder),
+        rank2TrigRate: rate(a.rankTrig[1], a.hadLadder),
+        rank3TrigRate: rate(a.rankTrig[2], a.hadLadder),
+        backupSavedRate: rate(a.firstFail_backupWorked, a.firstFail_sessions), // of sessions #1 failed, #2/#3 reclaimed
+        backupSamples: a.firstFail_sessions,
+      });
+
+      const bySymbol: Record<string, any> = {};
+      for (const k of Object.keys(agg)) if (k !== "ALL") bySymbol[k] = summ(agg[k]);
+      res.json({
+        overall: summ(agg.ALL),
+        bySymbol,
+        recentES: perSession.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 15),
+      });
+    } catch (e: any) {
+      console.error("debug-ladder error:", e);
       res.status(500).json({ error: String(e?.message || e) });
     }
   });
