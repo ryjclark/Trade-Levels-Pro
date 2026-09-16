@@ -100,7 +100,7 @@ export default function PublicHomePage() {
               </div>
               <p className="public-small-text">{PRICE_PER_MONTH} · Cancel anytime</p>
               <p className="public-small-text" style={{ marginTop: 10 }}>
-                A published level or target has been in play in <b>every</b> intraday-verified session.{" "}
+A published level or target has been in play in <b>every</b> intraday-verified ES and NQ session.{" "}
                 <Link href="/track-record" style={{ color: "var(--teal, #5EEAD4)", textDecoration: "underline" }} data-testid="link-proof-hero">
                   See the track record →
                 </Link>

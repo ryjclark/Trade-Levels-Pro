@@ -153,6 +153,8 @@ async function computeIntradayProof(): Promise<ProofResult> {
   };
   const rate = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : null);
   const bySymbol: Record<string, any> = {};
+  // Combined ES+NQ accumulators for the default "Overall" view.
+  const ALL = { scored: 0, inPlay: 0, tagged: 0, triggered: 0, worked: 0, targetReached: 0, rankTrig: [0, 0, 0], tgtHit: [0, 0, 0], tgtSamp: [0, 0, 0], recent: [] as any[] };
 
   for (const sym of Object.keys(CONTRACTS)) {
     const maps: Record<string, Map<string, Bar[]>> = {};
@@ -218,6 +220,13 @@ async function computeIntradayProof(): Promise<ProofResult> {
       tr.forEach((v, i) => { if (v) rankTrig[i]++; });
       if (!tr[0]) { ffSessions++; if (tr[1] || tr[2]) ffBackup++; }
       recent.push({ date: r.date, ladder, target, tagged: tg, triggered: tr, worked: wk, targetReached: tReached });
+      // Mirror into the combined Overall bucket.
+      ALL.scored++;
+      if (sTag) ALL.tagged++; if (sTrig) ALL.triggered++; if (sWork) ALL.worked++; if (tReached) ALL.targetReached++;
+      if (sTag || tReached) ALL.inPlay++;
+      tr.forEach((v, i) => { if (v) ALL.rankTrig[i]++; });
+      tLadder.forEach((_, j) => { ALL.tgtSamp[j]++; }); tLadder.forEach((T, j) => { if (sHigh >= T - TOL) ALL.tgtHit[j]++; });
+      ALL.recent.push({ date: r.date, symbol: sym, ladder, target, tagged: tg, triggered: tr, worked: wk, targetReached: tReached });
     }
     bySymbol[sym] = {
       scored,
@@ -239,6 +248,25 @@ async function computeIntradayProof(): Promise<ProofResult> {
       recent: recent.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30),
     };
   }
+  bySymbol.ALL = {
+    scored: ALL.scored,
+    inPlayRate: rate(ALL.inPlay, ALL.scored),
+    targetReachedRate: rate(ALL.targetReached, ALL.scored),
+    taggedRate: rate(ALL.tagged, ALL.scored),
+    triggeredRate: rate(ALL.triggered, ALL.scored),
+    workedRate: rate(ALL.worked, ALL.scored),
+    workedWhenTriggeredRate: rate(ALL.worked, ALL.triggered),
+    triggerSamples: ALL.triggered,
+    target1Rate: rate(ALL.tgtHit[0], ALL.tgtSamp[0]),
+    target2Rate: rate(ALL.tgtHit[1], ALL.tgtSamp[1]),
+    target3Rate: rate(ALL.tgtHit[2], ALL.tgtSamp[2]),
+    rank1TrigRate: rate(ALL.rankTrig[0], ALL.scored),
+    rank2TrigRate: rate(ALL.rankTrig[1], ALL.scored),
+    rank3TrigRate: rate(ALL.rankTrig[2], ALL.scored),
+    backupSavedRate: null,
+    backupSamples: 0,
+    recent: ALL.recent.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30),
+  };
   return { updatedAt: new Date().toISOString(), tolerancePts: TOL, interval: "15m", bySymbol };
 }
 
@@ -965,7 +993,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v85", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v86", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)

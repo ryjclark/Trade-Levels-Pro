@@ -27,6 +27,7 @@ interface SymProof {
 
 interface ProofSession {
   date: string;
+  symbol?: string;
   ladder: number[];
   target: number;
   tagged: boolean[];
@@ -91,10 +92,12 @@ function rung(level: number, tagged: boolean, triggered: boolean, worked: boolea
 export default function PublicTrackRecordPage() {
   const { data, isLoading } = useQuery<Proof>({ queryKey: ["/api/public/proof"] });
 
-  const symbols = data ? Object.keys(data.bySymbol) : [];
-  const [sym, setSym] = useState<string>("ES");
-  const active = symbols.includes(sym) ? sym : symbols[0];
-  const view = active ? data?.bySymbol[active] : undefined;
+  const tabs = data ? ["ALL", ...Object.keys(data.bySymbol).filter((s) => s !== "ALL")] : [];
+  const [sym, setSym] = useState<string>("ALL");
+  const active = tabs.includes(sym) ? sym : (tabs[0] ?? "ALL");
+  const view = data?.bySymbol[active];
+  const labelFor = (s: string) => (s === "ALL" ? "ES + NQ" : s);
+  const activeLabel = labelFor(active);
 
   return (
     <div className="public-page">
@@ -120,9 +123,9 @@ export default function PublicTrackRecordPage() {
           </div>
         ) : (
           <>
-            {symbols.length > 1 && (
+            {tabs.length > 1 && (
               <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }} data-testid="proof-filter">
-                {symbols.map((s) => (
+                {tabs.map((s) => (
                   <button
                     key={s}
                     onClick={() => setSym(s)}
@@ -137,7 +140,7 @@ export default function PublicTrackRecordPage() {
                       cursor: "pointer",
                     }}
                   >
-                    {s}
+                    {labelFor(s)}
                   </button>
                 ))}
               </div>
@@ -167,7 +170,7 @@ export default function PublicTrackRecordPage() {
             </section>
 
             <p style={{ fontSize: 14, opacity: 0.72, marginBottom: 40, maxWidth: 720, lineHeight: 1.6 }}>
-              Across <b>{view.scored}</b> intraday-verified {active} sessions: a failed-breakdown long set up
+              Across <b>{view.scored}</b> intraday-verified {activeLabel} sessions: a failed-breakdown long set up
               (flushed a ranked level and reclaimed it) in <b>{pct(view.triggeredRate)}</b> of them — on the
               rest, price simply never pulled back to the entries, and the targets carried the day instead.
               And it's a <b>ranked ladder</b>, not one shot — the deeper backups catch the flushes the first
@@ -179,7 +182,7 @@ export default function PublicTrackRecordPage() {
                 How far price runs — targets reached
               </h2>
               <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14 }}>
-                Once price is moving off the levels, how often it reaches each published upside target · {active}.
+                Once price is moving off the levels, how often it reaches each published upside target · {activeLabel}.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
                 <StatTile label="1st target reached" value={pct(view.target1Rate)} sub="the magnet, first objective" accent />
@@ -201,7 +204,7 @@ export default function PublicTrackRecordPage() {
                   },
                   {
                     n: "2", h: "React, don't predict",
-                    b: <>Wait for a ranked level to flush and reclaim (the failed breakdown), then enter. That set up in <b>{pct(view.triggeredRate)}</b> of {active} sessions — and when it did, it reached the next level <b>{pct(view.workedWhenTriggeredRate)}</b> of the time.</>,
+                    b: <>Wait for a ranked level to flush and reclaim (the failed breakdown), then enter. That set up in <b>{pct(view.triggeredRate)}</b> of {activeLabel} sessions — and when it did, it reached the next level <b>{pct(view.workedWhenTriggeredRate)}</b> of the time.</>,
                   },
                   {
                     n: "3", h: "Manage level to level",
@@ -228,7 +231,7 @@ export default function PublicTrackRecordPage() {
               return (
                 <section style={{ marginBottom: 40, border: "1px solid var(--border-teal-strong, rgba(94,234,212,0.35))", borderRadius: 14, padding: "22px 24px", background: "rgba(94,234,212,0.05)" }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "var(--teal, #5EEAD4)", marginBottom: 6 }}>
-                    A REAL SESSION · {active} · {shortDate(spot.date)}
+                    A REAL SESSION · {spot.symbol ?? activeLabel} · {shortDate(spot.date)}
                   </div>
                   <p style={{ fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 720 }}>
                     The plan published three ranked failed-breakdown longs at{" "}
@@ -247,7 +250,7 @@ export default function PublicTrackRecordPage() {
 
             <section style={{ marginBottom: 40 }}>
               <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
-                Every session — the ladder, intraday · {active}
+                Every session — the ladder, intraday · {activeLabel}
               </h2>
               <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14, maxWidth: 680 }}>
                 The three ranked failed-breakdown longs each session and what price actually did
@@ -262,6 +265,7 @@ export default function PublicTrackRecordPage() {
                   <thead>
                     <tr style={{ textAlign: "left", opacity: 0.7, fontSize: 13 }}>
                       <th style={{ padding: "8px 10px" }}>Date</th>
+                      {active === "ALL" && <th style={{ padding: "8px 10px" }}>Sym</th>}
                       <th style={{ padding: "8px 10px" }}>Ranked failed-breakdown longs</th>
                       <th style={{ padding: "8px 10px" }}>Target</th>
                       <th style={{ padding: "8px 10px" }}>Hit</th>
@@ -271,6 +275,7 @@ export default function PublicTrackRecordPage() {
                     {view.recent.map((s, i) => (
                       <tr key={`${s.date}-${i}`} style={{ borderTop: "1px solid var(--border, #26262b)", fontSize: 14 }}>
                         <td style={{ padding: "10px", whiteSpace: "nowrap" }}>{shortDate(s.date)}</td>
+                        {active === "ALL" && <td style={{ padding: "10px", fontWeight: 600 }}>{s.symbol}</td>}
                         <td style={{ padding: "10px" }}>
                           {s.ladder.map((L, j) => (
                             <span key={j}>{rung(L, s.tagged[j], s.triggered[j], s.worked[j])}</span>
