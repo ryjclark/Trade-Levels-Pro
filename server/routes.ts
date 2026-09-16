@@ -180,10 +180,16 @@ async function computeIntradayProof(): Promise<ProofResult> {
       const trade = computePlanTrade(lv, magnet, sym as SymbolId, plan.currentPrice ?? null);
       const ladder = [trade.aplus, ...trade.backups].filter((x): x is number => x != null).slice(0, 3);
       if (!ladder.length) continue;
-      const target = magnet;
+      const target = magnet; // session-level first objective for the "target reached" stat
+      // Candidate levels above each entry — a level-to-level trader's first take-
+      // profit is the NEXT level up (a rung above, the magnet, or a resistance),
+      // not necessarily the full magnet. This matches how the plan is traded.
+      const upLevels = [...ladder, magnet, ...(lv.swingResistances ?? [])];
+      const nextUp = (L: number) => upLevels.filter((x) => x > L + 0.5).sort((a, b) => a - b)[0] ?? magnet;
       scored++;
       const tg = [false, false, false], tr = [false, false, false], wk = [false, false, false];
       ladder.forEach((L, i) => {
+        const t1 = nextUp(L); // this entry's first level-to-level target
         let flush = -1;
         for (let k = 0; k < chron.length; k++) {
           if (chron[k].l <= L + TOL) tg[i] = true;
@@ -192,7 +198,7 @@ async function computeIntradayProof(): Promise<ProofResult> {
         if (flush >= 0) {
           let rec = -1;
           for (let k = flush + 1; k < chron.length; k++) { if (chron[k].c > L) { rec = k; break; } }
-          if (rec >= 0) { tr[i] = true; for (let k = rec; k < chron.length; k++) { if (chron[k].h >= target - TOL) { wk[i] = true; break; } } }
+          if (rec >= 0) { tr[i] = true; for (let k = rec; k < chron.length; k++) { if (chron[k].h >= t1 - TOL) { wk[i] = true; break; } } }
         }
       });
       const tReached = chron.some((b) => b.h >= target - TOL);
@@ -944,7 +950,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v78", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v79", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)

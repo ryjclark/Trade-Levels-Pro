@@ -189,7 +189,7 @@ export default function PublicTrackRecordPage() {
               <StatTile
                 label="Setup ran to target"
                 value={pct(view.workedRate)}
-                sub="triggered, then reached the magnet"
+                sub="triggered, then reached the next level"
               />
             </section>
 
@@ -200,7 +200,7 @@ export default function PublicTrackRecordPage() {
               <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14, maxWidth: 680 }}>
                 The three ranked failed-breakdown longs each session and what price actually did
                 to each on 15-minute bars.{" "}
-                <span style={{ color: "#4ade80" }}>● ran to target</span>{" · "}
+                <span style={{ color: "#4ade80" }}>● ran to next level</span>{" · "}
                 <span style={{ color: "#fbbf24" }}>● flushed + reclaimed</span>{" · "}
                 <span style={{ color: "#60a5fa" }}>● tagged (±{data?.tolerancePts}pts)</span>{" · "}
                 <span style={{ opacity: 0.5 }}>● not reached</span>
@@ -238,9 +238,10 @@ export default function PublicTrackRecordPage() {
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 8, maxWidth: 680 }}>
               <b>In play</b> — price reached at least one ranked level or a target that session.
               <b> Triggered</b> — a ranked support flushed below the line and reclaimed it intraday
-              (the failed-breakdown setting up). <b>Ran to target</b> — after triggering, price
-              reached the magnet (first objective). Measured on 15-minute bars with a ±{data?.tolerancePts}-point
-              tolerance, each session scored on the futures contract that was live that day.
+              (the failed-breakdown setting up). <b>Ran to next level</b> — after triggering, price
+              reached the next level up (a level-to-level take-profit, how the plan is traded).
+              Measured on 15-minute bars with a ±{data?.tolerancePts}-point tolerance, each session
+              scored on the futures contract that was live that day.
             </p>
             <p style={{ fontSize: 12, opacity: 0.5, marginTop: 12, maxWidth: 680 }}>
               These are level-interaction statistics describing how price moved relative to the
