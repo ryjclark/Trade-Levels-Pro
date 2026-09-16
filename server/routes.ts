@@ -196,8 +196,10 @@ async function computeIntradayProof(): Promise<ProofResult> {
           if (chron[k].l < L) { flush = k; break; }
         }
         if (flush >= 0) {
+          // Reclaim = price traded back ABOVE the level after flushing (a failed
+          // breakdown — often a wick, so use the high, not the bar close).
           let rec = -1;
-          for (let k = flush + 1; k < chron.length; k++) { if (chron[k].c > L) { rec = k; break; } }
+          for (let k = flush; k < chron.length; k++) { if (chron[k].h >= L) { rec = k; break; } }
           if (rec >= 0) { tr[i] = true; for (let k = rec; k < chron.length; k++) { if (chron[k].h >= t1 - TOL) { wk[i] = true; break; } } }
         }
       });
@@ -950,7 +952,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v80", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v81", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
