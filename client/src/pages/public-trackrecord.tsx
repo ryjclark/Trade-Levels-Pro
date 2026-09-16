@@ -12,6 +12,11 @@ interface SymProof {
   taggedRate: number | null;
   triggeredRate: number | null;
   workedRate: number | null;
+  workedWhenTriggeredRate: number | null;
+  triggerSamples: number;
+  target1Rate: number | null;
+  target2Rate: number | null;
+  target3Rate: number | null;
   rank1TrigRate: number | null;
   rank2TrigRate: number | null;
   rank3TrigRate: number | null;
@@ -160,18 +165,34 @@ export default function PublicTrackRecordPage() {
                 accent
               />
               <StatTile
-                label="Sessions verified"
-                value={view.scored.toLocaleString()}
-                sub={`intraday, 15-min bars · ${active}`}
+                label="When a setup triggers, it works"
+                value={pct(view.workedWhenTriggeredRate)}
+                sub={`reaches the next level${view.triggerSamples ? ` · ${view.triggerSamples} setups` : ""}`}
+                accent
               />
             </section>
 
             <p style={{ fontSize: 14, opacity: 0.72, marginBottom: 40, maxWidth: 720, lineHeight: 1.6 }}>
-              And the plan gives you a <b>ranked ladder</b>, not one shot: across the three failed-breakdown
-              longs, at least one flushed and reclaimed in <b>{pct(view.triggeredRate)}</b> of sessions, and
-              when the first entry missed, a backup caught it <b>{pct(view.backupSavedRate)}</b> of the time.
-              Once triggered, price ran to the next level <b>{pct(view.workedRate)}</b> of the time.
+              Across <b>{view.scored}</b> intraday-verified {active} sessions: a failed-breakdown long set up
+              (flushed a ranked level and reclaimed it) in <b>{pct(view.triggeredRate)}</b> of them — on the
+              rest, price simply never pulled back to the entries, and the targets carried the day instead.
+              And it's a <b>ranked ladder</b>, not one shot — the deeper backups catch the flushes the first
+              entry misses.
             </p>
+
+            <section style={{ marginBottom: 40 }}>
+              <h2 className="public-h1" style={{ fontSize: 20, marginBottom: 4 }}>
+                How far price runs — targets reached
+              </h2>
+              <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 14 }}>
+                Once price is moving off the levels, how often it reaches each published upside target · {active}.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+                <StatTile label="1st target reached" value={pct(view.target1Rate)} />
+                <StatTile label="2nd target reached" value={pct(view.target2Rate)} />
+                <StatTile label="3rd target reached" value={pct(view.target3Rate)} />
+              </div>
+            </section>
 
             <section style={{ marginBottom: 40 }}>
               <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>

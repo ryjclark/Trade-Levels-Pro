@@ -160,6 +160,7 @@ async function computeIntradayProof(): Promise<ProofResult> {
 
     let scored = 0, inPlay = 0, tagged = 0, triggered = 0, worked = 0, targetReached = 0;
     const rankTrig = [0, 0, 0];
+    const tgtHit = [0, 0, 0], tgtSamp = [0, 0, 0]; // 1st/2nd/3rd upside target reached
     let ffSessions = 0, ffBackup = 0;
     const recent: any[] = [];
 
@@ -204,6 +205,9 @@ async function computeIntradayProof(): Promise<ProofResult> {
         }
       });
       const tReached = chron.some((b) => b.h >= target - TOL);
+      // Upside target progression (1st/2nd/3rd): how far price ran this session.
+      const sHigh = Math.max(...chron.map((b) => b.h));
+      trade.targets.slice(0, 3).forEach((T, j) => { tgtSamp[j]++; if (sHigh >= T - TOL) tgtHit[j]++; });
       const sTag = tg.some(Boolean), sTrig = tr.some(Boolean), sWork = wk.some(Boolean);
       if (sTag) tagged++; if (sTrig) triggered++; if (sWork) worked++; if (tReached) targetReached++;
       if (sTag || tReached) inPlay++;
@@ -218,6 +222,11 @@ async function computeIntradayProof(): Promise<ProofResult> {
       taggedRate: rate(tagged, scored),
       triggeredRate: rate(triggered, scored),
       workedRate: rate(worked, scored),
+      workedWhenTriggeredRate: rate(worked, triggered), // when a setup triggers, it reached the next level
+      triggerSamples: triggered,
+      target1Rate: rate(tgtHit[0], tgtSamp[0]),
+      target2Rate: rate(tgtHit[1], tgtSamp[1]),
+      target3Rate: rate(tgtHit[2], tgtSamp[2]),
       rank1TrigRate: rate(rankTrig[0], scored),
       rank2TrigRate: rate(rankTrig[1], scored),
       rank3TrigRate: rate(rankTrig[2], scored),
@@ -952,7 +961,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v81", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v82", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)
