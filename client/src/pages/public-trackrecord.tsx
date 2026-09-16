@@ -188,6 +188,63 @@ export default function PublicTrackRecordPage() {
               </div>
             </section>
 
+            {/* How the numbers translate into a repeatable, tradeable process. */}
+            <section style={{ marginBottom: 40 }}>
+              <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 16 }}>
+                How you actually trade it
+              </h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
+                {[
+                  {
+                    n: "1", h: "Prepare the night before",
+                    b: <>Every session you get a ranked ladder plus targets, after the close. A published level or target was in play <b>{pct(view.inPlayRate)}</b> of sessions — there's always a plan.</>,
+                  },
+                  {
+                    n: "2", h: "React, don't predict",
+                    b: <>Wait for a ranked level to flush and reclaim (the failed breakdown), then enter. That set up in <b>{pct(view.triggeredRate)}</b> of {active} sessions — and when it did, it reached the next level <b>{pct(view.workedWhenTriggeredRate)}</b> of the time.</>,
+                  },
+                  {
+                    n: "3", h: "Manage level to level",
+                    b: <>Bank the first target, hold a runner. Price reached the 1st target <b>{pct(view.target1Rate)}</b>, the 2nd <b>{pct(view.target2Rate)}</b>, the 3rd <b>{pct(view.target3Rate)}</b> of the time.</>,
+                  },
+                ].map((s) => (
+                  <div key={s.n} style={{ border: "1px solid var(--border, #26262b)", borderRadius: 12, padding: "18px 20px", background: "var(--card, rgba(255,255,255,0.02))" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--teal, #5EEAD4)", marginBottom: 8 }}>STEP {s.n}</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{s.h}</div>
+                    <div style={{ fontSize: 13.5, opacity: 0.75, lineHeight: 1.6 }}>{s.b}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Real logged session, pulled live — the story in one concrete example. */}
+            {(() => {
+              const spot =
+                view.recent.find((s) => s.targetReached && s.worked.filter(Boolean).length >= 2) ??
+                view.recent.find((s) => s.targetReached) ??
+                view.recent[0];
+              if (!spot) return null;
+              const trigN = spot.triggered.filter(Boolean).length;
+              return (
+                <section style={{ marginBottom: 40, border: "1px solid var(--border-teal-strong, rgba(94,234,212,0.35))", borderRadius: 14, padding: "22px 24px", background: "rgba(94,234,212,0.05)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--teal, #5EEAD4)", marginBottom: 6 }}>
+                    A REAL SESSION · {active} · {shortDate(spot.date)}
+                  </div>
+                  <p style={{ fontSize: 15, lineHeight: 1.65, margin: 0, maxWidth: 720 }}>
+                    The plan published three ranked failed-breakdown longs at{" "}
+                    <b>{spot.ladder.map((l) => n(l)).join(", ")}</b>, targeting <b>{n(spot.target)}</b>.
+                    Price flushed and reclaimed <b>{trigN} of the 3</b>{" "}
+                    {trigN === 1 ? "entry" : "entries"}
+                    {spot.targetReached ? (
+                      <>, then <b>ran to the target</b>. Textbook: react to the reclaim, manage to the level.</>
+                    ) : (
+                      <>. The setup was there to trade off the reclaim.</>
+                    )}
+                  </p>
+                </section>
+              );
+            })()}
+
             <section style={{ marginBottom: 40 }}>
               <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
                 Every session — the ladder, intraday · {active}
