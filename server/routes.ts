@@ -205,9 +205,13 @@ async function computeIntradayProof(): Promise<ProofResult> {
         }
       });
       const tReached = chron.some((b) => b.h >= target - TOL);
-      // Upside target progression (1st/2nd/3rd): how far price ran this session.
+      // Upside target progression, nearest to furthest: the magnet is the 1st
+      // objective, then the plan's momentum targets beyond it. One clean ladder so
+      // "1st target" here == the hero "first target reached" (no contradiction).
       const sHigh = Math.max(...chron.map((b) => b.h));
-      trade.targets.slice(0, 3).forEach((T, j) => { tgtSamp[j]++; if (sHigh >= T - TOL) tgtHit[j]++; });
+      const tLadder = Array.from(new Set([magnet, ...trade.targets.filter((t) => t > magnet + 1)]))
+        .sort((a, b) => a - b).slice(0, 3);
+      tLadder.forEach((T, j) => { tgtSamp[j]++; if (sHigh >= T - TOL) tgtHit[j]++; });
       const sTag = tg.some(Boolean), sTrig = tr.some(Boolean), sWork = wk.some(Boolean);
       if (sTag) tagged++; if (sTrig) triggered++; if (sWork) worked++; if (tReached) targetReached++;
       if (sTag || tReached) inPlay++;
@@ -961,7 +965,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v82", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v83", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)

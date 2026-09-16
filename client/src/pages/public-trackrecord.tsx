@@ -159,12 +159,6 @@ export default function PublicTrackRecordPage() {
                 accent
               />
               <StatTile
-                label="First target reached"
-                value={pct(view.targetReachedRate)}
-                sub="the magnet, our first objective"
-                accent
-              />
-              <StatTile
                 label="When a setup triggers, it works"
                 value={pct(view.workedWhenTriggeredRate)}
                 sub={`reaches the next level${view.triggerSamples ? ` · ${view.triggerSamples} setups` : ""}`}
@@ -188,7 +182,7 @@ export default function PublicTrackRecordPage() {
                 Once price is moving off the levels, how often it reaches each published upside target · {active}.
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-                <StatTile label="1st target reached" value={pct(view.target1Rate)} />
+                <StatTile label="1st target reached" value={pct(view.target1Rate)} sub="the magnet, first objective" accent />
                 <StatTile label="2nd target reached" value={pct(view.target2Rate)} />
                 <StatTile label="3rd target reached" value={pct(view.target3Rate)} />
               </div>
