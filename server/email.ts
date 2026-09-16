@@ -80,6 +80,7 @@ export async function sendFreePlanEmail(
   plan: { symbol: string; date: string; magnet: number | null; dzLow: number | null; dzHigh: number | null; bias: string | null },
   links: { subscribeUrl: string; unsubscribeUrl: string },
 ): Promise<void> {
+  const company = process.env.COMPANY_NAME || "Trade Levels Pro";
   const addr = process.env.BUSINESS_ADDRESS || "";
   const fmt = (v: number | null) => (v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 }));
   await sendEmail({
@@ -100,7 +101,7 @@ export async function sendFreePlanEmail(
         <p><a href="${links.subscribeUrl}" style="display:inline-block;background:#2dd4bf;color:#0c1117;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Get the full plan →</a></p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
         <p style="color:#999;font-size:12px;">
-          You're getting this because you signed up for free daily levels at tradelevelspro.com.
+          ${company} · You're getting this because you signed up for free daily levels at tradelevelspro.com.
           <a href="${links.unsubscribeUrl}" style="color:#999;">Unsubscribe</a>.${addr ? `<br/>${addr}` : ""}
         </p>
       </div>`,
@@ -108,7 +109,7 @@ export async function sendFreePlanEmail(
       `${plan.symbol} · ${plan.date} (free daily preview)\n` +
       `Bias: ${plan.bias ?? "—"}\nMagnet: ${fmt(plan.magnet)}\nDynamic Zone: ${fmt(plan.dzLow)} - ${fmt(plan.dzHigh)}\n\n` +
       `Members get the full failed-breakdown ladder, targets, and invalidation for ${plan.symbol} and NQ daily.\n` +
-      `Get the full plan: ${links.subscribeUrl}\n\nUnsubscribe: ${links.unsubscribeUrl}${addr ? `\n${addr}` : ""}`,
+      `Get the full plan: ${links.subscribeUrl}\n\n${company}\nUnsubscribe: ${links.unsubscribeUrl}${addr ? `\n${addr}` : ""}`,
   });
 }
 
