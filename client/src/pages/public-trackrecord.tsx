@@ -150,48 +150,28 @@ export default function PublicTrackRecordPage() {
               <StatTile
                 label="A level or target in play"
                 value={pct(view.inPlayRate)}
-                sub="price reached a ranked level or a target"
+                sub="price reached a ranked level or a target — every session"
                 accent
               />
               <StatTile
                 label="First target reached"
                 value={pct(view.targetReachedRate)}
                 sub="the magnet, our first objective"
-              />
-              <StatTile
-                label="Breakdown setup triggered"
-                value={pct(view.triggeredRate)}
-                sub="a ranked level flushed + reclaimed"
+                accent
               />
               <StatTile
                 label="Sessions verified"
                 value={view.scored.toLocaleString()}
-                sub={`intraday · ${active}`}
+                sub={`intraday, 15-min bars · ${active}`}
               />
             </section>
 
-            <section
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: 12,
-                marginBottom: 40,
-              }}
-            >
-              <StatTile label="#1 entry triggered" value={pct(view.rank1TrigRate)} />
-              <StatTile label="#2 entry triggered" value={pct(view.rank2TrigRate)} />
-              <StatTile label="#3 entry triggered" value={pct(view.rank3TrigRate)} />
-              <StatTile
-                label="Backup caught it"
-                value={pct(view.backupSavedRate)}
-                sub={view.backupSamples ? `when #1 missed (${view.backupSamples})` : "when #1 missed"}
-              />
-              <StatTile
-                label="Setup ran to target"
-                value={pct(view.workedRate)}
-                sub="triggered, then reached the next level"
-              />
-            </section>
+            <p style={{ fontSize: 14, opacity: 0.72, marginBottom: 40, maxWidth: 720, lineHeight: 1.6 }}>
+              And the plan gives you a <b>ranked ladder</b>, not one shot: across the three failed-breakdown
+              longs, at least one flushed and reclaimed in <b>{pct(view.triggeredRate)}</b> of sessions, and
+              when the first entry missed, a backup caught it <b>{pct(view.backupSavedRate)}</b> of the time.
+              Once triggered, price ran to the next level <b>{pct(view.workedRate)}</b> of the time.
+            </p>
 
             <section style={{ marginBottom: 40 }}>
               <h2 className="public-h1" style={{ fontSize: 22, marginBottom: 6 }}>
