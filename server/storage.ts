@@ -1,5 +1,5 @@
 import { eq, and, desc, lte, lt, isNotNull } from "drizzle-orm";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { plans, publishLogs, siteSettings, previews, members, memberEmailPrefs, telegramMembers, memberAccessExpiry, planResults, claudeApiCalls, telegramSubscribers, type Plan, type InsertPlan, type PublishLog, type InsertPublishLog, type SiteSettingsData, type Preview, type InsertPreview, type Member, type InsertMember, type PlanResult, type InsertPlanResult, type ClaudeApiCall, type InsertClaudeApiCall, type TelegramSubscriber } from "@shared/schema";
 import { PUBLIC_PLAN_SOURCES } from "@shared/constants";
 
@@ -195,6 +195,28 @@ export class DatabaseStorage implements IStorage {
   async insertPreview(data: InsertPreview): Promise<Preview> {
     const [row] = await db.insert(previews).values(data).returning();
     return row;
+  }
+
+  // Distinct captured lead emails, minus anyone who unsubscribed. Raw SQL so we
+  // don't need Drizzle models for the idempotent aux table.
+  async listFreeListEmails(): Promise<string[]> {
+    const res: any = await pool.query(
+      `SELECT DISTINCT p.email FROM previews p
+       WHERE lower(p.email) NOT IN (SELECT email FROM email_unsubscribes)`,
+    );
+    return (res.rows ?? []).map((r: any) => String(r.email));
+  }
+
+  async isUnsubscribed(email: string): Promise<boolean> {
+    const res: any = await pool.query(`SELECT 1 FROM email_unsubscribes WHERE email = $1 LIMIT 1`, [email.toLowerCase().trim()]);
+    return (res.rows ?? []).length > 0;
+  }
+
+  async addUnsubscribe(email: string): Promise<void> {
+    await pool.query(
+      `INSERT INTO email_unsubscribes (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`,
+      [email.toLowerCase().trim()],
+    );
   }
 
   async getPreviousPlan(beforeDate: string, symbol: string): Promise<Plan | undefined> {

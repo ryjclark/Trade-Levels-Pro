@@ -8,7 +8,7 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
@@ -37,6 +37,12 @@ export async function ensureAuxTables(): Promise<void> {
     CREATE TABLE IF NOT EXISTS member_access_expiry (
       email text PRIMARY KEY,
       expires_at timestamptz NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_unsubscribes (
+      email text PRIMARY KEY,
       created_at timestamptz NOT NULL DEFAULT now()
     );
   `);

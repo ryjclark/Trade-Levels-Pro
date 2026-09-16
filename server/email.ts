@@ -71,6 +71,47 @@ export async function sendMemberLoginLink(email: string, loginUrl: string): Prom
   });
 }
 
+// Free daily "taste" plan for the lead list: the magnet, dynamic zone, and bias
+// only — NOT the full failed-breakdown ladder / targets / invalidation (those stay
+// paid). CAN-SPAM: includes a one-click unsubscribe and, when set, a postal
+// address. Best-effort; callers catch.
+export async function sendFreePlanEmail(
+  email: string,
+  plan: { symbol: string; date: string; magnet: number | null; dzLow: number | null; dzHigh: number | null; bias: string | null },
+  links: { subscribeUrl: string; unsubscribeUrl: string },
+): Promise<void> {
+  const addr = process.env.BUSINESS_ADDRESS || "";
+  const fmt = (v: number | null) => (v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 }));
+  await sendEmail({
+    to: email,
+    subject: `${plan.symbol} levels for ${plan.date} — free daily plan`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#111;">
+        <h1 style="color:#0c1117;font-size:20px;">${plan.symbol} · ${plan.date}</h1>
+        <p style="margin:0 0 4px;color:#555;font-size:13px;">Your free daily preview</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+          <tr><td style="padding:8px 0;color:#555;">Bias</td><td style="padding:8px 0;text-align:right;font-weight:700;">${plan.bias ?? "—"}</td></tr>
+          <tr><td style="padding:8px 0;color:#555;">Magnet</td><td style="padding:8px 0;text-align:right;font-weight:700;">${fmt(plan.magnet)}</td></tr>
+          <tr><td style="padding:8px 0;color:#555;">Dynamic Zone</td><td style="padding:8px 0;text-align:right;font-weight:700;">${fmt(plan.dzLow)} – ${fmt(plan.dzHigh)}</td></tr>
+        </table>
+        <p style="background:#f4f4f5;border-radius:8px;padding:14px 16px;font-size:14px;color:#333;">
+          Members also get the ranked failed-breakdown longs, the exact entry/target ladder, and the invalidation for ${plan.symbol} and NQ every day.
+        </p>
+        <p><a href="${links.subscribeUrl}" style="display:inline-block;background:#2dd4bf;color:#0c1117;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Get the full plan →</a></p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
+        <p style="color:#999;font-size:12px;">
+          You're getting this because you signed up for free daily levels at tradelevelspro.com.
+          <a href="${links.unsubscribeUrl}" style="color:#999;">Unsubscribe</a>.${addr ? `<br/>${addr}` : ""}
+        </p>
+      </div>`,
+    text:
+      `${plan.symbol} · ${plan.date} (free daily preview)\n` +
+      `Bias: ${plan.bias ?? "—"}\nMagnet: ${fmt(plan.magnet)}\nDynamic Zone: ${fmt(plan.dzLow)} - ${fmt(plan.dzHigh)}\n\n` +
+      `Members get the full failed-breakdown ladder, targets, and invalidation for ${plan.symbol} and NQ daily.\n` +
+      `Get the full plan: ${links.subscribeUrl}\n\nUnsubscribe: ${links.unsubscribeUrl}${addr ? `\n${addr}` : ""}`,
+  });
+}
+
 // Alert the owner that someone subscribed. Best-effort; callers should catch.
 export async function notifyOwnerOfSignup(
   customerEmail: string,

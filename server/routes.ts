@@ -782,6 +782,29 @@ export async function registerRoutes(
     }
   });
 
+  // One-click unsubscribe for the free daily email (CAN-SPAM). Token is an HMAC of
+  // the email so only our own links validate; adds the email to email_unsubscribes.
+  app.get("/api/unsubscribe", async (req, res) => {
+    const email = String(req.query.e || "").toLowerCase().trim();
+    const token = String(req.query.t || "");
+    const secret = process.env.UNSUB_SECRET || process.env.SESSION_SECRET || "tlp-unsub-fallback";
+    const expected = crypto.createHmac("sha256", secret).update(email).digest("hex").slice(0, 32);
+    const ok = email && token.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+    const page = (msg: string) =>
+      `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui,Arial,sans-serif;background:#050810;color:#e5e7eb;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;"><div style="max-width:440px;text-align:center;padding:24px;"><h1 style="color:#5EEAD4;font-size:22px;">${msg}</h1><p style="opacity:.7;">Trade Levels Pro</p><p><a href="https://tradelevelspro.com" style="color:#5EEAD4;">Back to the site →</a></p></div></body>`;
+    if (!ok) {
+      return res.status(400).send(page("That unsubscribe link isn't valid. Email contact@tradelevelspro.com and we'll remove you."));
+    }
+    try {
+      await storage.addUnsubscribe(email);
+      res.send(page("You're unsubscribed from the free daily email."));
+    } catch (err) {
+      console.error("unsubscribe error:", err);
+      res.status(500).send(page("Something went wrong. Email contact@tradelevelspro.com and we'll remove you."));
+    }
+  });
+
   app.get("/api/plans/copy-previous", requireAdmin, async (req, res) => {
     try {
       const { date, symbol } = req.query;
@@ -993,7 +1016,7 @@ export async function registerRoutes(
   // without regenerating or logging in. `regimeAware:true` only exists in the
   // momentum build.
   app.get("/api/public/version", (_req, res) => {
-    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v86", regimeAware: true });
+    res.json({ algorithm: ALGORITHM_VERSION, build: "momentum-v87", regimeAware: true });
   });
 
   // Externally-triggerable cron jobs. An outside pinger (GitHub Action / cron-job.org)

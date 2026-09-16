@@ -5,7 +5,8 @@ import { formatTelegramPro, escapeMdV2 } from "./formatter";
 import { generateAndPublishLevels, fetchDailyBars, fetchRthDailyBars, fetchIntradayBars, channelSymbols, SYMBOLS, type SymbolId } from "./lib/levels-algorithm";
 import { deliverToSubscribers } from "./lib/telegram-bot";
 import { formatAlgorithmPlan } from "./lib/telegram-format";
-import { sendDailyPlanDigest } from "./email";
+import { sendDailyPlanDigest, sendFreePlanEmail } from "./email";
+import crypto from "crypto";
 import { postToX } from "./lib/twitter";
 import { buildDailyBrief, formatBriefTelegram } from "./lib/daily-brief";
 import type { PlanLevels, Plan } from "@shared/schema";
@@ -480,6 +481,44 @@ export async function runResultsTick() {
 // Opt-in daily email: after the next-session plans are published, email the
 // featured (ES/NQ) plan(s) — the exact Telegram text — to members who turned it
 // on. Deduped to one send per plan date, best-effort, defaults to nobody.
+// Free daily "taste" plan to the lead list (magnet/zone/bias only). OFF until
+// FREE_PLAN_EMAIL_ENABLED=true so the content + CAN-SPAM address can be reviewed
+// first. Fully isolated so it can never break generation.
+const FREE_APP_BASE_URL = process.env.APP_BASE_URL || "https://tradelevelspro.com";
+const UNSUB_SECRET = process.env.UNSUB_SECRET || process.env.SESSION_SECRET || "tlp-unsub-fallback";
+export function unsubToken(email: string): string {
+  return crypto.createHmac("sha256", UNSUB_SECRET).update(email.toLowerCase().trim()).digest("hex").slice(0, 32);
+}
+export async function sendFreePlanEmails(): Promise<void> {
+  if (process.env.FREE_PLAN_EMAIL_ENABLED !== "true") return;
+  try {
+    const pubs = await storage.listPublicPlans(50);
+    const es = pubs.find((p) => p.symbol === "ES");
+    if (!es) return;
+    const emails = await storage.listFreeListEmails();
+    if (!emails.length) return;
+    let sent = 0;
+    for (const email of emails) {
+      try {
+        await sendFreePlanEmail(
+          email,
+          { symbol: "ES", date: es.date, magnet: es.magnet ?? null, dzLow: (es as any).dynamicZoneBottom ?? null, dzHigh: (es as any).dynamicZoneTop ?? null, bias: (es as any).bias ?? null },
+          {
+            subscribeUrl: `${FREE_APP_BASE_URL}/pricing?utm_source=free-email`,
+            unsubscribeUrl: `${FREE_APP_BASE_URL}/api/unsubscribe?e=${encodeURIComponent(email)}&t=${unsubToken(email)}`,
+          },
+        );
+        sent++;
+      } catch (err) {
+        console.error(`[free-email] failed for ${email}:`, err);
+      }
+    }
+    console.log(`[free-email] sent to ${sent}/${emails.length} lead(s) for ${es.date}`);
+  } catch (err) {
+    console.error("[free-email] error:", err);
+  }
+}
+
 export async function sendDailyPlanEmails(): Promise<void> {
   try {
     const pubs = await storage.listPublicPlans(50);
@@ -525,6 +564,7 @@ export async function sendTestPlanEmail(to: string): Promise<void> {
 export async function runGenerateTick() {
   await generateAndPublishLevels();
   await sendDailyPlanEmails();
+  await sendFreePlanEmails();
   await postDailyBriefToTelegram();
 }
 
