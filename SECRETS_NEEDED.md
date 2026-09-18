@@ -20,7 +20,13 @@ inert / dev-log mode.
 - `STRIPE_PUBLISHABLE_KEY` — `pk_live_…` (only needed if you later switch the
   pricing CTA to Stripe Elements / client-side; not required for hosted
   Checkout)
-- `STRIPE_PRICE_ID` — `price_…` for the $25/month Founding Members plan
+- `STRIPE_PRICE_ID` — `price_…` for the $49/month Founding Members plan
+- `STRIPE_PRICE_ID_ANNUAL` — `price_…` for the $490/year plan. This MUST be a
+  price that bills yearly and MUST NOT be the same id as `STRIPE_PRICE_ID`.
+  Setting it wrong once caused annual subscribers to be billed monthly, so
+  `server/stripe.ts` now verifies the interval with Stripe before using it and
+  falls back to the known-good annual price id, logging an error, if the check
+  fails. Leave it unset and the fallback is used.
 - `STRIPE_WEBHOOK_SECRET` — `whsec_…` from Stripe webhook endpoint settings.
   Endpoint to register: `POST https://tradelevelspro.com/stripe/webhook`,
   events: `checkout.session.completed`, `customer.subscription.deleted`
@@ -28,6 +34,15 @@ inert / dev-log mode.
 When all four are set, swap the `CTA_MAILTO` constant in
 `client/src/lib/constants.ts` (or call `POST /api/checkout` and redirect to
 the returned `url`) to flip the site over to live checkout.
+
+## Owner alerts (recommended)
+
+- `OWNER_TELEGRAM_CHAT_ID` — your personal Telegram chat id, so new signups
+  ping you directly. Currently unset, which means signups happen silently.
+  At a small member count you want to know the moment one lands. Get your id by
+  messaging `@userinfobot` on Telegram; it replies with your numeric chat id.
+- `OWNER_EMAIL` — defaults to `contact@`. Set it to route signup alerts to the
+  inbox you actually read.
 
 ## Email — Resend (optional in dev)
 

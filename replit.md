@@ -24,7 +24,8 @@ Trade Levels Pro is a daily trade planning system for ES (E-mini S&P 500) and NQ
 - Logo: /images/logo-square.webp (square), /images/logo-banner.jpg (wide)
 - Tagline: "Trade Smart. React to Price. No Predictions."
 - Payment URL: https://im.page/tradelevelspro
-- Price: $20/month (Founding Members)
+- Price: $49/month or $490/year (Founding Members). Single source of truth is
+  `client/src/lib/constants.ts` — update there, not here.
 
 ## Tech Stack
 - **Frontend**: React with TypeScript, TanStack Query, Tailwind CSS, shadcn/ui

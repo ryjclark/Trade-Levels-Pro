@@ -174,6 +174,25 @@ A published level or target has been in play in <b>every</b> intraday-verified E
 
         <SectionDivider />
 
+        {/* 3b. Free daily levels — lead capture, placed right after the visitor
+            has seen what the plan actually looks like. This is the moment of
+            peak interest and the cheapest possible next step for someone not
+            ready to pay $49 yet. */}
+        <Reveal>
+          <section className="public-section" style={{ textAlign: "center" }}>
+            <h2 className="public-section-title">Get free daily ES levels by email</h2>
+            <p className="public-section-subtitle" style={{ marginBottom: 24, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
+              The magnet, dynamic zone, and bias for tomorrow's ES session, free after the close.
+              Members get the full failed-breakdown ladder, targets, and invalidation for ES and NQ.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <EmailCapture source="home-free" />
+            </div>
+          </section>
+        </Reveal>
+
+        <SectionDivider />
+
         {/* 4. Three feature cards */}
         <Reveal>
           <section className="public-section">
@@ -300,18 +319,6 @@ A published level or target has been in play in <b>every</b> intraday-verified E
             <FaqAccordion items={FAQ} />
           </section>
         </Reveal>
-
-        {/* Free daily levels — lead capture */}
-        <section className="public-section" style={{ textAlign: "center" }}>
-          <h2 className="public-section-title">Get free daily ES levels by email</h2>
-          <p className="public-section-subtitle" style={{ marginBottom: 24, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
-            The magnet, dynamic zone, and bias for tomorrow's ES session, free after the close.
-            Members get the full failed-breakdown ladder, targets, and invalidation for ES and NQ.
-          </p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <EmailCapture source="home-free" />
-          </div>
-        </section>
 
         {/* 9. Final CTA */}
         <section className="public-cta-section">

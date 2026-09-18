@@ -126,6 +126,58 @@ export async function regenerateMemberInvite(email: string): Promise<string | nu
   return inviteLink;
 }
 
+// The $490/year live price id, kept as the known-good fallback.
+//
+// History: STRIPE_PRICE_ID_ANNUAL in the deployment was once set to a $49
+// monthly price id, which silently billed annual subscribers at the monthly
+// rate. That is why this used to be hardcoded outright. Rather than trust the
+// secret blindly or ignore it forever, we now ask Stripe what the price
+// actually is and only use the secret when Stripe confirms it bills yearly.
+// Price ids are not secret, so keeping the literal here is safe.
+const ANNUAL_PRICE_ID_FALLBACK = "price_1U5FWeFpno3hNS1skZVRZEEf";
+
+let annualPriceIdCache: string | null = null;
+
+/**
+ * Resolve the annual price id, verifying with Stripe that it really is a
+ * yearly recurring price before using it. Falls back to the known-good literal
+ * and logs loudly on any mismatch, so a bad secret can never bill an annual
+ * customer at the monthly rate again. Cached per process after the first
+ * successful check.
+ */
+async function resolveAnnualPriceId(stripe: Stripe): Promise<string> {
+  if (annualPriceIdCache) return annualPriceIdCache;
+
+  const candidate = process.env.STRIPE_PRICE_ID_ANNUAL;
+  if (candidate && candidate !== STRIPE_PRICE_ID) {
+    try {
+      const price = await stripe.prices.retrieve(candidate);
+      if (price.recurring?.interval === "year") {
+        annualPriceIdCache = candidate;
+        return candidate;
+      }
+      console.error(
+        `[stripe] STRIPE_PRICE_ID_ANNUAL (${candidate}) bills every ` +
+          `${price.recurring?.interval ?? "unknown"}, not year. Ignoring it and ` +
+          `using ${ANNUAL_PRICE_ID_FALLBACK}. Fix the secret in Replit.`,
+      );
+    } catch (err) {
+      console.error(
+        `[stripe] Could not verify STRIPE_PRICE_ID_ANNUAL (${candidate}):`,
+        err,
+      );
+    }
+  } else if (candidate && candidate === STRIPE_PRICE_ID) {
+    console.error(
+      "[stripe] STRIPE_PRICE_ID_ANNUAL is set to the SAME id as the monthly " +
+        "price. Ignoring it. This is the bug that billed annual at the monthly rate.",
+    );
+  }
+
+  annualPriceIdCache = ANNUAL_PRICE_ID_FALLBACK;
+  return ANNUAL_PRICE_ID_FALLBACK;
+}
+
 export function registerStripeRoutes(app: Express): void {
   app.post(
     "/stripe/webhook",
@@ -246,13 +298,8 @@ export function registerStripeRoutes(app: Express): void {
     }
     try {
       const email = typeof req.body?.email === "string" ? req.body.email : undefined;
-      // Annual uses the confirmed $490/year live price id, hardcoded on purpose.
-      // We do NOT read STRIPE_PRICE_ID_ANNUAL: the deployment's copy of that secret
-      // was set to a $49 price id, which silently billed "annual" at the monthly
-      // rate and overrode any fallback. Price ids are not secret. Monthly still
-      // comes from STRIPE_PRICE_ID.
       const plan = req.body?.plan === "annual" ? "annual" : "monthly";
-      const priceId = plan === "annual" ? "price_1U5FWeFpno3hNS1skZVRZEEf" : STRIPE_PRICE_ID;
+      const priceId = plan === "annual" ? await resolveAnnualPriceId(stripe) : STRIPE_PRICE_ID;
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
