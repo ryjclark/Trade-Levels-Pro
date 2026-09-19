@@ -5,6 +5,8 @@ import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import StickyCta from "@/components/sticky-cta";
 import { useSeo } from "@/hooks/use-seo";
+import { useMemberAuth } from "@/hooks/use-member-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { SITE_NAME } from "@/lib/constants";
 import "./public.css";
 
@@ -49,6 +51,11 @@ function card(): CSSProperties {
 }
 
 export default function PublicBriefPage() {
+  const { isMember, token: memberToken } = useMemberAuth();
+  const { isAuthenticated: isAdmin, getToken: getAdminToken } = useAuth();
+  const adminToken = isAdmin ? getAdminToken() : null;
+  const unlockToken = memberToken || adminToken;
+
   useSeo({
     title: `Daily Brief | ${SITE_NAME}`,
     description:
@@ -57,7 +64,17 @@ export default function PublicBriefPage() {
   });
 
   const { data, isLoading } = useQuery<DailyBrief>({
-    queryKey: ["/api/public/daily-brief"],
+    queryKey: ["/api/public/daily-brief", unlockToken],
+    queryFn: async () => {
+      const res = await fetch("/api/public/daily-brief", {
+        headers:
+          (isMember || !!isAdmin) && unlockToken
+            ? { authorization: `Bearer ${unlockToken}` }
+            : {},
+      });
+      if (!res.ok) throw new Error("Failed to load daily brief");
+      return res.json();
+    },
     refetchInterval: 5 * 60 * 1000,
   });
 
@@ -93,12 +110,14 @@ export default function PublicBriefPage() {
                     <div key={t.symbol} style={card()} data-testid={`brief-today-${t.symbol}`}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                         <span style={{ fontWeight: 700 }}>{t.symbol}</span>
-                        <span style={{ opacity: 0.7, fontSize: 13 }}>{t.bias || "Reactive"}</span>
+                        {t.bias && <span style={{ opacity: 0.7, fontSize: 13 }}>{t.bias}</span>}
                       </div>
                       <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                         <div>Magnet <b>{n(t.magnet)}</b></div>
                         <div>Dynamic Zone <b>{n(t.dzBottom)} – {n(t.dzTop)}</b></div>
-                        <div>Key failed-breakdown level <b>{n(t.keyLevel)}</b></div>
+                        {t.keyLevel != null && (
+                          <div>Key failed-breakdown level <b>{n(t.keyLevel)}</b></div>
+                        )}
                       </div>
                       <p style={{ fontSize: 13, opacity: 0.85, marginTop: 10 }}>{t.headline}</p>
                     </div>

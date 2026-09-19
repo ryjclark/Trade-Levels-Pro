@@ -44,6 +44,8 @@ export function registerSeoRoutes(app: Express): void {
         "Disallow: /admin/",
         "Disallow: /login",
         "Disallow: /welcome",
+        "Allow: /api/public/daily-brief",
+        "Allow: /api/public/archive",
         "Disallow: /api/",
         "",
         `Sitemap: ${SITE_URL}/sitemap.xml`,

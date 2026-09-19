@@ -39,6 +39,10 @@ export interface DailyBrief {
   note: string;
 }
 
+export interface BuildDailyBriefOptions {
+  includePaidSetup?: boolean;
+}
+
 const fmt = (v: number | null | undefined) =>
   v == null ? "—" : v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
@@ -56,7 +60,9 @@ function keyLevelFromPlan(plan: Plan): number | null {
   return plan.s1 ?? null;
 }
 
-export async function buildDailyBrief(): Promise<DailyBrief> {
+export async function buildDailyBrief(
+  { includePaidSetup = true }: BuildDailyBriefOptions = {},
+): Promise<DailyBrief> {
   const plans = await storage.listPublicPlans(50);
   let results: PlanResult[] = [];
   try {
@@ -72,21 +78,24 @@ export async function buildDailyBrief(): Promise<DailyBrief> {
     const plan = plans.find((p) => p.symbol === sym);
     if (!plan) continue;
     if (!generatedForDate) generatedForDate = plan.date;
-    const keyLevel = keyLevelFromPlan(plan);
-    const bias = plan.bias || null;
+    const paidKeyLevel = keyLevelFromPlan(plan);
+    const paidBias = plan.bias || null;
     const magnet = plan.magnet ?? null;
-    const headline =
-      magnet != null
-        ? `Hold ${fmt(magnet)} for the bullish case. The A+ setup is a failed-breakdown long at ${fmt(keyLevel)}: wait for the flush and reclaim, then manage level to level.`
-        : `See the terminal for today's levels.`;
+    const dzTop = plan.dynamicZoneTop ?? null;
+    const dzBottom = plan.dynamicZoneBottom ?? null;
+    const headline = includePaidSetup
+      ? magnet != null
+        ? `Hold ${fmt(magnet)} for the bullish case. The A+ setup is a failed-breakdown long at ${fmt(paidKeyLevel)}: wait for the flush and reclaim, then manage level to level.`
+        : `See the terminal for today's levels.`
+      : `Magnet ${fmt(magnet)}. Dynamic Zone ${fmt(dzBottom)}–${fmt(dzTop)}. Bias and ranked setups are in the member plan.`;
     today.push({
       symbol: sym,
       date: plan.date,
-      bias,
+      bias: includePaidSetup ? paidBias : null,
       magnet,
-      dzTop: plan.dynamicZoneTop ?? null,
-      dzBottom: plan.dynamicZoneBottom ?? null,
-      keyLevel,
+      dzTop,
+      dzBottom,
+      keyLevel: includePaidSetup ? paidKeyLevel : null,
       headline,
     });
   }

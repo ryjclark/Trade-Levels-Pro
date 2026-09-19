@@ -1002,10 +1002,13 @@ export async function registerRoutes(
   // Public, read-only track record: aggregate hit rates from plan_results.
   // Powers the public "proof" page. Buckets overall + per-symbol so we can show
   // magnet hit rate, R1/S1 tag rates, and sessions counted.
-  app.get("/api/public/daily-brief", async (_req, res) => {
+  app.get("/api/public/daily-brief", async (req, res) => {
     try {
       const { buildDailyBrief } = await import("./lib/daily-brief");
-      res.json(await buildDailyBrief());
+      const isMbr =
+        !!(await optionalMember(req as MemberAuthRequest)) ||
+        (await optionalAdmin(req as AdminAuthRequest));
+      res.json(await buildDailyBrief({ includePaidSetup: isMbr }));
     } catch (err) {
       console.error("public daily-brief error:", err);
       res.status(500).json({ error: "Failed to load daily brief" });
