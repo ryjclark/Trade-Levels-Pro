@@ -282,16 +282,35 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
   },
 };
 
+// Route-aware CTA footer. Never self-links the current page: /sample drives to
+// paid (Subscribe), /pricing offers the sample only, everything else gets both.
+function ctaFooter(path: string): string {
+  if (path === "/sample") {
+    return (
+      `<p>Daily ES and NQ plans on Telegram and Today's Plan. $49/mo or $490/yr. Cancel anytime.</p>` +
+      `<p><a href="/pricing">Subscribe</a></p>`
+    );
+  }
+  if (path === "/pricing") {
+    return `<p><a href="/sample">See a sample plan</a></p>`;
+  }
+  return `<p><a href="/pricing">Subscribe</a> · <a href="/sample">See a sample plan</a></p>`;
+}
+
 function renderRouteBody(path: string, meta: RouteMeta): string {
   const entry = ROUTE_BODY[path];
   const h1 = esc(entry?.h1 || meta.title);
   const paras = (entry?.paras || [meta.description]).map((p) => `<p>${esc(p)}</p>`).join("");
-  const nav = NAV_LINKS.map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join(" · ");
+  // Don't self-link the current page in the site nav either (render it as text).
+  const nav = NAV_LINKS.map(([href, label]) =>
+    href === path ? `<span>${esc(label)}</span>` : `<a href="${href}">${esc(label)}</a>`,
+  ).join(" · ");
   // Sits inside #root; React clears it on mount. Kept minimal + semantic.
   return (
     `<div id="prerender-content"><header><a href="/">Trade Levels Pro</a></header>` +
     `<main><h1>${h1}</h1>${paras}` +
-    `<p><a href="/pricing">See pricing</a> · <a href="/sample">See a sample plan</a></p></main>` +
+    ctaFooter(path) +
+    `</main>` +
     `<nav aria-label="Site">${nav}</nav></div>`
   );
 }
