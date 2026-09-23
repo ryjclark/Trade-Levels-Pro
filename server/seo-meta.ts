@@ -6,7 +6,13 @@
 // og:url per route and returns a real 404 for unknown paths, which is what
 // crawlers need. Keep the route lists in sync with client/src/App.tsx.
 
+import { ARTICLES as LEARN_ARTICLES } from "../client/src/lib/articles";
+
 const SITE = "https://tradelevelspro.com";
+
+// Real article metadata (title/excerpt/description) shared with the hydrated
+// /learn page, used to build the SSR hub index and per-article meta.
+const LEARN_BY_SLUG = new Map(LEARN_ARTICLES.map((a) => [a.slug, a]));
 
 export interface RouteMeta {
   title: string;
@@ -117,17 +123,6 @@ const STATIC: Record<string, RouteMeta> = {
 };
 
 // Learn article slugs → human title.
-const ARTICLES: Record<string, string> = {
-  "what-is-the-dynamic-zone": "What Is the Dynamic Zone?",
-  "es-vs-nq-which-to-trade": "ES vs NQ: Which to Trade",
-  "the-rejection-short-setup": "The Rejection Short Setup",
-  "how-to-trade-the-daily-plan": "How to Trade the Daily Plan",
-  "the-failed-breakdown-setup": "The Failed Breakdown Setup",
-  "acceptance-and-level-to-level": "Acceptance and Level-to-Level Trading",
-  "what-is-a-magnet-level-es-futures": "What Is a Magnet Level? (ES Futures)",
-  "prop-firm-traders-support-resistance": "Support and Resistance for Prop Firm Traders",
-  "building-a-daily-es-trade-plan-template": "Building a Daily ES Trade Plan Template",
-};
 
 export interface ResolvedMeta {
   meta: RouteMeta;
@@ -146,11 +141,13 @@ export function resolveRouteMeta(rawPath: string): ResolvedMeta {
   // article can never accidentally 404; known slugs get a specific title.
   const article = path.match(/^\/learn\/([a-z0-9-]+)$/);
   if (article) {
-    const known = ARTICLES[article[1]];
+    const a = LEARN_BY_SLUG.get(article[1]);
     return {
       meta: {
-        title: known ? `${known} | Trade Levels Pro` : "Learn | Trade Levels Pro",
-        description: "A Trade Levels Pro guide on trading the daily ES and NQ plan.",
+        title: a ? `${a.title} | Trade Levels Pro` : "Learn | Trade Levels Pro",
+        description: a
+          ? (a.description || a.excerpt)
+          : "A Trade Levels Pro guide on trading the daily ES and NQ plan.",
       },
       status: 200,
       canonical: SITE + path,
@@ -299,8 +296,30 @@ function ctaFooter(path: string): string {
 
 function renderRouteBody(path: string, meta: RouteMeta): string {
   const entry = ROUTE_BODY[path];
-  const h1 = esc(entry?.h1 || meta.title);
-  const paras = (entry?.paras || [meta.description]).map((p) => `<p>${esc(p)}</p>`).join("");
+  const slugMatch = path.match(/^\/learn\/([a-z0-9-]+)$/);
+  const article = slugMatch ? LEARN_BY_SLUG.get(slugMatch[1]) : undefined;
+
+  // Article pages use the real title as H1 and the real description as the intro.
+  const h1 = esc(article?.title || entry?.h1 || meta.title);
+  const paraSource = article ? [article.description || article.excerpt] : (entry?.paras || [meta.description]);
+  const paras = paraSource.map((p) => `<p>${esc(p)}</p>`).join("");
+
+  // /learn hub: a real index of every guide (title + excerpt + read time) so
+  // crawlers and no-JS visitors get the full set of internal links.
+  const learnIndex =
+    path === "/learn"
+      ? `<ul>` +
+        LEARN_ARTICLES.map((a) =>
+          `<li><a href="/learn/${a.slug}"><strong>${esc(a.title)}</strong></a>` +
+          `<p>${esc(a.excerpt || a.description)}` +
+          (a.readMinutes ? ` (${a.readMinutes} min read)` : "") +
+          `</p></li>`,
+        ).join("") +
+        `</ul>`
+      : "";
+  // Article pages link back to the hub as a secondary link.
+  const learnBack = article ? `<p><a href="/learn">All guides</a></p>` : "";
+
   // Don't self-link the current page in the site nav either (render it as text).
   const nav = NAV_LINKS.map(([href, label]) =>
     href === path ? `<span>${esc(label)}</span>` : `<a href="${href}">${esc(label)}</a>`,
@@ -308,7 +327,7 @@ function renderRouteBody(path: string, meta: RouteMeta): string {
   // Sits inside #root; React clears it on mount. Kept minimal + semantic.
   return (
     `<div id="prerender-content"><header><a href="/">Trade Levels Pro</a></header>` +
-    `<main><h1>${h1}</h1>${paras}` +
+    `<main><h1>${h1}</h1>${paras}${learnIndex}${learnBack}` +
     ctaFooter(path) +
     `</main>` +
     `<nav aria-label="Site">${nav}</nav></div>`
