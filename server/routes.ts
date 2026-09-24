@@ -1157,16 +1157,25 @@ export async function registerRoutes(
         const pn = (v: number) => Number(v.toFixed(6));
         const f = (price: number, text: string, color: string, width: number, dotted = false) =>
           `f(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
+        // Profile levels (POC/VAH/VAL) are context: gated behind a toggle (off).
+        const fp = (price: number, text: string, color: string, width: number, dotted = false) =>
+          `fp(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
         const L: string[] = [
           "//@version=5",
           `indicator(${JSON.stringify(title)}, ${JSON.stringify(`TLP ${symbol}`)}, overlay=true, max_lines_count=200, max_labels_count=200)`,
           `// Trade Levels Pro — tradelevelspro.com. Levels for ${symbol} ${plan.date}.`,
           "// Static daily snapshot: recopy each morning (TradingView can't auto-fetch).",
           "",
-          'LB = input.int(60, "Line length (bars back)", minval=10)',
+          'LB = input.int(12, "Line length (bars back)", minval=4)',
+          'showProfile = input.bool(false, "Show prior-session profile (POC/VAH/VAL)")',
           "",
           "f(float p, string t, color c, int w, bool dot) =>",
           "    if barstate.islast and not na(p)",
+          "        line.new(bar_index - LB, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
+          "        label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small)",
+          "",
+          "fp(float p, string t, color c, int w, bool dot) =>",
+          "    if showProfile and barstate.islast and not na(p)",
           "        line.new(bar_index - LB, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
           "        label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small)",
           "",
@@ -1178,21 +1187,21 @@ export async function registerRoutes(
           L.push(`fill(hT, hB, color=color.new(color.orange, 92), title="Dynamic Zone")`);
         }
         L.push("", "// --- The trade (matches the Telegram plan) ---");
-        L.push(f(magnet, `◆ Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
-        if (aplus != null) L.push(f(aplus, `🎯 A+ LONG ${fmt(aplus)} — flush & reclaim`, "color.new(color.lime, 0)", 3));
-        backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} (backup) ${fmt(b)}`, "color.new(color.green, 25)", 1)));
-        targets.forEach((t, i) => L.push(f(t, `T${i + 1} target ${fmt(t)}`, "color.new(color.aqua, 0)", 2)));
-        if (invalid != null) L.push(f(invalid, `✕ Invalid < ${fmt(invalid)} (long off)`, "color.new(color.red, 0)", 2, true));
+        L.push(f(magnet, `Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
+        if (aplus != null) L.push(f(aplus, `A+ long ${fmt(aplus)}`, "color.new(color.lime, 0)", 2));
+        backups.forEach((b, i) => L.push(f(b, `L${i + 2} ${fmt(b)}`, "color.new(color.green, 25)", 1)));
+        targets.forEach((t, i) => L.push(f(t, `T${i + 1} ${fmt(t)}`, "color.new(color.aqua, 0)", 1)));
+        if (invalid != null) L.push(f(invalid, `Inval ${fmt(invalid)}`, "color.new(color.red, 0)", 1, true));
         if (shorts && shorts.length) {
           L.push("", "// --- Rejection shorts (secondary, lower win-rate) ---");
-          L.push(f(shorts[0], `🔻 SHORT ${fmt(shorts[0])} — reject & fail`, "color.new(color.fuchsia, 0)", 2));
-          shorts.slice(1).forEach((s, i) => L.push(f(s, `Short ${i + 2} (backup) ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1)));
+          L.push(f(shorts[0], `Short ${fmt(shorts[0])}`, "color.new(color.fuchsia, 0)", 1));
+          shorts.slice(1).forEach((s, i) => L.push(f(s, `S${i + 2} ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1)));
         }
         if (hasProf) {
-          L.push("", "// --- Prior-session profile (context) ---");
-          L.push(f(prof.poc, `POC ${fmt(prof.poc)} (prior)`, "color.new(color.purple, 0)", 2));
-          if (prof.vah != null) L.push(f(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true));
-          if (prof.val != null) L.push(f(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true));
+          L.push("", "// --- Prior-session profile (context, hidden unless toggled on) ---");
+          L.push(fp(prof.poc, `POC ${fmt(prof.poc)}`, "color.new(color.purple, 0)", 1));
+          if (prof.vah != null) L.push(fp(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true));
+          if (prof.val != null) L.push(fp(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true));
         }
         // Stale-snapshot guard: this plan is for plan.date. If the chart's current
         // session is a LATER date, the levels are yesterday's — warn to recopy.
@@ -1210,11 +1219,11 @@ export async function registerRoutes(
           "// --- Info panel ---",
           "var table tb = table.new(position.top_right, 1, 5, border_width=1, frame_color=color.new(color.gray, 50), frame_width=1)",
           "if barstate.islast",
-          `    table.cell(tb, 0, 0, ${JSON.stringify(`Trade Levels Pro — ${symbol}`)}, text_color=color.white, bgcolor=color.new(color.blue, 10), text_size=size.small)`,
+          `    table.cell(tb, 0, 0, ${JSON.stringify(`Trade Levels Pro ${symbol}`)}, text_color=color.white, bgcolor=color.new(color.blue, 10), text_size=size.small)`,
           `    table.cell(tb, 0, 1, ${JSON.stringify(plan.date)}, text_color=color.gray, text_size=size.small)`,
           `    table.cell(tb, 0, 2, ${JSON.stringify(`Bias: ${biasCap}`)}, text_color=${bias === "bullish" ? "color.lime" : bias === "bearish" ? "color.red" : "color.gray"}, text_size=size.small)`,
           `    table.cell(tb, 0, 3, ${JSON.stringify(regime)}, text_color=color.orange, text_size=size.small)`,
-          `    table.cell(tb, 0, 4, isStale ? "⚠ STALE — recopy today's plan" : "✓ Current for this session", text_color=color.white, bgcolor=(isStale ? color.new(color.red, 0) : color.new(color.green, 25)), text_size=size.small)`,
+          `    table.cell(tb, 0, 4, isStale ? "⚠ STALE, recopy today's plan" : "✓ Current for this session", text_color=color.white, bgcolor=(isStale ? color.new(color.red, 0) : color.new(color.green, 25)), text_size=size.small)`,
         );
 
         // Price alerts — fire when price reaches a key level. Create them in
@@ -1223,8 +1232,8 @@ export async function registerRoutes(
         L.push("", "// --- Alerts (set via TradingView's alert dialog) ---");
         const alertLine = (price: number, title: string, msg: string) =>
           `alertcondition(ta.cross(close, ${pn(price)}), title=${JSON.stringify(title)}, message=${JSON.stringify(msg)})`;
-        if (aplus != null) L.push(alertLine(aplus, `${symbol} A+ long`, `${symbol} reached A+ long ${fmt(aplus)} — flush & reclaim`));
-        if (invalid != null) L.push(alertLine(invalid, `${symbol} invalidation`, `${symbol} hit invalidation ${fmt(invalid)} — long is off`));
+        if (aplus != null) L.push(alertLine(aplus, `${symbol} A+ long`, `${symbol} reached A+ long ${fmt(aplus)}, flush and reclaim`));
+        if (invalid != null) L.push(alertLine(invalid, `${symbol} invalidation`, `${symbol} hit invalidation ${fmt(invalid)}, long is off`));
         L.push(alertLine(magnet, `${symbol} magnet`, `${symbol} reached the magnet ${fmt(magnet)}`));
         if (targets.length) L.push(alertLine(targets[0], `${symbol} T1 target`, `${symbol} reached T1 target ${fmt(targets[0])}`));
         if (shorts && shorts.length) L.push(alertLine(shorts[0], `${symbol} short`, `${symbol} reached rejection short ${fmt(shorts[0])}`));
