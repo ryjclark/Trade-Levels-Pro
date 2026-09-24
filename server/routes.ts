@@ -1676,7 +1676,7 @@ export async function registerRoutes(
       const member = await storage.getMemberByEmail(email);
       if (member && member.status === "active") {
         const token = await createLoginToken(email);
-        const base = `${req.protocol}://${req.get("host")}`;
+        const base = (process.env.APP_BASE_URL || process.env.PUBLIC_BASE_URL || "https://tradelevelspro.com").replace(/\/$/, "");
         const loginUrl = `${base}/member-auth?token=${encodeURIComponent(token)}`;
         try {
           await sendMemberLoginLink(email, loginUrl);
