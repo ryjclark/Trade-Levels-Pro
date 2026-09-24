@@ -1161,7 +1161,7 @@ export async function registerRoutes(
           `f(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted}, ${gate})`;
         const L: string[] = [
           "//@version=5",
-          `indicator(${JSON.stringify(title)}, ${JSON.stringify(`TLP ${symbol}`)}, overlay=true, max_lines_count=200, max_labels_count=200)`,
+          `indicator(${JSON.stringify(title)}, ${JSON.stringify(`TLP ${symbol}`)}, overlay=true, max_lines_count=200, max_labels_count=200, max_boxes_count=20)`,
           `// Trade Levels Pro — tradelevelspro.com. Levels for ${symbol} ${plan.date}.`,
           "// Static daily snapshot: recopy each morning (TradingView can't auto-fetch).",
           "",
@@ -1175,11 +1175,24 @@ export async function registerRoutes(
           'showProfile = input.bool(false, "Show prior-session profile (POC/VAH/VAL)", group=grp)',
           'showRR = input.bool(false, "Show risk/reward shading", group=grp)',
           "",
+          "// Track every drawing so we can wipe last tick's before redrawing (a live",
+          "// bar fires barstate.islast every tick, which would otherwise stack copies).",
+          "var line[]  TLP_L = array.new_line()",
+          "var label[] TLP_T = array.new_label()",
+          "var box[]   TLP_B = array.new_box()",
+          "if barstate.islast",
+          "    while array.size(TLP_L) > 0",
+          "        line.delete(array.pop(TLP_L))",
+          "    while array.size(TLP_T) > 0",
+          "        label.delete(array.pop(TLP_T))",
+          "    while array.size(TLP_B) > 0",
+          "        box.delete(array.pop(TLP_B))",
+          "",
           "f(float p, string t, color c, int w, bool dot, bool show) =>",
           "    if show and barstate.islast and not na(p)",
           "        leftX = rightOnly ? bar_index : bar_index - LB",
-          "        line.new(leftX, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
-          "        label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small)",
+          "        array.push(TLP_L, line.new(leftX, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w))",
+          "        array.push(TLP_T, label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small))",
           "",
           "// --- Dynamic Zone (shaded fair-value band) ---",
         ];
@@ -1189,7 +1202,7 @@ export async function registerRoutes(
           L.push(`hB = hline(${pn(dzBot)}, "", color=color.new(color.gray, 100))`);
           L.push(`fill(hT, hB, color=(showZone ? color.new(color.orange, 92) : color.new(color.orange, 100)), title="Dynamic Zone")`);
           L.push("if showZone and barstate.islast");
-          L.push(`    label.new(bar_index + 6, ${dzMid}, "Dynamic Zone", xloc=xloc.bar_index, yloc=yloc.price, color=color.new(color.orange, 55), style=label.style_label_left, textcolor=color.white, size=size.small)`);
+          L.push(`    array.push(TLP_T, label.new(bar_index + 6, ${dzMid}, "Dynamic Zone", xloc=xloc.bar_index, yloc=yloc.price, color=color.new(color.orange, 55), style=label.style_label_left, textcolor=color.white, size=size.small))`);
         }
         L.push("", "// --- The trade (matches the Telegram plan) ---");
         L.push(f(magnet, `Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
@@ -1209,11 +1222,11 @@ export async function registerRoutes(
           const boxLeft = "(rightOnly ? bar_index : bar_index - LB)";
           if (invalid != null) {
             L.push("if showRR and barstate.islast");
-            L.push(`    box.new(${boxLeft}, ${pn(aplus)}, bar_index + 6, ${pn(invalid)}, xloc=xloc.bar_index, bgcolor=color.new(color.red, 90), border_color=color.new(color.red, 100))`);
+            L.push(`    array.push(TLP_B, box.new(${boxLeft}, ${pn(aplus)}, bar_index + 6, ${pn(invalid)}, xloc=xloc.bar_index, bgcolor=color.new(color.red, 82), border_color=color.new(color.red, 100)))`);
           }
           if (targets.length) {
             L.push("if showRR and barstate.islast");
-            L.push(`    box.new(${boxLeft}, ${pn(targets[0])}, bar_index + 6, ${pn(aplus)}, xloc=xloc.bar_index, bgcolor=color.new(color.green, 90), border_color=color.new(color.green, 100))`);
+            L.push(`    array.push(TLP_B, box.new(${boxLeft}, ${pn(targets[0])}, bar_index + 6, ${pn(aplus)}, xloc=xloc.bar_index, bgcolor=color.new(color.green, 82), border_color=color.new(color.green, 100)))`);
           }
         }
         if (hasProf) {
