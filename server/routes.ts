@@ -1188,14 +1188,14 @@ export async function registerRoutes(
         }
         L.push("", "// --- The trade (matches the Telegram plan) ---");
         L.push(f(magnet, `Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
-        if (aplus != null) L.push(f(aplus, `A+ long ${fmt(aplus)}`, "color.new(color.lime, 0)", 2));
-        backups.forEach((b, i) => L.push(f(b, `L${i + 2} ${fmt(b)}`, "color.new(color.green, 25)", 1)));
-        targets.forEach((t, i) => L.push(f(t, `T${i + 1} ${fmt(t)}`, "color.new(color.aqua, 0)", 1)));
-        if (invalid != null) L.push(f(invalid, `Inval ${fmt(invalid)}`, "color.new(color.red, 0)", 1, true));
+        if (aplus != null) L.push(f(aplus, `A+ Long ${fmt(aplus)}`, "color.new(color.lime, 0)", 2));
+        backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} ${fmt(b)}`, "color.new(color.green, 25)", 1)));
+        targets.forEach((t, i) => L.push(f(t, `Target ${i + 1} ${fmt(t)}`, "color.new(color.aqua, 0)", 1)));
+        if (invalid != null) L.push(f(invalid, `Invalid ${fmt(invalid)}`, "color.new(color.red, 0)", 1, true));
         if (shorts && shorts.length) {
           L.push("", "// --- Rejection shorts (secondary, lower win-rate) ---");
           L.push(f(shorts[0], `Short ${fmt(shorts[0])}`, "color.new(color.fuchsia, 0)", 1));
-          shorts.slice(1).forEach((s, i) => L.push(f(s, `S${i + 2} ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1)));
+          shorts.slice(1).forEach((s, i) => L.push(f(s, `Short ${i + 2} ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1)));
         }
         if (hasProf) {
           L.push("", "// --- Prior-session profile (context, hidden unless toggled on) ---");
