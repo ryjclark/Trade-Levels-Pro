@@ -1155,53 +1155,72 @@ export async function registerRoutes(
         // edge, color-coded by role. f(price, text, color, width, dotted). pn strips
         // binary-float dust (e.g. 4386.900000000001) from the emitted Pine numbers.
         const pn = (v: number) => Number(v.toFixed(6));
-        const f = (price: number, text: string, color: string, width: number, dotted = false) =>
-          `f(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
-        // Profile levels (POC/VAH/VAL) are context: gated behind a toggle (off).
-        const fp = (price: number, text: string, color: string, width: number, dotted = false) =>
-          `fp(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted})`;
+        // f(price, text, color, width, dotted, gate) — gate is a Pine bool expr that
+        // controls visibility (default always on), so each level group can toggle.
+        const f = (price: number, text: string, color: string, width: number, dotted = false, gate = "true") =>
+          `f(${pn(price)}, ${JSON.stringify(text)}, ${color}, ${width}, ${dotted}, ${gate})`;
         const L: string[] = [
           "//@version=5",
           `indicator(${JSON.stringify(title)}, ${JSON.stringify(`TLP ${symbol}`)}, overlay=true, max_lines_count=200, max_labels_count=200)`,
           `// Trade Levels Pro — tradelevelspro.com. Levels for ${symbol} ${plan.date}.`,
           "// Static daily snapshot: recopy each morning (TradingView can't auto-fetch).",
           "",
-          'LB = input.int(12, "Line length (bars back)", minval=4)',
-          'showProfile = input.bool(false, "Show prior-session profile (POC/VAH/VAL)")',
+          'grp = "Display"',
+          'LB = input.int(12, "Line length (bars back)", minval=4, group=grp)',
+          'rightOnly = input.bool(false, "Levels: right-edge tab only", group=grp)',
+          'showZone = input.bool(true, "Show Dynamic Zone", group=grp)',
+          'showBackups = input.bool(true, "Show long backups", group=grp)',
+          'showTargets = input.bool(true, "Show targets", group=grp)',
+          'showShorts = input.bool(true, "Show rejection shorts", group=grp)',
+          'showProfile = input.bool(false, "Show prior-session profile (POC/VAH/VAL)", group=grp)',
+          'showRR = input.bool(false, "Show risk/reward shading", group=grp)',
           "",
-          "f(float p, string t, color c, int w, bool dot) =>",
-          "    if barstate.islast and not na(p)",
-          "        line.new(bar_index - LB, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
-          "        label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small)",
-          "",
-          "fp(float p, string t, color c, int w, bool dot) =>",
-          "    if showProfile and barstate.islast and not na(p)",
-          "        line.new(bar_index - LB, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
+          "f(float p, string t, color c, int w, bool dot, bool show) =>",
+          "    if show and barstate.islast and not na(p)",
+          "        leftX = rightOnly ? bar_index : bar_index - LB",
+          "        line.new(leftX, p, bar_index + 6, p, xloc=xloc.bar_index, extend=extend.none, color=c, style=(dot ? line.style_dotted : line.style_solid), width=w)",
           "        label.new(bar_index + 6, p, t, xloc=xloc.bar_index, yloc=yloc.price, color=c, style=label.style_label_left, textcolor=color.white, size=size.small)",
           "",
           "// --- Dynamic Zone (shaded fair-value band) ---",
         ];
         if (dzTop != null && dzBot != null) {
+          const dzMid = pn((dzTop + dzBot) / 2);
           L.push(`hT = hline(${pn(dzTop)}, "", color=color.new(color.gray, 100))`);
           L.push(`hB = hline(${pn(dzBot)}, "", color=color.new(color.gray, 100))`);
-          L.push(`fill(hT, hB, color=color.new(color.orange, 92), title="Dynamic Zone")`);
+          L.push(`fill(hT, hB, color=(showZone ? color.new(color.orange, 92) : color.new(color.orange, 100)), title="Dynamic Zone")`);
+          L.push("if showZone and barstate.islast");
+          L.push(`    label.new(bar_index + 6, ${dzMid}, "Dynamic Zone", xloc=xloc.bar_index, yloc=yloc.price, color=color.new(color.orange, 55), style=label.style_label_left, textcolor=color.white, size=size.small)`);
         }
         L.push("", "// --- The trade (matches the Telegram plan) ---");
         L.push(f(magnet, `Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
         if (aplus != null) L.push(f(aplus, `A+ Long ${fmt(aplus)}`, "color.new(color.lime, 0)", 2));
-        backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} ${fmt(b)}`, "color.new(color.green, 25)", 1)));
-        targets.forEach((t, i) => L.push(f(t, `Target ${i + 1} ${fmt(t)}`, "color.new(color.aqua, 0)", 1)));
+        backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} ${fmt(b)}`, "color.new(color.green, 25)", 1, false, "showBackups")));
+        targets.forEach((t, i) => L.push(f(t, `Target ${i + 1} ${fmt(t)}`, "color.new(color.aqua, 0)", 1, false, "showTargets")));
         if (invalid != null) L.push(f(invalid, `Invalid ${fmt(invalid)}`, "color.new(color.red, 0)", 1, true));
         if (shorts && shorts.length) {
           L.push("", "// --- Rejection shorts (secondary, lower win-rate) ---");
-          L.push(f(shorts[0], `Short ${fmt(shorts[0])}`, "color.new(color.fuchsia, 0)", 1));
-          shorts.slice(1).forEach((s, i) => L.push(f(s, `Short ${i + 2} ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1)));
+          L.push(f(shorts[0], `Short ${fmt(shorts[0])}`, "color.new(color.fuchsia, 0)", 1, false, "showShorts"));
+          shorts.slice(1).forEach((s, i) => L.push(f(s, `Short ${i + 2} ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1, false, "showShorts")));
+        }
+        // Risk/reward shading (optional): risk = A+ down to invalidation, reward =
+        // A+ up to the first target. Faint boxes so they read as bands, not fills.
+        if (aplus != null) {
+          L.push("", "// --- Risk / reward shading (optional) ---");
+          const boxLeft = "(rightOnly ? bar_index : bar_index - LB)";
+          if (invalid != null) {
+            L.push("if showRR and barstate.islast");
+            L.push(`    box.new(${boxLeft}, ${pn(aplus)}, bar_index + 6, ${pn(invalid)}, xloc=xloc.bar_index, bgcolor=color.new(color.red, 90), border_color=color.new(color.red, 100))`);
+          }
+          if (targets.length) {
+            L.push("if showRR and barstate.islast");
+            L.push(`    box.new(${boxLeft}, ${pn(targets[0])}, bar_index + 6, ${pn(aplus)}, xloc=xloc.bar_index, bgcolor=color.new(color.green, 90), border_color=color.new(color.green, 100))`);
+          }
         }
         if (hasProf) {
           L.push("", "// --- Prior-session profile (context, hidden unless toggled on) ---");
-          L.push(fp(prof.poc, `POC ${fmt(prof.poc)}`, "color.new(color.purple, 0)", 1));
-          if (prof.vah != null) L.push(fp(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true));
-          if (prof.val != null) L.push(fp(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true));
+          L.push(f(prof.poc, `POC ${fmt(prof.poc)}`, "color.new(color.purple, 0)", 1, false, "showProfile"));
+          if (prof.vah != null) L.push(f(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true, "showProfile"));
+          if (prof.val != null) L.push(f(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true, "showProfile"));
         }
         // Stale-snapshot guard: this plan is for plan.date. If the chart's current
         // session is a LATER date, the levels are yesterday's — warn to recopy.
