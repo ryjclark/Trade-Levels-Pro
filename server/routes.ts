@@ -1204,16 +1204,40 @@ export async function registerRoutes(
           L.push("if showZone and barstate.islast");
           L.push(`    array.push(TLP_T, label.new(bar_index + 6, ${dzMid}, "Dynamic Zone", xloc=xloc.bar_index, yloc=yloc.price, color=color.new(color.orange, 55), style=label.style_label_left, textcolor=color.white, size=size.small))`);
         }
-        L.push("", "// --- The trade (matches the Telegram plan) ---");
-        L.push(f(magnet, `Magnet ${fmt(magnet)}`, "color.new(color.orange, 0)", 2));
-        if (aplus != null) L.push(f(aplus, `A+ Long ${fmt(aplus)}`, "color.new(color.lime, 0)", 2));
-        backups.forEach((b, i) => L.push(f(b, `Long ${i + 2} ${fmt(b)}`, "color.new(color.green, 25)", 1, false, "showBackups")));
-        targets.forEach((t, i) => L.push(f(t, `Target ${i + 1} ${fmt(t)}`, "color.new(color.aqua, 0)", 1, false, "showTargets")));
-        if (invalid != null) L.push(f(invalid, `Invalid ${fmt(invalid)}`, "color.new(color.red, 0)", 1, true));
+        // Build every level, then merge any that sit at the same price (a Target
+        // and a rejection Short are often the SAME resistance) into one combined
+        // label, so they never hide each other. Lowest-priority item leads color.
+        type LvlItem = { price: number; name: string; color: string; width: number; dotted: boolean; gate: string; prio: number };
+        const items: LvlItem[] = [];
+        items.push({ price: magnet, name: "Magnet", color: "color.new(color.orange, 0)", width: 2, dotted: false, gate: "true", prio: 0 });
+        if (aplus != null) items.push({ price: aplus, name: "A+ Long", color: "color.new(color.lime, 0)", width: 2, dotted: false, gate: "true", prio: 1 });
+        if (invalid != null) items.push({ price: invalid, name: "Invalid", color: "color.new(color.red, 0)", width: 1, dotted: true, gate: "true", prio: 1 });
+        backups.forEach((b, i) => items.push({ price: b, name: `Long ${i + 2}`, color: "color.new(color.green, 25)", width: 1, dotted: false, gate: "showBackups", prio: 4 }));
+        targets.forEach((t, i) => items.push({ price: t, name: `Target ${i + 1}`, color: "color.new(color.aqua, 0)", width: 1, dotted: false, gate: "showTargets", prio: 2 }));
         if (shorts && shorts.length) {
-          L.push("", "// --- Rejection shorts (secondary, lower win-rate) ---");
-          L.push(f(shorts[0], `Short ${fmt(shorts[0])}`, "color.new(color.fuchsia, 0)", 1, false, "showShorts"));
-          shorts.slice(1).forEach((s, i) => L.push(f(s, `Short ${i + 2} ${fmt(s)}`, "color.new(color.fuchsia, 40)", 1, false, "showShorts")));
+          items.push({ price: shorts[0], name: "Short", color: "color.new(color.fuchsia, 0)", width: 1, dotted: false, gate: "showShorts", prio: 3 });
+          shorts.slice(1).forEach((s, i) => items.push({ price: s, name: `Short ${i + 2}`, color: "color.new(color.fuchsia, 40)", width: 1, dotted: false, gate: "showShorts", prio: 5 }));
+        }
+        if (hasProf) {
+          items.push({ price: prof.poc, name: "POC", color: "color.new(color.purple, 0)", width: 1, dotted: false, gate: "showProfile", prio: 6 });
+          if (prof.vah != null) items.push({ price: prof.vah, name: "VAH", color: "color.new(color.purple, 35)", width: 1, dotted: true, gate: "showProfile", prio: 6 });
+          if (prof.val != null) items.push({ price: prof.val, name: "VAL", color: "color.new(color.purple, 35)", width: 1, dotted: true, gate: "showProfile", prio: 6 });
+        }
+        const groups: LvlItem[][] = [];
+        for (const it of [...items].sort((a, b) => a.price - b.price || a.prio - b.prio)) {
+          const g = groups.find((gr) => Math.abs(gr[0].price - it.price) <= 0.5);
+          if (g) g.push(it);
+          else groups.push([it]);
+        }
+        L.push("", "// --- Levels (coincident target/short merged into one label) ---");
+        for (const g of groups) {
+          g.sort((a, b) => a.prio - b.prio);
+          const lead = g[0];
+          const name = g.map((x) => x.name).join(" / ");
+          const gate = g.some((x) => x.gate === "true")
+            ? "true"
+            : "(" + [...new Set(g.map((x) => x.gate))].join(" or ") + ")";
+          L.push(f(lead.price, `${name} ${fmt(lead.price)}`, lead.color, lead.width, lead.dotted, gate));
         }
         // Risk/reward shading (optional): risk = A+ down to invalidation, reward =
         // A+ up to the first target. Faint boxes so they read as bands, not fills.
@@ -1228,12 +1252,6 @@ export async function registerRoutes(
             L.push("if showRR and barstate.islast");
             L.push(`    array.push(TLP_B, box.new(${boxLeft}, ${pn(targets[0])}, bar_index + 6, ${pn(aplus)}, xloc=xloc.bar_index, bgcolor=color.new(color.green, 82), border_color=color.new(color.green, 100)))`);
           }
-        }
-        if (hasProf) {
-          L.push("", "// --- Prior-session profile (context, hidden unless toggled on) ---");
-          L.push(f(prof.poc, `POC ${fmt(prof.poc)}`, "color.new(color.purple, 0)", 1, false, "showProfile"));
-          if (prof.vah != null) L.push(f(prof.vah, `VAH ${fmt(prof.vah)}`, "color.new(color.purple, 35)", 1, true, "showProfile"));
-          if (prof.val != null) L.push(f(prof.val, `VAL ${fmt(prof.val)}`, "color.new(color.purple, 35)", 1, true, "showProfile"));
         }
         // Stale-snapshot guard: this plan is for plan.date. If the chart's current
         // session is a LATER date, the levels are yesterday's — warn to recopy.
