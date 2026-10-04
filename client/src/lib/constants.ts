@@ -46,6 +46,32 @@ export const PROP_FIRMS: PropFirm[] = [
     url: "https://www.topstep.com/",
   },
   {
+    slug: "lucid-trading",
+    name: "Lucid Trading",
+    tagline: "CME futures firm with flexible routes and fast, frequent payouts.",
+    accountSizes: "$25K – $150K",
+    pros: [
+      "Multiple routes (Flex, Pro, Direct) to match your risk style",
+      "LucidFlex funded accounts have no daily loss limit and no consistency rule",
+      "Keep 100% of your first $10K in payouts, then a 90/10 split, with daily payout requests",
+    ],
+    cons: ["Pro and Direct routes add consistency and buffer requirements"],
+    url: "https://lucidtrading.com/",
+  },
+  {
+    slug: "take-profit-trader",
+    name: "Take Profit Trader",
+    tagline: "One-step evaluation with on-demand payouts from day one of funded.",
+    accountSizes: "$25K – $150K",
+    pros: [
+      "Simple one-step evaluation with a single profit target",
+      "PRO accounts can withdraw on demand, starting day one",
+      "Upgrade to PRO+ for a 90/10 split after $5K in profit",
+    ],
+    cons: ["A maximum trailing drawdown applies through the funded PRO stage"],
+    url: "https://takeprofittrader.com/",
+  },
+  {
     slug: "apex-trader-funding",
     name: "Apex Trader Funding",
     tagline: "Aggressive payout splits and frequent promo discounts.",
