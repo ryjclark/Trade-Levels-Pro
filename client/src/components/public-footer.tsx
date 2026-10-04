@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { TAGLINE, CONTACT_EMAIL } from "@/lib/constants";
+import { SocialIconLinks } from "@/components/social-links";
 
 export default function PublicFooter() {
   const year = new Date().getFullYear();
@@ -11,6 +12,9 @@ export default function PublicFooter() {
             Trade Levels<span className="brand-pro">Pro</span>
           </div>
           <div className="public-footer-tag">{TAGLINE}</div>
+          <div style={{ marginTop: 14 }}>
+            <SocialIconLinks />
+          </div>
         </div>
         <div className="public-footer-col">
           <div className="public-footer-heading">Product</div>

@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import {
-  BarChart3, TrendingUp, Magnet,
+  BarChart3, TrendingUp, Target,
   Eye, Crosshair, Layers, Compass, Send,
   Check, X,
 } from "lucide-react";
@@ -34,8 +34,8 @@ const NOT_FOR_LIST = [
 ];
 
 const METHOD = [
-  { icon: Eye, title: "Map the Dynamic Zone", body: "Define the reactive band where price is most likely to consolidate or reverse." },
-  { icon: Crosshair, title: "Identify the Magnet", body: "Locate the level price tends to pull back toward intraday." },
+  { icon: Eye, title: "Frame the balance area", body: "Define the band around fair value where price is most likely to consolidate or reverse." },
+  { icon: Crosshair, title: "Find the anchor level", body: "Locate the level price tends to pull back toward intraday." },
   { icon: Layers, title: "Map the Reaction Levels", body: "Prior-day, overnight, and detected swing levels, ranked by quality, frame the day's playable range." },
   { icon: Compass, title: "Set the Bias", body: "Establish a directional lean based on context, not prediction." },
   { icon: Send, title: "Define 1–2 High-Quality Setups", body: "Concrete, level-based ideas you can prepare for ahead of the open." },
@@ -52,7 +52,7 @@ const FAQ = [
 export default function PublicHomePage() {
   useSeo({
     title: `${SITE_NAME}: Daily ES and NQ Futures Trade Plans`,
-    description: `Daily ES and NQ futures trade plans with Magnet, Dynamic Zone, ranked reaction levels, and a failed-breakdown plan, delivered to Telegram and Today's Plan after the close. ${TAGLINE}`,
+    description: `Daily ES and NQ futures trade plans with ranked levels, a daily bias, and 1 to 2 setups with clear invalidation, delivered by email and Telegram, with Today's Plan on site after the close. ${TAGLINE}`,
     path: "/",
     jsonLd: {
       "@context": "https://schema.org",
@@ -61,7 +61,10 @@ export default function PublicHomePage() {
       url: SITE_URL,
       logo: `${SITE_URL}/images/logo-square.webp`,
       description: TAGLINE,
-      sameAs: [],
+      sameAs: [
+        "https://x.com/TradeLevelsPro",
+        "https://www.instagram.com/tradelevelspro/",
+      ],
     },
   });
 
@@ -80,16 +83,12 @@ export default function PublicHomePage() {
           <div className="hero-noise" aria-hidden="true" />
           <div className="public-hero-grid-row">
             <div className="public-hero-content">
-              <div className="hero-pill" data-testid="pill-founding-members">
-                <span className="hero-pill-dot" />
-                Founding Members
-              </div>
               <h1>
                 Daily ES and NQ levels for traders who <span className="accent">prepare</span>, then react.
               </h1>
               <p className="public-hero-subtitle">
-                Tomorrow's Magnet, Dynamic Zone, ranked reaction levels, and trade plan for ES and NQ
-                (plus Gold, Crude, and Russell), delivered to Telegram and Today's Plan after the close.
+                Tomorrow's ranked levels, daily bias, and 1 to 2 setups with clear invalidation for ES and NQ
+                (plus Gold, Crude, and Russell), delivered by email and Telegram and on Today's Plan after the close.
               </p>
               <div className="hero-cta-row">
                 <Link href="/pricing" className="btn-primary" data-testid="button-cta-hero">
@@ -160,7 +159,7 @@ A published level or target has been in play in <b>every</b> intraday-verified E
               <span className="public-section-eyebrow">The Daily Drop</span>
               <h2 className="public-section-title">A look inside the daily plan</h2>
               <p className="public-section-subtitle">
-                Delivered as a single, structured Telegram message every trading day.
+                Delivered by email and Telegram every trading day, plus Today's Plan on site.
               </p>
             </div>
             <TelegramBubble />
@@ -182,7 +181,7 @@ A published level or target has been in play in <b>every</b> intraday-verified E
           <section className="public-section" style={{ textAlign: "center" }}>
             <h2 className="public-section-title">Get free daily ES levels by email</h2>
             <p className="public-section-subtitle" style={{ marginBottom: 24, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
-              The magnet, dynamic zone, and bias for tomorrow's ES session, free after the close.
+              The key levels and bias for tomorrow's ES session, free after the close.
               Members get the full failed-breakdown ladder, targets, and invalidation for ES and NQ.
             </p>
             <div style={{ display: "flex", justifyContent: "center" }}>
@@ -204,12 +203,12 @@ A published level or target has been in play in <b>every</b> intraday-verified E
               <div className="public-card" data-testid="card-feature-levels">
                 <div className="public-card-icon"><BarChart3 size={22} /></div>
                 <h3>Key Market Levels</h3>
-                <p>The Magnet, Dynamic Zone, and ranked reaction levels for the next ES and NQ session, defined before the open.</p>
+                <p>Ranked reaction levels for the next ES and NQ session, defined before the open, plus a bias and 1 to 2 setups with invalidation.</p>
               </div>
               <div className="public-card" data-testid="card-feature-zone">
-                <div className="public-card-icon"><Magnet size={22} /></div>
-                <h3>Dynamic Zone & Magnet</h3>
-                <p>Understand the reactive zones where price is most likely to pause, reverse, or reset.</p>
+                <div className="public-card-icon"><Target size={22} /></div>
+                <h3>Ranked levels and setups</h3>
+                <p>Know the best failed-breakdown longs, reclaim levels, and next targets before the open.</p>
               </div>
               <div className="public-card" data-testid="card-feature-bias">
                 <div className="public-card-icon"><TrendingUp size={22} /></div>
@@ -300,8 +299,8 @@ A published level or target has been in play in <b>every</b> intraday-verified E
               <h2 className="public-section-title">How It Works</h2>
             </div>
             <div className="public-steps">
-              <div className="public-step"><div className="public-step-num">1</div><p>Subscribe once to access the private Telegram channel.</p></div>
-              <div className="public-step"><div className="public-step-num">2</div><p>Receive tomorrow's ES and NQ plan in Telegram and Today's Plan after the close.</p></div>
+              <div className="public-step"><div className="public-step-num">1</div><p>Subscribe once to get the daily plan by email and Telegram.</p></div>
+              <div className="public-step"><div className="public-step-num">2</div><p>Receive tomorrow's ES and NQ plan by email, Telegram, and Today's Plan after the close.</p></div>
               <div className="public-step"><div className="public-step-num">3</div><p>Use the levels and bias to trade with discipline at the open.</p></div>
             </div>
           </section>

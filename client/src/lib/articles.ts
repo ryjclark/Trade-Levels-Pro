@@ -46,7 +46,7 @@ export const ARTICLES: ArticleMeta[] = [
     slug: "how-to-trade-the-daily-plan",
     title: "How to Trade the Daily Plan (Start Here)",
     excerpt:
-      "New here? Read this first. Exactly what each part of the daily ES and NQ plan means (Magnet, Dynamic Zone, failed-breakdown longs, rejection shorts) and how to act on it.",
+      "New here? Read this first. Exactly what each part of the daily ES and NQ plan means (ranked levels, bias, failed-breakdown longs, rejection shorts) and how to act on it.",
     description:
       "New here? Read this first. Exactly what each part of the daily ES and NQ plan means and how to trade it: the Magnet, Dynamic Zone, failed-breakdown longs, rejection shorts, acceptance, and level-to-level management.",
     date: "August 4, 2026",
@@ -101,7 +101,7 @@ export const ARTICLES: ArticleMeta[] = [
     slug: "building-a-daily-es-trade-plan-template",
     title: "How We Build the Daily ES and NQ Trade Plan",
     excerpt:
-      "Our exact evening process for both contracts: mark the Magnet and Dynamic Zone, map the structure and ranked reaction levels, set a bias, then write the ranked Failed-Breakdown longs and secondary rejection shorts.",
+      "Our exact evening process for both contracts: map the structure and ranked reaction levels, set a bias, then write the ranked failed-breakdown longs and secondary rejection shorts.",
     description:
       "Our exact evening process for building the next day's ES and NQ plan: the Magnet and Dynamic Zone, the structure and ranked detected levels, a conditional bias, and the ranked Failed-Breakdown longs with acceptance and level-to-level management, plus secondary rejection shorts.",
     date: "July 10, 2026",

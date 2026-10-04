@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { registerStripeRoutes } from "./stripe";
 import { registerSeoRoutes } from "./seo-routes";
@@ -19,6 +20,13 @@ app.use(
     crossOriginEmbedderPolicy: false,
   })
 );
+
+// Gzip/Brotli compression for all responses (HTML, JSON, and static JS/CSS).
+// Registered before the routes and static serving below so everything downstream
+// is compressed. The default filter already skips Server-Sent Events
+// (text/event-stream) and honors a per-response `x-no-compression` header, so it
+// is safe for any streaming routes.
+app.use(compression());
 
 // Canonicalize host: permanently send www.* to the bare domain so there is only
 // one indexable site. (Also requires www to be bound to this deployment.)

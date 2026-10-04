@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useMemberAuth } from "@/hooks/use-member-auth";
+import { SocialIconLinks } from "@/components/social-links";
 
 const BASE_NAV_ITEMS = [
   { href: "/", label: "Home" },
@@ -83,6 +84,9 @@ export default function PublicNav() {
               {item.label}
             </Link>
           ))}
+          <div className="public-nav-social" style={{ display: "inline-flex", alignItems: "center", marginLeft: 4 }}>
+            <SocialIconLinks idSuffix="-nav" />
+          </div>
         </div>
       </nav>
     </div>

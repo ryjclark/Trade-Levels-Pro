@@ -35,7 +35,7 @@ const HELPS = [
   },
   {
     t: "A reason to wait",
-    d: "Pre-defined Magnet, Dynamic Zone, and reaction levels give you a reason to sit on your hands, which cuts the overtrading that fails most evals.",
+    d: "Pre-defined ranked levels and setups give you a reason to sit on your hands, which cuts the overtrading that fails most evals.",
   },
   {
     t: "Level-to-level targets",
@@ -56,10 +56,9 @@ const NOT_LIST = [
 
 const PLAN = [
   ["Bias", "The day's directional lean, with the reasoning behind it."],
-  ["Magnet", "The price the market is drawn toward."],
-  ["Dynamic Zone", "The key acceptance and rejection band for the session."],
-  ["Ranked reaction levels", "Support and resistance, ordered by importance."],
-  ["1-2 setups", "Ranked failed-breakdown longs and rejection shorts, each with invalidation."],
+  ["Ranked reaction levels", "Support and resistance, ordered by importance, defined before the open."],
+  ["Next targets", "Logical level-to-level targets for scaling or exiting inside your firm's limits."],
+  ["1-2 setups", "Ranked failed-breakdown longs and rejection shorts, each with clear invalidation."],
 ];
 
 const FAQ = [
@@ -102,7 +101,7 @@ export default function PublicPropFirmsPage() {
   useSeo({
     title: `For Prop Firm Traders | ${SITE_NAME}`,
     description:
-      "A daily ES and NQ plan built as a discipline layer for prop evaluations and funded accounts: Magnet, Dynamic Zone, ranked reaction levels, bias, and 1-2 setups with clear invalidation. Not a signal service.",
+      "A daily ES and NQ plan built as a discipline layer for prop evaluations and funded accounts: ranked levels, a daily bias, and 1 to 2 setups with clear invalidation. Not a signal service.",
     path: "/prop-firms",
   });
 
@@ -123,9 +122,9 @@ export default function PublicPropFirmsPage() {
               A daily plan for <span className="accent">eval and funded</span> ES / NQ traders
             </h1>
             <p className="public-hero-subtitle">
-              Magnet, Dynamic Zone, ranked reaction levels, a daily bias, and 1-2 setups,
-              each with clear invalidation. A discipline layer for your evaluation or funded
-              account, not signal spam. Delivered to Telegram and the on-site terminal.
+              Ranked levels, a daily bias, and 1 to 2 setups, each with clear invalidation.
+              A discipline layer for your evaluation or funded account, not signal spam.
+              Delivered by email and Telegram, with Today's Plan on site.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", marginTop: 24 }}>
               <Link href="/sample" className="btn-primary" data-testid="button-prop-sample">
@@ -230,6 +229,12 @@ export default function PublicPropFirmsPage() {
               See pricing →
             </Link>
           </div>
+          <p className="public-small-text" style={{ marginTop: 16 }}>
+            Read the guide:{" "}
+            <a href="/learn/prop-firm-traders-support-resistance" data-testid="link-prop-guide">
+              How prop firm traders use support and resistance to pass evaluations →
+            </a>
+          </p>
         </section>
 
         {/* FAQ */}

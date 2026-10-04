@@ -9,8 +9,8 @@ import { useSeo } from "@/hooks/use-seo";
 import { CTA_TEXT, SITE_NAME } from "@/lib/constants";
 
 const METHOD = [
-  { icon: Eye, title: "Map the Dynamic Zone", body: "Define the reactive band where price is most likely to consolidate or reverse." },
-  { icon: Crosshair, title: "Identify the Magnet", body: "Locate the level price tends to pull back toward intraday." },
+  { icon: Eye, title: "Frame the balance area", body: "Define the band around fair value where price is most likely to consolidate or reverse." },
+  { icon: Crosshair, title: "Find the anchor level", body: "Locate the level price tends to pull back toward intraday." },
   { icon: Layers, title: "Map the Reaction Levels", body: "Prior-day, overnight, and detected swing levels, ranked by quality, frame the day's playable range." },
   { icon: Compass, title: "Set the Bias", body: "Establish a directional lean based on context, not prediction." },
   { icon: Send, title: "Define 1–2 High-Quality Setups", body: "Concrete, level-based ideas you can prepare for ahead of the open." },
@@ -19,7 +19,7 @@ const METHOD = [
 export default function PublicHowItWorksPage() {
   useSeo({
     title: `How It Works — The Methodology | ${SITE_NAME}`,
-    description: "How Trade Levels Pro builds a daily ES and NQ futures trade plan: Magnet, Dynamic Zone, ranked reaction levels, bias, and failed-breakdown setups, applied the same way every day.",
+    description: "How Trade Levels Pro builds a daily ES and NQ futures trade plan: ranked reaction levels, a daily bias, and failed-breakdown setups with clear invalidation, applied the same way every day.",
     path: "/how-it-works",
   });
 
@@ -50,7 +50,7 @@ export default function PublicHowItWorksPage() {
               </p>
               <p>
                 Each evening after the close, we publish a complete daily plan for
-                ES and NQ to the private Telegram channel. The plan gives you the
+                ES and NQ by email and Telegram, with Today's Plan on site. The plan gives you the
                 levels and context you need to be prepared before the open, and the
                 discipline to react instead of guess. React to price. No predictions.
               </p>
@@ -132,7 +132,7 @@ export default function PublicHowItWorksPage() {
               <div className="public-step">
                 <div className="public-step-num">3</div>
                 <p>
-                  Go long toward the Magnet, then the next level up. Bank profits
+                  Go long toward the first target, then the next level up. Bank profits
                   level-to-level and leave a runner for the bigger move.
                 </p>
               </div>
@@ -159,7 +159,7 @@ export default function PublicHowItWorksPage() {
             <div className="public-steps">
               <div className="public-step">
                 <div className="public-step-num">1</div>
-                <p>Subscribe once to access the private Telegram channel and Today's Plan.</p>
+                <p>Subscribe once to get the daily plan by email and Telegram, plus Today's Plan on site.</p>
               </div>
               <div className="public-step">
                 <div className="public-step-num">2</div>

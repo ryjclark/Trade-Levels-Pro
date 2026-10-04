@@ -6,9 +6,9 @@ export const ANNUAL_SAVINGS_LABEL = "Save $98 · 2 months free";
 
 export const CTA_TEXT = "Subscribe";
 export const CTA_MAILTO =
-  "mailto:contact@tradelevelspro.com?subject=Founding%20Member%20Signup";
+  "mailto:contact@tradelevelspro.com?subject=Trade%20Levels%20Pro%20Monthly%20Signup";
 export const CTA_MAILTO_ANNUAL =
-  "mailto:contact@tradelevelspro.com?subject=Founding%20Member%20Annual%20Signup";
+  "mailto:contact@tradelevelspro.com?subject=Trade%20Levels%20Pro%20Annual%20Signup";
 
 export const CONTACT_EMAIL = "contact@tradelevelspro.com";
 export const TAGLINE = "Trade Smarter. React to Price. No Predictions.";

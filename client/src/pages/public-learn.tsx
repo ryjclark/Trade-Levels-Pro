@@ -10,7 +10,7 @@ import { CTA_TEXT, SITE_NAME } from "@/lib/constants";
 export default function PublicLearnPage() {
   useSeo({
     title: `Learn — ES Futures, Levels, and Prop Trading | ${SITE_NAME}`,
-    description: "In-depth articles on ES futures levels, the Magnet, the Dynamic Zone, prop firm strategy, and building a repeatable daily trade plan.",
+    description: "In-depth articles on ES futures levels, failed-breakdown and rejection setups, prop firm strategy, and building a repeatable daily trade plan.",
     path: "/learn",
   });
 

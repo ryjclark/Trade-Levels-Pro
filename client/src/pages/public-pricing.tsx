@@ -16,9 +16,9 @@ const FAQ = [
   { q: "Which markets does this cover?", a: "ES and NQ E-mini futures are the focus, ES is what the plans are built around, and NQ is the most popular. You also get daily levels for Gold, Crude, and Russell in Today's Plan and Telegram." },
   { q: "Is this an alerts service?", a: "No. It is a daily plan with the key levels and ranked setups. You learn to navigate the levels and make your own decisions." },
   { q: "Who is this for?", a: "Prop traders and developing futures traders who want a repeatable, disciplined process around the ES and NQ session." },
-  { q: "What do I get each day?", a: "The Magnet and Dynamic Zone, the key structure and reaction levels, a daily bias, and ranked failed-breakdown longs plus secondary rejection shorts, for both ES and NQ." },
-  { q: "Is there a TradingView overlay?", a: "Yes, as an optional overlay. After you subscribe, copy today's levels from Today's Plan into a TradingView Pine script to plot the Magnet, Dynamic Zone, and ranked reaction levels on your chart. Re-copy when each new plan posts, TradingView does not auto-refresh a daily snapshot. It is optional, Telegram and Today's Plan are the main way you get each plan." },
-  { q: "When are plans posted?", a: "By 5:30 PM ET each trading day, for the next session, to Telegram and Today's Plan." },
+  { q: "What do I get each day?", a: "Ranked levels, a daily bias, and ranked failed-breakdown longs plus rejection shorts, each with clear invalidation, delivered by email and Telegram, with Today's Plan on site." },
+  { q: "Is there a TradingView overlay?", a: "Yes, as an optional overlay. After you subscribe, copy today's levels from Today's Plan into a TradingView Pine script to plot the ranked levels on your chart. Re-copy when each new plan posts, TradingView does not auto-refresh a daily snapshot. It is optional, email, Telegram, and Today's Plan are the main way you get each plan." },
+  { q: "When are plans posted?", a: "By 5:30 PM ET each trading day, for the next session, by email, Telegram, and Today's Plan." },
   { q: "Is the market data live?", a: "No. Price data shown on the site is delayed about a minute and is not a live trading feed. The levels are set after the cash close." },
   { q: "Can I cancel anytime?", a: "Yes. Email support to cancel and we will stop future billing. There are no contracts and no long-term commitment." },
   { q: "Do you offer refunds?", a: "You can cancel anytime to stop future billing, and access continues through the period you already paid for. Because the plans are delivered daily, we do not refund elapsed subscription time." },
@@ -26,10 +26,10 @@ const FAQ = [
 
 const FEATURES = [
   "Daily ES and NQ levels and trade plan (plus Gold, Crude, Russell)",
-  "Magnet, Dynamic Zone, and ranked reaction levels",
+  "Ranked levels, daily bias, and 1 to 2 setups with clear invalidation",
   "Ranked failed-breakdown longs plus rejection shorts",
-  "Optional TradingView overlay — copy each day's levels into a Pine script",
-  "Posted by 5:30 PM ET via Telegram and Today's Plan",
+  "Optional TradingView overlay: copy each day's levels into a Pine script",
+  "Posted by 5:30 PM ET via email, Telegram, and Today's Plan",
   "Cancel anytime",
 ];
 
@@ -37,8 +37,8 @@ export default function PublicPricingPage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
 
   useSeo({
-    title: `Pricing — Founding Members | ${SITE_NAME}`,
-    description: "Founding Members pricing for Trade Levels Pro: $49/month or $490/year for daily ES and NQ futures trade plans delivered to a private Telegram channel and Today's Plan.",
+    title: `Pricing | ${SITE_NAME}`,
+    description: "Pricing for Trade Levels Pro: $49/month or $490/year for daily ES and NQ futures trade plans delivered by email and Telegram, with Today's Plan on site.",
     path: "/pricing",
     jsonLd: {
       "@context": "https://schema.org",
@@ -94,11 +94,11 @@ export default function PublicPricingPage() {
           <div className="hero-noise" aria-hidden="true" />
           <div className="public-hero-content public-hero-centered">
             <h1>
-              Founding Members <span className="accent">Pricing</span>
+              <span className="accent">Pricing</span>
             </h1>
             <p className="public-hero-subtitle">
               One simple plan. Daily ES and NQ levels, bias, and setups
-              delivered to a private Telegram channel.
+              delivered by email and Telegram.
             </p>
           </div>
         </section>
@@ -128,7 +128,6 @@ export default function PublicPricingPage() {
                 </button>
               </div>
               <div className="pricing-plan" data-testid="card-pricing-plan">
-                <div className="pricing-badge">FOUNDING MEMBERS</div>
                 <div className="pricing-plan-name">Trade Levels Pro</div>
                 <div className="pricing-plan-price" data-testid="text-price">{price}</div>
                 <div className="pricing-plan-period">{period}</div>

@@ -5,6 +5,8 @@ import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import Reveal from "@/components/reveal";
 import TradingViewChart from "@/components/TradingViewChart";
+import ShareRow from "@/components/share-row";
+import { SOCIAL } from "@/components/social-links";
 import { useSeo } from "@/hooks/use-seo";
 import { CTA_TEXT, SITE_NAME } from "@/lib/constants";
 
@@ -28,16 +30,14 @@ const bubble: CSSProperties = {
 const SAMPLE_ES = `🤖 ES Trade Plan · Example
 
 Bias: Bullish
-Magnet: 7,496
-Dynamic Zone: 7,475 – 7,517
 
 🟢 Failed-breakdown longs (best first)
-🥇 7,427 → flush and reclaim, long toward the magnet
+🥇 7,427 → flush and reclaim, long toward the first target
 🥈 7,399 (backup)
 🥉 7,372 (deeper)
 
 🔴 Rejection shorts (secondary)
-🥇 7,517 → reject and fail, short toward the magnet
+🥇 7,517 → reject and fail, short toward the first target
 🥈 7,547
 
 Rule: wait for acceptance, then manage level to level.
@@ -46,16 +46,14 @@ Educational only. Not investment advice.`;
 const SAMPLE_NQ = `🤖 NQ Trade Plan · Example
 
 Bias: Neutral
-Magnet: 24,180
-Dynamic Zone: 24,090 – 24,275
 
 🟢 Failed-breakdown longs (best first)
-🥇 23,985 → flush and reclaim, long toward the magnet
+🥇 23,985 → flush and reclaim, long toward the first target
 🥈 23,880 (backup)
 🥉 23,740 (deeper)
 
 🔴 Rejection shorts (secondary)
-🥇 24,310 → reject and fail, short toward the magnet
+🥇 24,310 → reject and fail, short toward the first target
 🥈 24,440
 
 Rule: wait for acceptance, then manage level to level.
@@ -65,7 +63,7 @@ export default function PublicSamplePage() {
   useSeo({
     title: `Sample Daily ES and NQ Trade Plan | ${SITE_NAME}`,
     description:
-      "See exactly what members receive each trading day: the real Telegram drop with Bias, Magnet, Dynamic Zone, ranked failed-breakdown longs and rejection shorts, and the acceptance rule. Numbers illustrative.",
+      "See exactly what members receive each trading day: the real email and Telegram drop with bias, ranked levels, failed-breakdown longs and rejection shorts, and the acceptance rule for ES and NQ. Numbers illustrative.",
     path: "/sample",
   });
 
@@ -81,7 +79,7 @@ export default function PublicSamplePage() {
           <div className="public-hero-content public-hero-centered">
             <h1>Sample <span className="accent">Daily Plan</span></h1>
             <p className="public-hero-subtitle">
-              Illustrative, redacted example of the daily Telegram drop for ES and NQ.
+              Illustrative, redacted example of the daily email and Telegram drop for ES and NQ.
               Numbers are examples, not live levels. The format is exactly what members get.
             </p>
           </div>
@@ -118,21 +116,28 @@ export default function PublicSamplePage() {
               <h3>Glossary</h3>
               <dl className="glossary-list">
                 <dt>Bias</dt>
-                <dd>The day's directional lean while price holds the magnet.</dd>
-                <dt>Magnet</dt>
-                <dd>The price the session tends to gravitate toward. The main anchor for bias.</dd>
-                <dt>Dynamic Zone (DZ)</dt>
-                <dd>A volatility band around the magnet where price often consolidates or reverses.</dd>
+                <dd>The day's directional lean while price holds the anchor level.</dd>
                 <dt>Failed-breakdown long</dt>
-                <dd>The primary setup: price flushes below a level, traps sellers, reclaims it, and you long toward the magnet.</dd>
+                <dd>The primary setup: price flushes below a level, traps sellers, reclaims it, and you long toward the first target.</dd>
                 <dt>Rejection short</dt>
-                <dd>The secondary setup: price tests a level above the magnet, rejects and fails to hold, and you fade it back toward the magnet.</dd>
+                <dd>The secondary setup: price tests a level above fair value, rejects and fails to hold, and you fade it back toward the first target.</dd>
                 <dt>Acceptance</dt>
                 <dd>The confirmation to enter: price holds back above (or below) the level rather than knifing through it.</dd>
                 <dt>Level to level</dt>
                 <dd>How you manage: bank the first target, trail a runner, and react to price rather than predict.</dd>
               </dl>
             </div>
+
+            <div style={{ maxWidth: 640, margin: "0 auto" }}>
+              <ShareRow title={`Sample Daily ES and NQ Trade Plan | ${SITE_NAME}`} />
+            </div>
+
+            <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7, marginTop: 28 }}>
+              Get a free trading tip every day. Follow us on{" "}
+              <a href={SOCIAL.x} target="_blank" rel="noopener noreferrer">X</a>
+              {" and "}
+              <a href={SOCIAL.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>.
+            </p>
           </section>
         </Reveal>
 

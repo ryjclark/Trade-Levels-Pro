@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
+import { setProofSnapshot } from "./proof-cache";
 import { sendTelegramMessage } from "./telegram";
 import { formatTelegramFree, formatTelegramPro, formatAll, escapeMdV2 } from "./formatter";
 import { formatBySource, formatAiParsedPlan, formatManualPlan, formatAlgorithmPlan } from "./lib/telegram-format";
@@ -1101,6 +1102,7 @@ export async function registerRoutes(
     try {
       if (!PROOF_CACHE || Date.now() - PROOF_CACHE.at > PROOF_TTL_MS) {
         PROOF_CACHE = { at: Date.now(), data: await computeIntradayProof() };
+        setProofSnapshot(PROOF_CACHE.data); // share with the SSR /track-record prerender
       }
       res.json(PROOF_CACHE.data);
     } catch (e: any) {
@@ -1108,6 +1110,18 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to load proof" });
     }
   });
+
+  // Warm the proof snapshot in the background so the /track-record prerender has
+  // real numbers shortly after boot (without waiting for a visitor to hit the
+  // API). Non-blocking; failures just leave the prerender on its fallback text.
+  (async () => {
+    try {
+      PROOF_CACHE = { at: Date.now(), data: await computeIntradayProof() };
+      setProofSnapshot(PROOF_CACHE.data);
+    } catch (e: any) {
+      console.warn("proof warm failed:", e?.message || e);
+    }
+  })();
 
   // "Levels for your chart" — the published plan's levels as copy-paste text or a
   // TradingView Pine script that draws them as horizontal lines. High-utility,
@@ -2310,7 +2324,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/public/site-config", (_req, res) => {
-    res.json({ clarityProjectId: process.env.CLARITY_PROJECT_ID || null });
+    res.json({ clarityProjectId: (process.env.CLARITY_PROJECT_ID || "").trim() || null });
   });
 
   app.get("/api/public/settings", async (_req, res) => {

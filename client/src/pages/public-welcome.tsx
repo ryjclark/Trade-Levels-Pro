@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
+import { SOCIAL } from "@/components/social-links";
 import { CONTACT_EMAIL } from "@/lib/constants";
 import { useMemberAuth } from "@/hooks/use-member-auth";
 
@@ -142,9 +143,30 @@ export default function PublicWelcomePage() {
               </>
             )}
 
-            {!loading && !info && !error && (
+            {!loading && !info && !error && isCold && (
               <>
-                <h3 className="capture-title">{isCold ? "Member access" : "You're in"}</h3>
+                <h3 className="capture-title">Member access</h3>
+                <p className="capture-sub">
+                  This page is for after checkout or for signed-in members. Log in
+                  to open your welcome steps and Telegram invite.
+                </p>
+                <a
+                  href="/member-login"
+                  className="capture-button"
+                  style={{ textAlign: "center", textDecoration: "none", display: "inline-block" }}
+                  data-testid="link-member-login"
+                >
+                  Log in to your member account →
+                </a>
+                <p className="capture-sub" style={{ marginTop: 16 }}>
+                  <a href="/pricing" style={{ color: "#2dd4bf" }}>See pricing →</a>
+                </p>
+              </>
+            )}
+
+            {!loading && !info && !error && !isCold && (
+              <>
+                <h3 className="capture-title">You're in</h3>
                 <p className="capture-sub">
                   Your subscription is active and we're setting up your Telegram
                   access. If your invite doesn't appear here shortly, email{" "}
@@ -156,6 +178,15 @@ export default function PublicWelcomePage() {
               </>
             )}
           </div>
+
+          {!isCold && (
+            <p style={{ textAlign: "center", fontSize: 14, opacity: 0.75, marginTop: 24 }} data-testid="welcome-follow">
+              Get a free trading tip every day. Follow us on{" "}
+              <a href={SOCIAL.x} target="_blank" rel="noopener noreferrer" style={{ color: "#2dd4bf" }}>X</a>
+              {" and "}
+              <a href={SOCIAL.instagram} target="_blank" rel="noopener noreferrer" style={{ color: "#2dd4bf" }}>Instagram</a>.
+            </p>
+          )}
         </section>
 
         <PublicFooter />

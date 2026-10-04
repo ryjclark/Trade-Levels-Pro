@@ -4,6 +4,7 @@ import "./public.css";
 import PublicNav from "@/components/public-nav";
 import PublicFooter from "@/components/public-footer";
 import { useSeo } from "@/hooks/use-seo";
+import ShareRow from "@/components/share-row";
 import { ARTICLES, getArticle } from "@/lib/articles";
 import {
   CTA_TEXT, SITE_NAME, SITE_URL, OG_DEFAULT_IMAGE,
@@ -48,7 +49,7 @@ function EndCta() {
   return (
     <div className="article-cta">
       <h3>Trade tomorrow with structure.</h3>
-      <p>The same Magnet, Dynamic Zone, structure levels, and ranked setups, delivered to Telegram every evening for ES and NQ.</p>
+      <p>The same ranked levels, bias, and setups, delivered by email and Telegram every evening for ES and NQ.</p>
       <div className="article-cta-row">
         <Link href="/pricing" className="btn-secondary" data-testid="article-link-pricing-end">View pricing</Link>
         <Link href="/pricing" className="btn-primary" data-testid="article-link-cta-end">{CTA_TEXT} →</Link>
@@ -107,6 +108,7 @@ export default function PublicArticlePage() {
         <div className="article-body">
           <Body />
         </div>
+        <ShareRow title={`${article.title} | ${SITE_NAME}`} />
         <div style={{ marginTop: 56, paddingTop: 32, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, marginBottom: 12 }}>
             More from the blog
