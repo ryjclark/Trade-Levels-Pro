@@ -1,16 +1,19 @@
 name: Trade Levels cron pinger
 
-# Replit Autoscale can idle the app to zero, which stops the in-process timers.
-# This pings the token-gated /api/cron/:job endpoints on a schedule so the intraday
-# alert loop + the daily results/generate jobs always run (and keeps the app warm).
+# Lightweight REDUNDANT backup for the app's own in-process scheduler. The app runs
+# on an always-on deployment (100% uptime), so its internal cron already generates
+# levels (~5:15pm ET), scores results (~5pm ET), and runs intraday alerts (every 2
+# min). This workflow only re-triggers the two DAILY jobs as belt-and-suspenders.
+#
+# The every-5-min intraday ping was REMOVED because it burned through the free
+# GitHub Actions minutes (the internal 2-min loop already covers intraday). If the
+# deployment is ever switched to Autoscale (which sleeps), restore an intraday ping
+# via a free external cron instead: https://tradelevelspro.com/api/cron/intraday?key=YOUR_KEY
 #
 # SETUP (one time): add a repo secret CRON_KEY = the value of ALGORITHM_INGEST_API_KEY.
-# For tighter (1–2 min) intraday timing, also point cron-job.org at:
-#   https://tradelevelspro.com/api/cron/intraday?key=YOUR_KEY   (every 2 min, Mon–Fri 9:30–16:00 ET)
 
 on:
   schedule:
-    - cron: "*/5 13-21 * * 1-5" # intraday alerts, ~cash session (UTC; covers EDT & EST)
     - cron: "3 21 * * 1-5" # results ~5:03pm ET (EDT)
     - cron: "3 22 * * 1-5" # results ~5:03pm ET (EST)
     - cron: "17 21 * * 1-5" # generate next-session levels ~5:17pm ET (EDT)
