@@ -145,19 +145,6 @@ export const PROP_FIRMS: PropFirm[] = [
     url: "https://www.thetradingpit.com/",
   },
   {
-    slug: "tick-tick-trader",
-    name: "TickTick Trader",
-    tagline: "Futures-focused prop with simple two-step evaluations.",
-    accountSizes: "$25K – $150K",
-    pros: [
-      "Clean, easy-to-understand rule set",
-      "Reasonable trailing drawdown structure",
-      "Responsive support team",
-    ],
-    cons: ["Smaller account ladder vs. larger competitors"],
-    url: "https://www.tickticktrader.com/",
-  },
-  {
     slug: "bulenox",
     name: "Bulenox",
     tagline: "Discount-friendly prop with fast activation.",
