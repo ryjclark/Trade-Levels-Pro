@@ -18,8 +18,13 @@ export const SITE_NAME = "Trade Levels Pro";
 export const OG_DEFAULT_IMAGE = `${SITE_URL}/og-default.png`;
 
 /**
- * Affiliate placeholders. Swap each `ref` value for the real affiliate code
- * when ready. The order here is also the display order on /prop-firms.
+ * Prop firm list shown on /prop-firms, in display order.
+ *
+ * AFFILIATE: the `url` field is the affiliate slot. Replace each firm's homepage
+ * URL below with your real affiliate / referral link once you have it from that
+ * firm's affiliate program (see ~/Desktop/prop-firm-affiliate-checklist.md).
+ * Links already carry rel="sponsored" and the page shows an affiliate
+ * disclosure, so this is the only change needed to monetize them.
  */
 export interface PropFirm {
   slug: string;

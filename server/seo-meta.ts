@@ -34,7 +34,7 @@ const STATIC: Record<string, RouteMeta> = {
   "/pricing": {
     title: "Pricing | Trade Levels Pro",
     description:
-      "Simple monthly or annual access to the daily ES and NQ trade plans, Today's Plan, plus an optional TradingView overlay. Cancel anytime.",
+      "Start a 7-day free trial, then $49/month or $490/year for the daily ES and NQ trade plans, Today's Plan, and an optional TradingView overlay. Cancel anytime.",
   },
   "/sample": {
     title: "Sample Daily Plan | Trade Levels Pro",
@@ -227,7 +227,7 @@ const ROUTE_BODY: Record<string, { h1: string; paras: string[] }> = {
   "/pricing": {
     h1: "Pricing",
     paras: [
-      "One simple plan: $49 per month or $490 per year. Cancel anytime.",
+      "Start with a 7-day free trial, then $49 per month, or pay $490 per year. Cancel anytime.",
       "You get the daily ES and NQ trade plan (plus Gold, Crude, and Russell): ranked reaction levels, a daily bias, and ranked failed-breakdown longs plus rejection shorts, delivered by email and Telegram and on Today's Plan. An optional TradingView overlay lets you copy the levels onto your own chart; re-copy when each new plan posts.",
     ],
   },

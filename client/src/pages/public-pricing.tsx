@@ -38,7 +38,7 @@ export default function PublicPricingPage() {
 
   useSeo({
     title: `Pricing | ${SITE_NAME}`,
-    description: "Pricing for Trade Levels Pro: $49/month or $490/year for daily ES and NQ futures trade plans delivered by email and Telegram, with Today's Plan on site.",
+    description: "Start a 7-day free trial of Trade Levels Pro, then $49/month or $490/year for daily ES and NQ futures trade plans delivered by email and Telegram, with Today's Plan on site. Cancel anytime.",
     path: "/pricing",
     jsonLd: {
       "@context": "https://schema.org",
@@ -55,6 +55,9 @@ export default function PublicPricingPage() {
   const price = isAnnual ? PRICE_ANNUAL : PRICE;
   const period = isAnnual ? "per year" : "per month";
   const ctaHref = isAnnual ? CTA_MAILTO_ANNUAL : CTA_MAILTO;
+  // Monthly plan starts with a 7-day free trial (card required, cancel anytime
+  // before day 7 for no charge). Annual bills right away.
+  const ctaLabel = isAnnual ? CTA_TEXT : "Start 7-day free trial";
   const [checkoutBusy, setCheckoutBusy] = useState(false);
 
   // Start Stripe Checkout for the selected plan. Falls back to the email CTA if
@@ -131,6 +134,11 @@ export default function PublicPricingPage() {
                 <div className="pricing-plan-name">Trade Levels Pro</div>
                 <div className="pricing-plan-price" data-testid="text-price">{price}</div>
                 <div className="pricing-plan-period">{period}</div>
+                {!isAnnual && (
+                  <div className="pricing-trial-note" data-testid="text-trial" style={{ marginTop: 8, color: "var(--teal, #5EEAD4)", fontWeight: 600, fontSize: 14 }}>
+                    7-day free trial, then {PRICE}/month. Cancel anytime.
+                  </div>
+                )}
                 <div className="pricing-features">
                   {FEATURES.map((f, i) => (
                     <div className="pricing-feature" key={i}>
@@ -146,11 +154,12 @@ export default function PublicPricingPage() {
                   data-testid="button-cta-pricing"
                   style={{ cursor: checkoutBusy ? "wait" : "pointer", width: "100%", border: "none" }}
                 >
-                  {checkoutBusy ? "Starting checkout…" : `${CTA_TEXT} →`}
+                  {checkoutBusy ? "Starting checkout…" : `${ctaLabel} →`}
                 </button>
                 <p className="subscribe-onboard-text">
-                  Secure checkout via Stripe. Right after payment you'll get your
-                  single-use invite to the private Telegram channel.
+                  {isAnnual
+                    ? "Secure checkout via Stripe. You get member access right away: email, Telegram, and Today's Plan."
+                    : "Secure checkout via Stripe. No charge during the 7-day trial, cancel anytime before it ends. You get member access right away: email, Telegram, and Today's Plan."}
                 </p>
                 <p className="subscribe-secure-text">No contracts. Cancel anytime.</p>
               </div>
@@ -183,7 +192,7 @@ export default function PublicPricingPage() {
             data-testid="button-cta-pricing-final"
             style={{ cursor: checkoutBusy ? "wait" : "pointer", border: "none" }}
           >
-            {checkoutBusy ? "Starting checkout…" : `${CTA_TEXT} →`}
+            {checkoutBusy ? "Starting checkout…" : `${ctaLabel} →`}
           </button>
         </section>
 

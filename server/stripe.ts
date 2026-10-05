@@ -307,6 +307,15 @@ export function registerStripeRoutes(app: Express): void {
         cancel_url: `${APP_BASE_URL}/pricing`,
         customer_email: email,
         allow_promotion_codes: true,
+        // 7-day free trial on the MONTHLY plan to lower the cold-start friction.
+        // Stripe Checkout still collects a card, so it auto-converts at day 7 and
+        // keeps out tire-kickers. Not applied to annual (a trial before a $490
+        // charge invites confusion and chargebacks). The welcome/provisioning
+        // flow already grants access on a completed (trialing) session, and the
+        // existing subscription.deleted webhook revokes access on a trial cancel.
+        ...(plan === "monthly"
+          ? { subscription_data: { trial_period_days: 7 } }
+          : {}),
         // Force the price's native currency (USD). Without this, Stripe Adaptive
         // Pricing converts to the visitor's local currency (e.g. ¥ JPY), which
         // mismatched the USD shown on /pricing.

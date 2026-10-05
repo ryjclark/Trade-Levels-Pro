@@ -98,7 +98,7 @@ export default function PublicHomePage() {
                   See a Sample Plan
                 </Link>
               </div>
-              <p className="public-small-text">{PRICE_PER_MONTH} · Cancel anytime</p>
+              <p className="public-small-text">7-day free trial, then {PRICE_PER_MONTH} · Cancel anytime</p>
               <p className="public-small-text" style={{ marginTop: 10 }}>
 A published level or target has been in play in <b>every</b> intraday-verified ES and NQ session.{" "}
                 <Link href="/track-record" style={{ color: "var(--teal, #5EEAD4)", textDecoration: "underline" }} data-testid="link-proof-hero">
@@ -327,7 +327,7 @@ A published level or target has been in play in <b>every</b> intraday-verified E
           </div>
           <h2 className="public-section-title">Trade with structure tomorrow.</h2>
           <p className="public-section-subtitle" style={{ marginBottom: "32px" }}>
-            {PRICE_PER_MONTH} · Cancel anytime.
+            Start with a 7-day free trial, then {PRICE_PER_MONTH}. Cancel anytime.
           </p>
           <Link href="/pricing" className="btn-primary" data-testid="button-cta-final">
             {CTA_TEXT} →
