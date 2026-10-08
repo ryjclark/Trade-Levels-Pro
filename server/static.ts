@@ -23,6 +23,10 @@ export function serveStatic(app: Express) {
       setHeaders: (res, filePath) => {
         if (filePath.includes("/assets/")) {
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else if (filePath.includes("/videos/")) {
+          // Dated video/caption/poster files: cache a week so repeat views and
+          // range requests don't re-pull ~15MB. New cuts get a new filename.
+          res.setHeader("Cache-Control", "public, max-age=604800");
         } else {
           res.setHeader("Cache-Control", "no-store");
         }

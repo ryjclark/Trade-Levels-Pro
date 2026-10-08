@@ -377,6 +377,20 @@ function shareRow(path: string, title: string): string {
   );
 }
 
+// How-to video for the /tradingview prerender. Inserted after the intro
+// paragraph so crawlers see the player next to the install steps. No autoplay.
+function tradingViewVideo(): string {
+  return (
+    `<h2>Watch: install in about a minute</h2>` +
+    `<video controls playsinline preload="metadata" ` +
+    `poster="/videos/tradingview-howto-2026-10-08-poster.jpg" ` +
+    `style="width:100%;max-width:860px;aspect-ratio:16/9;border-radius:12px;background:#050810">` +
+    `<source src="/videos/tradingview-howto-2026-10-08.mp4" type="video/mp4" />` +
+    `<track kind="captions" src="/videos/tradingview-howto-2026-10-08.en.vtt" srclang="en" label="English" default />` +
+    `</video>`
+  );
+}
+
 function renderRouteBody(path: string, meta: RouteMeta): string {
   const entry = ROUTE_BODY[path];
   const slugMatch = path.match(/^\/learn\/([a-z0-9-]+)$/);
@@ -390,9 +404,14 @@ function renderRouteBody(path: string, meta: RouteMeta): string {
   // crawlers see the real content instead of a one-paragraph stub.
   const fullArticle = slug ? PRERENDER_ARTICLE_BODIES[slug] : undefined;
   const paraSource = article ? [article.description || article.excerpt] : (entry?.paras || [meta.description]);
-  const paras = fullArticle
+  let paras = fullArticle
     ? fullArticle
     : paraSource.map((p) => `<p>${esc(p)}</p>`).join("");
+  // /tradingview: video sits after the intro sentence, above the step text.
+  if (path === "/tradingview" && !fullArticle) {
+    const parts = paraSource.map((p) => `<p>${esc(p)}</p>`);
+    paras = (parts[0] || "") + tradingViewVideo() + parts.slice(1).join("");
+  }
 
   // Route-specific extra content inserted after the intro.
   let extra = "";

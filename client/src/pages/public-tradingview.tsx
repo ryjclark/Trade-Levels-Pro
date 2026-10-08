@@ -25,6 +25,32 @@ export default function PublicTradingViewPage() {
           Optional Pine overlay for the daily ES and NQ levels. Telegram and Today&apos;s Plan stay the primary delivery.
         </p>
 
+        <h2 style={{ fontSize: 22, marginBottom: 12 }}>Watch: install in about a minute</h2>
+        <video
+          controls
+          playsInline
+          preload="metadata"
+          poster="/videos/tradingview-howto-2026-10-08-poster.jpg"
+          style={{
+            width: "100%",
+            maxWidth: 860,
+            aspectRatio: "16 / 9",
+            borderRadius: 12,
+            background: "#050810",
+            display: "block",
+            marginBottom: 28,
+          }}
+        >
+          <source src="/videos/tradingview-howto-2026-10-08.mp4" type="video/mp4" />
+          <track
+            kind="captions"
+            src="/videos/tradingview-howto-2026-10-08.en.vtt"
+            srcLang="en"
+            label="English"
+            default
+          />
+        </video>
+
         <h2 style={{ fontSize: 22, marginBottom: 14 }}>Install in three steps</h2>
         <ol style={{ color: "var(--text-dim)", lineHeight: 1.8, marginBottom: 18, paddingLeft: 22 }}>
           <li>Open Today&apos;s Plan (or levels export) → Show code → Copy.</li>

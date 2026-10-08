@@ -1,0 +1,94 @@
+WEBVTT
+
+00:00:00.250 --> 00:00:02.071
+Here's how to get Trade Levels Pro's levels
+
+00:00:02.071 --> 00:00:04.363
+drawn right on your TradingView chart.
+
+00:00:04.363 --> 00:00:05.403
+Takes about a minute.
+
+00:00:06.150 --> 00:00:09.032
+Open Today's Plan on tradelevelspro.com.
+
+00:00:09.032 --> 00:00:10.869
+Make sure you're logged in as a member.
+
+00:00:11.700 --> 00:00:14.083
+Click Show TradingView indicator code.
+
+00:00:15.200 --> 00:00:16.316
+Hit Copy code.
+
+00:00:16.316 --> 00:00:17.505
+It flips to Copied.
+
+00:00:17.705 --> 00:00:20.290
+Now open TradingView and pull up ES,
+
+00:00:20.290 --> 00:00:22.572
+the E-mini S&P futures.
+
+00:00:22.772 --> 00:00:24.064
+Open the Pine Editor.
+
+00:00:25.522 --> 00:00:26.646
+Select everything,
+
+00:00:26.646 --> 00:00:27.981
+and paste in the code.
+
+00:00:28.422 --> 00:00:29.566
+Click Add to chart.
+
+00:00:31.972 --> 00:00:32.923
+And there it is.
+
+00:00:33.622 --> 00:00:35.582
+Today's long levels, targets,
+
+00:00:35.582 --> 00:00:37.292
+shorts and invalidation,
+
+00:00:37.292 --> 00:00:38.683
+drawn right on your chart,
+
+00:00:38.683 --> 00:00:40.419
+with the bias in the corner.
+
+00:00:40.719 --> 00:00:42.701
+Open settings to choose what you see,
+
+00:00:42.701 --> 00:00:46.200
+like targets, backup longs or rejection shorts.
+
+00:00:46.450 --> 00:00:48.627
+Every day, when the new plan comes out,
+
+00:00:48.627 --> 00:00:49.947
+do the same thing.
+
+00:00:49.947 --> 00:00:52.017
+Copy the fresh code from Today's Plan,
+
+00:00:52.017 --> 00:00:54.304
+paste it over the old code in Pine Editor,
+
+00:00:54.304 --> 00:00:55.912
+and click Update on chart.
+
+00:00:56.850 --> 00:00:58.849
+TradingView can't pull it in on its own,
+
+00:00:58.849 --> 00:01:01.144
+so it's a quick re-copy each day.
+
+00:01:01.444 --> 00:01:02.731
+Full plan available.
+
+00:01:02.731 --> 00:01:03.553
+Get a free sample at
+
+00:01:03.553 --> 00:01:06.653
+tradelevelspro.com/sample
